@@ -1,0 +1,1549 @@
+import {
+  Document,
+  Packer,
+  Paragraph,
+  Table,
+  TableRow,
+  TableCell,
+  TextRun,
+  AlignmentType,
+  WidthType,
+  BorderStyle,
+  PageOrientation,
+  TextDirection,
+  VerticalAlign,
+  HeightRule,
+} from 'docx';
+import { saveAs } from 'file-saver';
+import { Airman, DutyAssignment, FlightName } from '../types';
+import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
+
+export interface RosterExportItem {
+  serNo: string;
+  bdNo: string;
+  rank: string;
+  name: string;
+  trade: string;
+  block: string;
+  mobileNo: string;
+  dateStr: string;
+  section: string;
+}
+
+export interface RosterSectionData {
+  title: string;
+  subTitle?: string;
+  items: RosterExportItem[];
+}
+
+export async function exportDutyRosterDocx(
+  unitHeader: string,
+  dateRangeHeader: string,
+  sections: RosterSectionData[],
+  fileName: string = 'Duty_Roster_155_UASU.docx'
+) {
+  const docChildren: any[] = [
+    // Main Unit Header
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: 'BASE DUTIES: AIRMEN',
+          bold: true,
+          size: 26, // 13pt
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: `(${unitHeader})`,
+          bold: true,
+          size: 24, // 12pt
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: `(${dateRangeHeader})`,
+          bold: true,
+          size: 22, // 11pt
+        }),
+      ],
+    }),
+  ];
+
+  // Add each section and its table
+  for (const section of sections) {
+    if (section.items.length === 0) continue;
+
+    // Section Title
+    docChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 180, after: section.subTitle ? 40 : 100 },
+        children: [
+          new TextRun({
+            text: section.title,
+            bold: true,
+            size: 22,
+            underline: {},
+          }),
+        ],
+      })
+    );
+
+    if (section.subTitle) {
+      docChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 100 },
+          children: [
+            new TextRun({
+              text: `(${section.subTitle})`,
+              bold: true,
+              size: 20,
+            }),
+          ],
+        })
+      );
+    }
+
+    // Table Header Row
+    const headerRow = new TableRow({
+      tableHeader: true,
+      children: [
+        createHeaderCell('Ser No', 800),
+        createHeaderCell('BD No', 1100),
+        createHeaderCell('Rank', 900),
+        createHeaderCell('Name', 1400),
+        createHeaderCell('Trade', 1300),
+        createHeaderCell('Block', 1100),
+        createHeaderCell('Mobile No', 1600),
+        createHeaderCell('Date', 1000),
+        createHeaderCell('Section', 1200),
+      ],
+    });
+
+    // Table Data Rows
+    const dataRows = section.items.map((item, idx) => {
+      const displaySer = String(idx + 1).padStart(2, '0');
+      return new TableRow({
+        children: [
+          createDataCell(item.serNo || displaySer, 800, AlignmentType.CENTER),
+          createDataCell(item.bdNo, 1100, AlignmentType.CENTER),
+          createDataCell(item.rank, 900, AlignmentType.CENTER),
+          createDataCell(item.name, 1400, AlignmentType.LEFT),
+          createDataCell(item.trade, 1300, AlignmentType.CENTER),
+          createDataCell(item.block || 'L/O', 1100, AlignmentType.CENTER),
+          createDataCell(item.mobileNo || '-', 1600, AlignmentType.CENTER),
+          createDataCell(item.dateStr, 1000, AlignmentType.CENTER),
+          createDataCell(item.section || '155 UASU', 1200, AlignmentType.CENTER),
+        ],
+      });
+    });
+
+    const table = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [headerRow, ...dataRows],
+    });
+
+    docChildren.push(table);
+    docChildren.push(new Paragraph({ spacing: { after: 140 }, children: [] }));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 720,
+              right: 720,
+              bottom: 720,
+              left: 720,
+            },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, fileName);
+}
+
+export interface IdacRosterRow {
+  dateDisplay: string;
+  dayDisplay: string;
+  morning: string;
+  afternoon: string;
+  night: string;
+}
+
+export async function exportIdacRosterDocx(
+  unitHeader: string,
+  dateRangeHeader: string,
+  rows: IdacRosterRow[],
+  fileName: string = 'IDAC_Duty_Roster_155_UASU.docx'
+) {
+  const docChildren: any[] = [
+    // Main Title: DUTY ROSTER : 155 UASU BAF
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: `DUTY ROSTER : ${unitHeader.toUpperCase()}`,
+          font: 'Arial',
+          bold: true,
+          size: 26, // 13pt
+          underline: {},
+        }),
+      ],
+    }),
+    // Sub-title: (IDA CENTER DUTY)
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [
+        new TextRun({
+          text: '(IDA CENTER DUTY)',
+          font: 'Arial',
+          bold: true,
+          size: 24, // 12pt
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: `(${dateRangeHeader})`,
+          font: 'Arial',
+          bold: true,
+          size: 22, // 11pt
+        }),
+      ],
+    }),
+  ];
+
+  // Table Header Row
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      createArialHeaderCell('Date', 1500),
+      createArialHeaderCell('Day', 1700),
+      createArialHeaderCell('Morning\n(0730F - 1430F)', 2400),
+      createArialHeaderCell('Afternoon\n(1430F - 2100F)', 2400),
+      createArialHeaderCell('Night\n(2100F - 0730F)', 2800),
+    ],
+  });
+
+  // Table Data Rows
+  const dataRows = rows.map((item) => {
+    return new TableRow({
+      children: [
+        createArialDataCell(item.dateDisplay, 1500, AlignmentType.CENTER),
+        createArialDataCell(item.dayDisplay, 1700, AlignmentType.CENTER),
+        createArialDataCell(item.morning || '-', 2400, AlignmentType.CENTER),
+        createArialDataCell(item.afternoon || '-', 2400, AlignmentType.CENTER),
+        createArialDataCell(item.night || '-', 2800, AlignmentType.CENTER),
+      ],
+    });
+  });
+
+  const table = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...dataRows],
+  });
+
+  docChildren.push(table);
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 720,
+              right: 720,
+              bottom: 720,
+              left: 720,
+            },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, fileName);
+}
+
+// 3. NOMINAL ROLL DIRECTORY EXPORT
+export async function exportNominalRollDocx(
+  airmen: Airman[],
+  fileName: string = 'Nominal_Roll_155_UASU_BAF.docx'
+) {
+  const docChildren: any[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: 'NOMINAL ROLL DIRECTORY : 155 UASU BAF',
+          font: 'Arial',
+          bold: true,
+          size: 26,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 180 },
+      children: [
+        new TextRun({
+          text: `Total Personnel: ${airmen.length} Airmen (Sorted by Rank Seniority & BD Number)`,
+          font: 'Arial',
+          bold: false,
+          size: 20,
+        }),
+      ],
+    }),
+  ];
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      createArialHeaderCell('Ser', 700),
+      createArialHeaderCell('BD No', 1400),
+      createArialHeaderCell('Rank', 1000),
+      createArialHeaderCell('Name', 2200),
+      createArialHeaderCell('Trade', 1400),
+      createArialHeaderCell('Flight', 1300),
+      createArialHeaderCell('Address / Block', 1600),
+      createArialHeaderCell('Mobile No', 1500),
+    ],
+  });
+
+  const dataRows = airmen.map((a, idx) => {
+    return new TableRow({
+      children: [
+        createArialDataCell(String(idx + 1), 700, AlignmentType.CENTER),
+        createArialDataCell(a.bdNo, 1400, AlignmentType.CENTER),
+        createArialDataCell(a.rank, 1000, AlignmentType.CENTER),
+        createArialDataCell(a.name, 2200, AlignmentType.LEFT),
+        createArialDataCell(a.trade, 1400, AlignmentType.CENTER),
+        createArialDataCell(a.flightName, 1300, AlignmentType.CENTER),
+        createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.CENTER),
+        createArialDataCell(a.mobileNo || '-', 1500, AlignmentType.CENTER),
+      ],
+    });
+  });
+
+  const table = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...dataRows],
+  });
+
+  docChildren.push(table);
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: { top: 720, right: 720, bottom: 720, left: 720 },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, fileName);
+}
+
+// 4. DUTY RATIO MATRIX EXPORT
+export async function exportDutyRatioDocx(
+  matrix: DutyRatioTable[],
+  fileName: string = 'Duty_Ratio_Matrix_155_UASU.docx'
+) {
+  const docChildren: any[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+      children: [
+        new TextRun({
+          text: 'OFFICIAL DUTY RATIO & FLIGHT QUOTA MATRIX : 155 UASU BAF',
+          font: 'Arial',
+          bold: true,
+          size: 26,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 180 },
+      children: [
+        new TextRun({
+          text: 'Flight-wise Personnel Allocation Guidelines & Daily Shift Quota',
+          font: 'Arial',
+          bold: false,
+          size: 20,
+        }),
+      ],
+    }),
+  ];
+
+  for (const tableData of matrix) {
+    docChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 140, after: 60 },
+        children: [
+          new TextRun({
+            text: tableData.title,
+            font: 'Arial',
+            bold: true,
+            size: 22,
+          }),
+        ],
+      })
+    );
+
+    const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
+    const headerRow = new TableRow({
+      tableHeader: true,
+      children: [
+        createArialHeaderCell('Flight Name', 1800),
+        ...Array.from({ length: 31 }, (_, i) =>
+          createArialHeaderCell(String(i + 1), 240)
+        ),
+        createArialHeaderCell('Total Duty', 800),
+      ],
+    });
+
+    const dailySums = Array.from({ length: 31 }, (_, dayIdx) =>
+      flights.reduce((sum, fl) => sum + (tableData.data?.[fl]?.[dayIdx] || 0), 0)
+    );
+    const tableGrandTotal = flights.reduce((sum, fl) => {
+      return sum + (tableData.data?.[fl]?.reduce((s, c) => s + c, 0) || 0);
+    }, 0);
+
+    const dataRows = flights.map((fl) => {
+      const rowVals = tableData.data?.[fl] || [];
+      const rowTotal = rowVals.reduce((s, c) => s + c, 0);
+      return new TableRow({
+        children: [
+          createArialDataCell(fl, 1800, AlignmentType.LEFT),
+          ...Array.from({ length: 31 }, (_, i) => {
+            const v = rowVals[i] !== undefined ? rowVals[i] : 0;
+            return createArialDataCell(v > 0 ? String(v) : '-', 240, AlignmentType.CENTER);
+          }),
+          createArialDataCell(String(rowTotal), 800, AlignmentType.CENTER, true),
+        ],
+      });
+    });
+
+    const dailyTotalRow = new TableRow({
+      children: [
+        createArialHeaderCell('Daily Total', 1800),
+        ...dailySums.map((dSum) =>
+          createArialDataCell(dSum > 0 ? String(dSum) : '-', 240, AlignmentType.CENTER, true)
+        ),
+        createArialDataCell(String(tableGrandTotal), 800, AlignmentType.CENTER, true),
+      ],
+    });
+
+    const table = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [headerRow, ...dataRows, dailyTotalRow],
+    });
+
+    docChildren.push(table);
+    docChildren.push(new Paragraph({ spacing: { after: 100 }, children: [] }));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: { top: 500, right: 500, bottom: 500, left: 500 },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, fileName);
+}
+
+// 5. SINGLE-DAY PARADE STATE EXPORT
+export interface SingleParadeExportParams {
+  documentType?: 'PARADE' | 'PT';
+  documentTitle?: string;
+  dateStr: string;
+  flight: string;
+  stats: any;
+  onParade: Airman[];
+  leave: Airman[];
+  bakeBite: Airman[];
+  tdy: Airman[];
+  reception: Airman[];
+  dutyOn: { airman: Airman; note?: string }[];
+  dutyOff: { airman: Airman; note?: string }[];
+  airFdDuty: Airman[];
+  essn?: Airman[];
+  cmh?: Airman[];
+  sickReport?: Airman[];
+  drillCatC?: Airman[];
+  adminOrder?: Airman[];
+  classTrg?: Airman[];
+  games?: Airman[];
+  absent?: Airman[];
+  otherDisposals?: { title: string; airmen: Airman[] }[];
+  leftSig?: { rank: string; name: string; desig: string };
+  rightSig?: { rank: string; name: string; desig: string };
+}
+
+export async function exportParadeStateSingleDocx(
+  params: SingleParadeExportParams,
+  fileName?: string
+) {
+  const {
+    documentType = 'PARADE',
+    documentTitle,
+    dateStr,
+    flight,
+    stats,
+    onParade,
+    leave = [],
+    bakeBite = [],
+    tdy = [],
+    reception = [],
+    dutyOn = [],
+    dutyOff = [],
+    airFdDuty = [],
+    essn = [],
+    cmh = [],
+    sickReport = [],
+    drillCatC = [],
+    adminOrder = [],
+    classTrg = [],
+    games = [],
+    absent = [],
+    otherDisposals = [],
+  } = params;
+
+  const isPt = documentType === 'PT';
+  const finalTitle = documentTitle || (isPt ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN');
+
+  const unitLabel =
+    flight === 'Overall'
+      ? '155 UASU BAF'
+      : `155 UASU BAF (${flight.toUpperCase()} FLT)`;
+
+  const docChildren: any[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: finalTitle,
+          font: 'Arial',
+          bold: true,
+          size: 26,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: unitLabel,
+          font: 'Arial',
+          bold: true,
+          size: 24,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { after: 120 },
+      children: [
+        new TextRun({
+          text: `Date: ${dateStr}`,
+          font: 'Arial',
+          bold: true,
+          size: 24,
+        }),
+      ],
+    }),
+  ];
+
+  // 1st Table: Summary Matrix Table (20 columns exact)
+  const statHeaders = [
+    'Unit',
+    'Total\nstr',
+    'Det/\nTdy',
+    'Eff\nstr',
+    'Leave',
+    'Essn',
+    'BNS/BSH/\nCMH',
+    'Sick\nReport',
+    'Drill\nCat-C',
+    'Guard Duty\nOn/Off',
+    'Bake &\nBite',
+    'K/O &\nReception',
+    'Admin\nOrder',
+    'Class/\nTrg',
+    'Airfield\nDuty',
+    'G/H &\nGames',
+    isPt ? 'Total Out\nPT' : 'Total Out\nParade',
+    isPt ? 'On PT' : 'On Parade',
+    'Absent',
+    'Rmk',
+  ];
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    height: { value: 1440, rule: HeightRule.ATLEAST },
+    children: statHeaders.map((h, i) =>
+      i === 0 ? createArialUnitHeaderCell(h, 1500) : createArialVerticalHeaderCell(h, 680)
+    ),
+  });
+
+  const valOrDash = (v: number) => (v > 0 ? String(v) : '-');
+
+  const dataRow = new TableRow({
+    children: [
+      createArialDataCell('155 UASU BAF', 1500, AlignmentType.CENTER),
+      createArialDataCell(String(stats.totalStr), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.detTdyCount), 680, AlignmentType.CENTER),
+      createArialDataCell(String(stats.effStr), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.leaveCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.essnCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.hospitalCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.sickExCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.drillCatCCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.guardDutyCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.bakeBiteCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.koReceptionCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.adminCommCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.classTrgCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.airFdDutyCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.gamesCount), 680, AlignmentType.CENTER),
+      createArialDataCell(String(stats.totalOutPt), 680, AlignmentType.CENTER),
+      createArialDataCell(String(stats.onPtParadeCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.absentCount), 680, AlignmentType.CENTER),
+      createArialDataCell('-', 680, AlignmentType.CENTER),
+    ],
+  });
+
+  const matrixTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, dataRow],
+  });
+
+  docChildren.push(matrixTable);
+
+  // Spacing between 1st & 2nd table: Font size 1 (2 half-points) with 0 margin
+  docChildren.push(
+    new Paragraph({
+      spacing: { before: 0, after: 20, line: 20 },
+      children: [
+        new TextRun({
+          text: '',
+          font: 'Arial',
+          size: 2, // 1pt font size
+        }),
+      ],
+    })
+  );
+
+  // Borderless style for 2nd disposal table
+  const invisibleBorders = {
+    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+
+  // Helper to build a disposal section only if it has personnel
+  const buildDisposalSection = (title: string, list: { displayName: string }[], isFirst: boolean = false): Paragraph[] => {
+    if (!list || list.length === 0) return [];
+    return [
+      new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: isFirst ? 0 : 80, after: 30 },
+        children: [
+          new TextRun({
+            text: title,
+            font: 'Arial',
+            bold: true,
+            size: 24,
+            underline: {},
+          }),
+        ],
+      }),
+      ...list.map((item, idx) =>
+        new Paragraph({
+          spacing: { after: 20 },
+          children: [
+            new TextRun({
+              text: `${idx + 1}. ${item.displayName}`,
+              font: 'Arial',
+              size: 24,
+            }),
+          ],
+        })
+      ),
+    ];
+  };
+
+  // Format airman names
+  const toDisplay = (airmenList: Airman[]) => airmenList.map((a) => ({ displayName: `${a.rank} ${a.name}` }));
+
+  // Format Duty Off as: `${rank} ${name}-${duty} Off`
+  const dutyOffDisplay = dutyOff.map((item) => {
+    let dutyNote = item.note || 'GD';
+    if (!dutyNote.toLowerCase().includes('off')) {
+      dutyNote = `${dutyNote} Off`;
+    }
+    return {
+      displayName: `${item.airman.rank} ${item.airman.name}-${dutyNote}`,
+    };
+  });
+
+  const dutyOnDisplay = dutyOn.map((item) => ({
+    displayName: `${item.airman.rank} ${item.airman.name}${item.note ? ` (${item.note})` : ''}`,
+  }));
+
+  // Col 1: On Parade 1..15
+  const onParade1To15 = onParade.slice(0, 15);
+  const onParade16Plus = onParade.slice(15);
+
+  const col1Children: Paragraph[] = [
+    new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: 'ON PARADE',
+          font: 'Arial',
+          bold: true,
+          size: 24,
+          underline: {},
+        }),
+      ],
+    }),
+  ];
+
+  if (onParade1To15.length === 0) {
+    col1Children.push(
+      new Paragraph({
+        children: [new TextRun({ text: '-', font: 'Arial', size: 24 })],
+      })
+    );
+  } else {
+    onParade1To15.forEach((item, idx) => {
+      col1Children.push(
+        new Paragraph({
+          spacing: { after: 20 },
+          children: [
+            new TextRun({
+              text: `${idx + 1}. ${item.rank} ${item.name}`,
+              font: 'Arial',
+              size: 24,
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  const col1 = new TableCell({
+    width: { size: 2520, type: WidthType.DXA },
+    borders: invisibleBorders,
+    margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    children: col1Children,
+  });
+
+  // Col 2: On Parade 16 onwards
+  const col2Children: Paragraph[] = [
+    new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: ' ',
+          font: 'Arial',
+          size: 24,
+        }),
+      ],
+    }),
+  ];
+
+  onParade16Plus.forEach((item, idx) => {
+    col2Children.push(
+      new Paragraph({
+        spacing: { after: 20 },
+        children: [
+          new TextRun({
+            text: `${16 + idx}. ${item.rank} ${item.name}`,
+            font: 'Arial',
+            size: 24,
+          }),
+        ],
+      })
+    );
+  });
+
+  const col2 = new TableCell({
+    width: { size: 2520, type: WidthType.DXA },
+    borders: invisibleBorders,
+    margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    children: col2Children,
+  });
+
+  // Col 3 Disposals: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT
+  const col3Paragraphs: Paragraph[] = [];
+  const secLeave = buildDisposalSection('LEAVE', toDisplay(leave), col3Paragraphs.length === 0);
+  if (secLeave.length > 0) col3Paragraphs.push(...secLeave);
+
+  const secBakeBite = buildDisposalSection('BAKE & BITE', toDisplay(bakeBite), col3Paragraphs.length === 0);
+  if (secBakeBite.length > 0) col3Paragraphs.push(...secBakeBite);
+
+  const secEssn = buildDisposalSection('ESSN', toDisplay(essn), col3Paragraphs.length === 0);
+  if (secEssn.length > 0) col3Paragraphs.push(...secEssn);
+
+  const secCmh = buildDisposalSection('BNS/BSH/CMH', toDisplay(cmh), col3Paragraphs.length === 0);
+  if (secCmh.length > 0) col3Paragraphs.push(...secCmh);
+
+  const secSick = buildDisposalSection('SICK REPORT', toDisplay(sickReport), col3Paragraphs.length === 0);
+  if (secSick.length > 0) col3Paragraphs.push(...secSick);
+
+  if (col3Paragraphs.length === 0) {
+    col3Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
+  }
+
+  const col3 = new TableCell({
+    width: { size: 3456, type: WidthType.DXA },
+    borders: invisibleBorders,
+    margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    children: col3Paragraphs,
+  });
+
+  // Col 4 Disposals: ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C
+  const col4Paragraphs: Paragraph[] = [];
+  const secTdy = buildDisposalSection('ATT/TDY/DETT', toDisplay(tdy), col4Paragraphs.length === 0);
+  if (secTdy.length > 0) col4Paragraphs.push(...secTdy);
+
+  const secReception = buildDisposalSection('RECEPTION', toDisplay(reception), col4Paragraphs.length === 0);
+  if (secReception.length > 0) col4Paragraphs.push(...secReception);
+
+  const secAirFd = buildDisposalSection('AIR FD DUTY', toDisplay(airFdDuty), col4Paragraphs.length === 0);
+  if (secAirFd.length > 0) col4Paragraphs.push(...secAirFd);
+
+  const secAdmin = buildDisposalSection('ADMIN ORDER', toDisplay(adminOrder), col4Paragraphs.length === 0);
+  if (secAdmin.length > 0) col4Paragraphs.push(...secAdmin);
+
+  const secClass = buildDisposalSection('CLASS/TRG', toDisplay(classTrg), col4Paragraphs.length === 0);
+  if (secClass.length > 0) col4Paragraphs.push(...secClass);
+
+  const secDrill = buildDisposalSection('DRILL CAT-C', toDisplay(drillCatC), col4Paragraphs.length === 0);
+  if (secDrill.length > 0) col4Paragraphs.push(...secDrill);
+
+  if (col4Paragraphs.length === 0) {
+    col4Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
+  }
+
+  const col4 = new TableCell({
+    width: { size: 3312, type: WidthType.DXA },
+    borders: invisibleBorders,
+    margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    children: col4Paragraphs,
+  });
+
+  // Col 5 Disposals: DUTY ON, DUTY OFF, GAMES, ABSENT, Other custom disposals
+  const col5Paragraphs: Paragraph[] = [];
+  const secDutyOn = buildDisposalSection('DUTY ON', dutyOnDisplay, col5Paragraphs.length === 0);
+  if (secDutyOn.length > 0) col5Paragraphs.push(...secDutyOn);
+
+  const secDutyOff = buildDisposalSection('DUTY OFF', dutyOffDisplay, col5Paragraphs.length === 0);
+  if (secDutyOff.length > 0) col5Paragraphs.push(...secDutyOff);
+
+  const secGames = buildDisposalSection('GAMES', toDisplay(games), col5Paragraphs.length === 0);
+  if (secGames.length > 0) col5Paragraphs.push(...secGames);
+
+  const secAbsent = buildDisposalSection('ABSENT', toDisplay(absent), col5Paragraphs.length === 0);
+  if (secAbsent.length > 0) col5Paragraphs.push(...secAbsent);
+
+  if (otherDisposals && otherDisposals.length > 0) {
+    otherDisposals.forEach((od) => {
+      const customSec = buildDisposalSection(od.title.toUpperCase(), toDisplay(od.airmen), col5Paragraphs.length === 0);
+      if (customSec.length > 0) col5Paragraphs.push(...customSec);
+    });
+  }
+
+  if (col5Paragraphs.length === 0) {
+    col5Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
+  }
+
+  const col5 = new TableCell({
+    width: { size: 3312, type: WidthType.DXA },
+    borders: invisibleBorders,
+    margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    children: col5Paragraphs,
+  });
+
+  // Spacer Row between 1st & 2nd rows: height 0.6 inch = 864 DXA
+  const spacerRow = new TableRow({
+    height: { value: 864, rule: HeightRule.EXACT },
+    children: [
+      new TableCell({
+        columnSpan: 5,
+        width: { size: 15120, type: WidthType.DXA },
+        borders: invisibleBorders,
+        children: [new Paragraph({ children: [] })],
+      }),
+    ],
+  });
+
+  // 2nd Row: 1st & 2nd Column Merged (Left Officer Sgt Nahid), 3rd & 4th empty, Last column (Right Officer WO Shahin)
+  const leftSigName = params.leftSig?.name || 'MD NAHID HASAN KHAN';
+  const leftSigRank = params.leftSig?.rank || 'SGT';
+  const leftSigDesig = params.leftSig?.desig || 'UWO';
+
+  const rightSigName = params.rightSig?.name || 'MD SHAHINUZZAMAN';
+  const rightSigRank = params.rightSig?.rank || 'WO';
+  const rightSigDesig = params.rightSig?.desig || 'WOIC Orderly Room';
+
+  const signatureRow = new TableRow({
+    children: [
+      new TableCell({
+        columnSpan: 2,
+        width: { size: 5040, type: WidthType.DXA },
+        borders: invisibleBorders,
+        margins: { top: 120, bottom: 40, left: 40, right: 40 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 30 },
+            children: [
+              new TextRun({
+                text: leftSigName.toUpperCase(),
+                font: 'Arial',
+                bold: true,
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 30 },
+            children: [
+              new TextRun({
+                text: leftSigRank.toUpperCase(),
+                font: 'Arial',
+                bold: true,
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 20 },
+            children: [
+              new TextRun({
+                text: leftSigDesig,
+                font: 'Arial',
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            children: [
+              new TextRun({
+                text: '155 UASU BAF',
+                font: 'Arial',
+                size: 24,
+              }),
+            ],
+          }),
+        ],
+      }),
+      new TableCell({
+        width: { size: 3456, type: WidthType.DXA },
+        borders: invisibleBorders,
+        margins: { top: 120, bottom: 40, left: 40, right: 40 },
+        children: [new Paragraph({ children: [] })],
+      }),
+      new TableCell({
+        width: { size: 3312, type: WidthType.DXA },
+        borders: invisibleBorders,
+        margins: { top: 120, bottom: 40, left: 40, right: 40 },
+        children: [new Paragraph({ children: [] })],
+      }),
+      new TableCell({
+        width: { size: 3312, type: WidthType.DXA },
+        borders: invisibleBorders,
+        margins: { top: 120, bottom: 40, left: 40, right: 40 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 30 },
+            children: [
+              new TextRun({
+                text: rightSigName.toUpperCase(),
+                font: 'Arial',
+                bold: true,
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 30 },
+            children: [
+              new TextRun({
+                text: rightSigRank.toUpperCase(),
+                font: 'Arial',
+                bold: true,
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 20 },
+            children: [
+              new TextRun({
+                text: rightSigDesig,
+                font: 'Arial',
+                size: 24,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            children: [
+              new TextRun({
+                text: '155 UASU BAF',
+                font: 'Arial',
+                size: 24,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const disposalTable = new Table({
+    width: { size: 15120, type: WidthType.DXA },
+    columnWidths: [2520, 2520, 3456, 3312, 3312],
+    borders: invisibleBorders,
+    rows: [
+      new TableRow({
+        children: [col1, col2, col3, col4, col5],
+      }),
+      spacerRow,
+      signatureRow,
+    ],
+  });
+
+  docChildren.push(disposalTable);
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 24,
+          },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              width: 11906,
+              height: 16838,
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: { top: 720, right: 720, bottom: 720, left: 720 },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const targetFileName =
+    fileName || `Parade_State_${flight.replace(/\s+/g, '_')}_${dateStr}.docx`;
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, targetFileName);
+}
+
+// 6. MULTI-DAY PARADE STATE MATRIX EXPORT
+export interface MultiParadeDayItem {
+  dateDisplay: string;
+  dayDisplay: string;
+  baseSec: string;
+  btf: string;
+  ntf: string;
+  airfield: string;
+  halishahar: string;
+  bakeBite: string;
+  tdy: string;
+  leave: string;
+  idaMorning: string;
+  idaAfternoon: string;
+  idaNight: string;
+  dutyOff: string;
+  onParade: string;
+}
+
+export async function exportParadeStateMultiDocx(
+  unitHeader: string,
+  dateRangeHeader: string,
+  rows: MultiParadeDayItem[],
+  fileName: string = 'Multi_Day_Parade_State_155_UASU.docx'
+) {
+  const docChildren: any[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: 'PARADE STATE & DAILY DUTY REGISTER : AIRMEN',
+          font: 'Arial',
+          bold: true,
+          size: 26,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: unitHeader,
+          font: 'Arial',
+          bold: true,
+          size: 24,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 120 },
+      children: [
+        new TextRun({
+          text: `(${dateRangeHeader})`,
+          font: 'Arial',
+          bold: true,
+          size: 24,
+        }),
+      ],
+    }),
+  ];
+
+  const headerRow1 = new TableRow({
+    tableHeader: true,
+    children: [
+      createArialHeaderCell('Date', 900),
+      createArialHeaderCell('Day', 900),
+      createArialHeaderCell('Base Security\nDuty', 1100),
+      createArialHeaderCell('Base Taskforce\nDuty', 1100),
+      createArialHeaderCell('Najirpara\nTF Duty', 1100),
+      createArialHeaderCell('Airfield\nDuty', 1000),
+      createArialHeaderCell('Halishahar\nDuty', 1000),
+      createArialHeaderCell('Bake N\nBite', 900),
+      createArialHeaderCell('Tdy', 900),
+      createArialHeaderCell('Leave', 900),
+      createArialHeaderCell('IDA CENTER Duty', 3300),
+      createArialHeaderCell('Duty\nOff', 1100),
+      createArialHeaderCell('On\nParade', 1800),
+    ],
+  });
+
+  const dataRows = rows.map((r) => {
+    return new TableRow({
+      children: [
+        createArialDataCell(r.dateDisplay, 900, AlignmentType.CENTER),
+        createArialDataCell(r.dayDisplay, 900, AlignmentType.CENTER),
+        createArialDataCell(r.baseSec || '-', 1100, AlignmentType.LEFT),
+        createArialDataCell(r.btf || '-', 1100, AlignmentType.LEFT),
+        createArialDataCell(r.ntf || '-', 1100, AlignmentType.LEFT),
+        createArialDataCell(r.airfield || '-', 1000, AlignmentType.LEFT),
+        createArialDataCell(r.halishahar || '-', 1000, AlignmentType.LEFT),
+        createArialDataCell(r.bakeBite || '-', 900, AlignmentType.LEFT),
+        createArialDataCell(r.tdy || '-', 900, AlignmentType.LEFT),
+        createArialDataCell(r.leave || '-', 900, AlignmentType.LEFT),
+        createArialDataCell(
+          `Morning:\n${r.idaMorning || '-'}\n\nAfternoon:\n${r.idaAfternoon || '-'}\n\nNight:\n${r.idaNight || '-'}`,
+          3300,
+          AlignmentType.LEFT
+        ),
+        createArialDataCell(r.dutyOff || '-', 1100, AlignmentType.LEFT),
+        createArialDataCell(r.onParade || '-', 1800, AlignmentType.LEFT),
+      ],
+    });
+  });
+
+  const table = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow1, ...dataRows],
+  });
+
+  docChildren.push(table);
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 24,
+          },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              width: 11906,
+              height: 16838,
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: { top: 720, right: 720, bottom: 720, left: 720 },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, fileName);
+}
+
+// 7. MONTHLY DUTY REGISTER MATRIX EXPORT
+export async function exportMonthlyDutyRegisterDocx(
+  airmen: Airman[],
+  assignments: DutyAssignment[],
+  year: number,
+  month: number,
+  flightFilter: string = 'All',
+  fileName?: string
+) {
+  const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const filteredAirmen =
+    flightFilter === 'All'
+      ? airmen
+      : airmen.filter((a) => a.flightName === flightFilter);
+
+  const assignmentMap = new Map<string, DutyAssignment>();
+  assignments.forEach((ass) => {
+    assignmentMap.set(`${ass.airmanId}_${ass.date}`, ass);
+  });
+
+  const docChildren: any[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [
+        new TextRun({
+          text: 'MONTHLY DUTY REGISTER : 155 UASU BAF',
+          font: 'Arial',
+          bold: true,
+          size: 26,
+          underline: {},
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 120 },
+      children: [
+        new TextRun({
+          text: `Month: ${monthName} • Flight: ${flightFilter}`,
+          font: 'Arial',
+          bold: true,
+          size: 24,
+        }),
+      ],
+    }),
+  ];
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      createArialHeaderCell('Ser', 500),
+      createArialHeaderCell('BD No', 1100),
+      createArialHeaderCell('Rank', 800),
+      createArialHeaderCell('Name', 1800),
+      createArialHeaderCell('Flt', 700),
+      ...Array.from({ length: daysInMonth }, (_, i) =>
+        createArialHeaderCell(String(i + 1), 260)
+      ),
+    ],
+  });
+
+  const dataRows = filteredAirmen.map((a, idx) => {
+    return new TableRow({
+      children: [
+        createArialDataCell(String(idx + 1), 500, AlignmentType.CENTER),
+        createArialDataCell(a.bdNo, 1100, AlignmentType.CENTER),
+        createArialDataCell(a.rank, 800, AlignmentType.CENTER),
+        createArialDataCell(a.name, 1800, AlignmentType.LEFT),
+        createArialDataCell(a.flightName.slice(0, 3), 700, AlignmentType.CENTER),
+        ...Array.from({ length: daysInMonth }, (_, i) => {
+          const dStr = `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+          const ass = assignmentMap.get(`${a.id}_${dStr}`);
+          let codeDisplay = '-';
+          if (ass) {
+            if (ass.dutyCode === 'GD') codeDisplay = 'GD';
+            else if (ass.dutyCode === 'BTF') codeDisplay = 'BTF';
+            else if (ass.dutyCode === 'NTF') codeDisplay = 'NTF';
+            else if (ass.dutyCode === 'HALISHAHAR') codeDisplay = 'HALI';
+            else if (ass.dutyCode === 'AIRPORT') codeDisplay = 'AIR';
+            else if (ass.dutyCode === 'IDAC' || ass.dutyCode === 'IDA') {
+              codeDisplay = ass.idaShift === 'Night' ? 'IDAn' : ass.idaShift === 'Afternoon' ? 'IDAa' : 'IDAm';
+            } else if (ass.dutyCode === 'LEAVE') codeDisplay = 'L';
+            else if (ass.dutyCode === 'TDY') codeDisplay = 'TDY';
+            else if (ass.dutyCode === 'BAKE_N_BITE') codeDisplay = 'BB';
+            else if (ass.dutyCode === 'DUTY_OFF') codeDisplay = 'OFF';
+          }
+          return createArialDataCell(codeDisplay, 260, AlignmentType.CENTER);
+        }),
+      ],
+    });
+  });
+
+  const table = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...dataRows],
+  });
+
+  docChildren.push(table);
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 24,
+          },
+        },
+      },
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              width: 11906,
+              height: 16838,
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: { top: 720, right: 720, bottom: 720, left: 720 },
+          },
+        },
+        children: docChildren,
+      },
+    ],
+  });
+
+  const targetName =
+    fileName || `Duty_Register_${monthName.replace(/\s+/g, '_')}_${flightFilter}.docx`;
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, targetName);
+}
+
+// -------------------------------------------------------------
+// Cell Formatting Helpers
+// -------------------------------------------------------------
+function createArialUnitHeaderCell(text: string, width: number) {
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 60, bottom: 60, left: 40, right: 40 },
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text,
+            font: 'Arial',
+            bold: true,
+            size: 24,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function createArialVerticalHeaderCell(text: string, width: number) {
+  const cleanText = text.replace(/\n/g, ' ');
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    textDirection: TextDirection.BOTTOM_TO_TOP_LEFT_TO_RIGHT,
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 60, bottom: 60, left: 30, right: 30 },
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: cleanText,
+            font: 'Arial',
+            bold: true,
+            size: 24, // 12pt
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function createArialHeaderCell(text: string, width: number) {
+  const lines = text.split('\n');
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    shading: { fill: 'E2E8F0' },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 80, bottom: 80, left: 50, right: 50 },
+    children: lines.map(
+      (l) =>
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: l,
+              font: 'Arial',
+              bold: true,
+              size: 24, // 12pt
+            }),
+          ],
+        })
+    ),
+  });
+}
+
+function createArialDataCell(
+  text: string,
+  width: number,
+  alignment: (typeof AlignmentType)[keyof typeof AlignmentType],
+  bold: boolean = false
+) {
+  const lines = (text || '').split('\n');
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 60, bottom: 60, left: 50, right: 50 },
+    children: lines.map(
+      (l) =>
+        new Paragraph({
+          alignment,
+          children: [
+            new TextRun({
+              text: l,
+              font: 'Arial',
+              bold: bold,
+              size: 24, // 12pt
+            }),
+          ],
+        })
+    ),
+  });
+}
+
+function createHeaderCell(text: string, width: number) {
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    shading: { fill: 'E2E8F0' },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 80, bottom: 80, left: 60, right: 60 },
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text,
+            font: 'Arial',
+            bold: true,
+            size: 24,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function createDataCell(
+  text: string,
+  width: number,
+  alignment: (typeof AlignmentType)[keyof typeof AlignmentType]
+) {
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 60, bottom: 60, left: 60, right: 60 },
+    children: [
+      new Paragraph({
+        alignment,
+        children: [
+          new TextRun({
+            text: text || '',
+            font: 'Arial',
+            size: 24,
+          }),
+        ],
+      }),
+    ],
+  });
+}

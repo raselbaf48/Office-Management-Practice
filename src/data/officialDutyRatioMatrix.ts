@@ -1,0 +1,305 @@
+import { FlightName, DutyCategoryCode, IDAShift } from '../types';
+import { FlightDutyQuota } from './dutyRatios';
+
+export interface DutyRatioTable {
+  id: string;
+  title: string; // e.g., 'SECURITY DUTY (88)'
+  dutyCode: DutyCategoryCode;
+  shiftLabel?: string; // e.g. 'Morning', 'Afternoon', 'Night'
+  totalRequiredMonth: number;
+  data: {
+    Mechanics: number[]; // Array of 31 numbers (index 0 = day 1, index 30 = day 31)
+    Avionics: number[];
+    GCS: number[];
+    Admin: number[];
+  };
+}
+
+export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
+  // 1. SECURITY DUTY (88)
+  {
+    id: 'security_duty',
+    title: 'SECURITY DUTY (88)',
+    dutyCode: 'GD',
+    totalRequiredMonth: 88,
+    data: {
+      Mechanics: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+      Avionics:  [1,1,1,0,1,1,1,0,0,0,1,1,1,1,1,0,0,0,1,1,0,1,0,0,1,1,1,0,1,1,1],
+      GCS:       [1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,1],
+      Admin:     [0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1],
+    },
+  },
+
+  // 2. NAZIRPARA T/F (40)
+  {
+    id: 'nazirpara_tf',
+    title: 'NAZIRPARA T/F (40)',
+    dutyCode: 'NTF',
+    totalRequiredMonth: 40,
+    data: {
+      Mechanics: [1,1,0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,1,1,0,0,1],
+      Avionics:  [0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1],
+      GCS:       [1,0,1,1,0,0,0,0,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,0,1,1,0,1,1,0],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 3. BASE T/F (22)
+  {
+    id: 'base_tf',
+    title: 'BASE T/F (22)',
+    dutyCode: 'BTF',
+    totalRequiredMonth: 22,
+    data: {
+      Mechanics: [0,0,1,1,0,0,1,1,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0],
+      Avionics:  [1,1,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      GCS:       [0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 4. IDAC MOR 31
+  {
+    id: 'idac_mor',
+    title: 'IDAC MOR (31)',
+    dutyCode: 'IDAC',
+    shiftLabel: 'Morning',
+    totalRequiredMonth: 31,
+    data: {
+      Mechanics: [1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0],
+      Avionics:  [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,1,0],
+      GCS:       [0,1,0,1,0,0,1,1,1,1,0,0,0,1,0,0,0,0,0,1,1,0,1,0,0,0,1,0,0,0,1],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],
+    },
+  },
+
+  // 5. IDAC A/N 31
+  {
+    id: 'idac_an',
+    title: 'IDAC A/N (31)',
+    dutyCode: 'IDAC',
+    shiftLabel: 'Afternoon',
+    totalRequiredMonth: 31,
+    data: {
+      Mechanics: [0,1,0,1,0,1,1,1,1,0,0,0,0,0,1,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,0],
+      Avionics:  [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,1,0,0,1,1],
+      GCS:       [0,0,0,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0],
+      Admin:     [0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 6. IDAC NT 62 (2 per night)
+  {
+    id: 'idac_nt',
+    title: 'IDAC NT (62)',
+    dutyCode: 'IDAC',
+    shiftLabel: 'Night',
+    totalRequiredMonth: 62,
+    data: {
+      Mechanics: [0,1,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1],
+      Avionics:  [0,0,1,0,0,1,1,1,0,0,0,0,0,1,1,1,1,0,0,0,1,1,0,1,1,1,1,0,0,1,1],
+      GCS:       [1,1,0,1,1,0,0,0,0,1,1,1,1,0,1,1,0,1,1,1,0,0,1,1,0,0,1,1,1,0,0],
+      Admin:     [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 7. AIRPORT DUTY (93) - Regular 3 daily (1 Avi, 1 Mech, 1 GCS)
+  {
+    id: 'airport_duty',
+    title: 'AIRPORT DUTY (93)',
+    dutyCode: 'AIRPORT',
+    totalRequiredMonth: 93,
+    data: {
+      Mechanics: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      Avionics:  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      GCS:       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 8. HALISHAHAR DUTY (14-20 AUG / 7) - 14-20 Aug Avi Flight
+  {
+    id: 'halishahar_duty',
+    title: 'HALISHAHAR DUTY (14-20 AUG)',
+    dutyCode: 'HALISHAHAR',
+    totalRequiredMonth: 7,
+    data: {
+      Mechanics: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      Avionics:  [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+      GCS:       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+];
+
+const MATRIX_STORAGE_KEY = 'baf_official_duty_matrix_v3';
+
+export function getStoredDutyMatrix(): DutyRatioTable[] {
+  try {
+    const raw = localStorage.getItem(MATRIX_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const existingIds = new Set(parsed.map((t: DutyRatioTable) => t.id));
+        const missing = INITIAL_OFFICIAL_DUTY_MATRIX.filter((t) => !existingIds.has(t.id));
+        if (missing.length > 0) {
+          return [...parsed, ...missing];
+        }
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load stored duty matrix:', e);
+  }
+  return INITIAL_OFFICIAL_DUTY_MATRIX;
+}
+
+export function saveDutyMatrix(matrix: DutyRatioTable[]) {
+  try {
+    localStorage.setItem(MATRIX_STORAGE_KEY, JSON.stringify(matrix));
+  } catch (e) {
+    console.error('Failed to save duty matrix:', e);
+  }
+}
+
+export function resetDutyMatrixToDefault(): DutyRatioTable[] {
+  try {
+    localStorage.removeItem(MATRIX_STORAGE_KEY);
+  } catch (e) {
+    console.error('Failed to reset matrix:', e);
+  }
+  return INITIAL_OFFICIAL_DUTY_MATRIX;
+}
+
+/**
+ * Calculates exact FlightDutyQuota[] for any given date string (e.g., '2026-08-12')
+ * by extracting the day number (1..31) and summing quotas across all duty tables.
+ */
+export function getDailyQuotasFromMatrix(dateStr: string): FlightDutyQuota[] {
+  const matrix = getStoredDutyMatrix();
+  const dayNum = parseInt(dateStr.split('-')[2] || '1', 10);
+  const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
+
+  const flightQuotaMap: Record<FlightName, Partial<Record<DutyCategoryCode, number>>> = {
+    Avionics: {},
+    Mechanics: {},
+    GCS: {},
+    Admin: {},
+  };
+
+  const flights: FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
+
+  matrix.forEach((table) => {
+    flights.forEach((fl) => {
+      const val = table.data[fl]?.[dayIndex] || 0;
+      flightQuotaMap[fl][table.dutyCode] = (flightQuotaMap[fl][table.dutyCode] || 0) + val;
+    });
+  });
+
+  const result: FlightDutyQuota[] = [];
+  flights.forEach((fl) => {
+    Object.entries(flightQuotaMap[fl]).forEach(([dCode, count]) => {
+      if (count && count > 0) {
+        result.push({
+          flight: fl,
+          dutyCode: dCode as DutyCategoryCode,
+          requiredCount: count,
+        });
+      }
+    });
+  });
+
+  return result;
+}
+
+/**
+ * Returns available IDAC shifts ('Morning', 'Afternoon', 'Night') for a given date and flight,
+ * based on whether IDAC quota > 0 for that shift in the Official Duty Ratio Matrix.
+ */
+export function getIdacShiftsForDateAndFlight(dateStr: string, flight?: FlightName): IDAShift[] {
+  if (!dateStr) return ['Morning', 'Afternoon', 'Night'];
+
+  const parts = dateStr.split('-');
+  const dayNum = parseInt(parts[2] || '1', 10);
+  if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+    return ['Morning', 'Afternoon', 'Night'];
+  }
+  const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
+
+  const matrix = getStoredDutyMatrix();
+
+  const morTable = matrix.find((t) => t.id === 'idac_mor' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Morning'));
+  const anTable = matrix.find((t) => t.id === 'idac_an' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Afternoon'));
+  const ntTable = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
+
+  const flightsToCheck: FlightName[] = flight && flight !== ('All' as any)
+    ? [flight]
+    : ['Mechanics', 'Avionics', 'GCS', 'Admin'];
+
+  let morQuota = 0;
+  let anQuota = 0;
+  let ntQuota = 0;
+
+  flightsToCheck.forEach((f) => {
+    if (morTable?.data[f]) morQuota += morTable.data[f][dayIndex] || 0;
+    if (anTable?.data[f]) anQuota += anTable.data[f][dayIndex] || 0;
+    if (ntTable?.data[f]) ntQuota += ntTable.data[f][dayIndex] || 0;
+  });
+
+  const availableShifts: IDAShift[] = [];
+  if (morQuota > 0) availableShifts.push('Morning');
+  if (anQuota > 0) availableShifts.push('Afternoon');
+  if (ntQuota > 0) availableShifts.push('Night');
+
+  if (availableShifts.length === 0) {
+    return ['Morning', 'Afternoon', 'Night'];
+  }
+
+  return availableShifts;
+}
+
+/**
+ * Returns the exact scheduled quota for a given date, flight, duty code, and optional shift.
+ */
+export function getFlightDutyQuotaForDate(
+  dateStr: string,
+  flight: FlightName,
+  dutyCode: DutyCategoryCode,
+  shiftLabel?: string
+): number {
+  if (!dateStr || !flight) return 0;
+  const parts = dateStr.split('-');
+  const dayNum = parseInt(parts[2] || '1', 10);
+  if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return 0;
+  const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
+
+  const matrix = getStoredDutyMatrix();
+
+  let table: DutyRatioTable | undefined;
+  if (dutyCode === 'IDAC' || dutyCode === 'IDA') {
+    if (shiftLabel === 'Morning') {
+      table = matrix.find((t) => t.id === 'idac_mor' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Morning'));
+    } else if (shiftLabel === 'Afternoon') {
+      table = matrix.find((t) => t.id === 'idac_an' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Afternoon'));
+    } else if (shiftLabel === 'Night') {
+      table = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
+    } else {
+      table = matrix.find((t) => t.dutyCode === 'IDAC');
+    }
+  } else if (dutyCode === 'GD') {
+    table = matrix.find((t) => t.id === 'security_duty' || t.dutyCode === 'GD');
+  } else if (dutyCode === 'NTF') {
+    table = matrix.find((t) => t.id === 'nazirpara_tf' || t.dutyCode === 'NTF');
+  } else if (dutyCode === 'BTF') {
+    table = matrix.find((t) => t.id === 'base_tf' || t.dutyCode === 'BTF');
+  } else if (dutyCode === 'HALISHAHAR') {
+    table = matrix.find((t) => t.id === 'halishahar_duty' || t.dutyCode === 'HALISHAHAR');
+  } else if (dutyCode === 'AIRPORT') {
+    table = matrix.find((t) => t.id === 'airport_duty' || t.dutyCode === 'AIRPORT');
+  } else {
+    table = matrix.find((t) => t.dutyCode === dutyCode);
+  }
+
+  if (!table) return 0;
+  return table.data[flight]?.[dayIndex] || 0;
+}
