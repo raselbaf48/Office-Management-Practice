@@ -132,6 +132,38 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
   },
 ];
 
+export function parseDayNumber(dateStr: string): number {
+  if (!dateStr) return 1;
+  const trimmed = dateStr.trim();
+  // Handle ISO or YYYY-MM-DD
+  if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    if (parts.length >= 3) {
+      const d = parseInt(parts[2].slice(0, 2), 10);
+      if (!isNaN(d) && d >= 1 && d <= 31) return d;
+    }
+  }
+  // Handle MM/DD/YYYY or DD/MM/YYYY
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    if (parts.length >= 3) {
+      // In MM/DD/YYYY, parts[1] is the day
+      const d1 = parseInt(parts[1], 10);
+      if (!isNaN(d1) && d1 >= 1 && d1 <= 31) return d1;
+      // In DD/MM/YYYY, parts[0] is the day
+      const d0 = parseInt(parts[0], 10);
+      if (!isNaN(d0) && d0 >= 1 && d0 <= 31) return d0;
+      const d2 = parseInt(parts[2], 10);
+      if (!isNaN(d2) && d2 >= 1 && d2 <= 31) return d2;
+    }
+  }
+  const dt = new Date(trimmed);
+  if (!isNaN(dt.getTime())) {
+    return dt.getDate();
+  }
+  return 1;
+}
+
 const MATRIX_STORAGE_KEY = 'baf_official_duty_matrix_v3';
 
 export function getStoredDutyMatrix(): DutyRatioTable[] {
@@ -157,6 +189,9 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
 export function saveDutyMatrix(matrix: DutyRatioTable[]) {
   try {
     localStorage.setItem(MATRIX_STORAGE_KEY, JSON.stringify(matrix));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated', { detail: { matrix } }));
+    }
   } catch (e) {
     console.error('Failed to save duty matrix:', e);
   }
@@ -165,6 +200,9 @@ export function saveDutyMatrix(matrix: DutyRatioTable[]) {
 export function resetDutyMatrixToDefault(): DutyRatioTable[] {
   try {
     localStorage.removeItem(MATRIX_STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated', { detail: { matrix: INITIAL_OFFICIAL_DUTY_MATRIX } }));
+    }
   } catch (e) {
     console.error('Failed to reset matrix:', e);
   }
@@ -177,7 +215,7 @@ export function resetDutyMatrixToDefault(): DutyRatioTable[] {
  */
 export function getDailyQuotasFromMatrix(dateStr: string): FlightDutyQuota[] {
   const matrix = getStoredDutyMatrix();
-  const dayNum = parseInt(dateStr.split('-')[2] || '1', 10);
+  const dayNum = parseDayNumber(dateStr);
   const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
 
   const flightQuotaMap: Record<FlightName, Partial<Record<DutyCategoryCode, number>>> = {
@@ -214,16 +252,12 @@ export function getDailyQuotasFromMatrix(dateStr: string): FlightDutyQuota[] {
 
 /**
  * Returns available IDAC shifts ('Morning', 'Afternoon', 'Night') for a given date and flight,
- * based on whether IDAC quota > 0 for that shift in the Official Duty Ratio Matrix.
+ * strictly based on whether IDAC quota > 0 for that specific shift in the Official Duty Ratio Matrix.
  */
 export function getIdacShiftsForDateAndFlight(dateStr: string, flight?: FlightName): IDAShift[] {
   if (!dateStr) return ['Morning', 'Afternoon', 'Night'];
 
-  const parts = dateStr.split('-');
-  const dayNum = parseInt(parts[2] || '1', 10);
-  if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
-    return ['Morning', 'Afternoon', 'Night'];
-  }
+  const dayNum = parseDayNumber(dateStr);
   const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
 
   const matrix = getStoredDutyMatrix();
@@ -232,7 +266,8 @@ export function getIdacShiftsForDateAndFlight(dateStr: string, flight?: FlightNa
   const anTable = matrix.find((t) => t.id === 'idac_an' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Afternoon'));
   const ntTable = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
 
-  const flightsToCheck: FlightName[] = flight && flight !== ('All' as any)
+  const isSpecificFlight = flight && flight !== ('All' as any);
+  const flightsToCheck: FlightName[] = isSpecificFlight
     ? [flight]
     : ['Mechanics', 'Avionics', 'GCS', 'Admin'];
 
@@ -251,6 +286,24 @@ export function getIdacShiftsForDateAndFlight(dateStr: string, flight?: FlightNa
   if (anQuota > 0) availableShifts.push('Afternoon');
   if (ntQuota > 0) availableShifts.push('Night');
 
+  // If a specific flight is chosen and it has positive IDAC quota for some shifts, return only those shifts!
+  if (availableShifts.length > 0) {
+    return availableShifts;
+  }
+
+  // If the specific flight has 0 IDAC quota configured for this day, check if other flights have quotas
+  if (isSpecificFlight) {
+    let anyMor = 0, anyAn = 0, anyNt = 0;
+    (['Mechanics', 'Avionics', 'GCS', 'Admin'] as FlightName[]).forEach((f) => {
+      if (morTable?.data[f]) anyMor += morTable.data[f][dayIndex] || 0;
+      if (anTable?.data[f]) anyAn += anTable.data[f][dayIndex] || 0;
+      if (ntTable?.data[f]) anyNt += ntTable.data[f][dayIndex] || 0;
+    });
+    if (anyMor > 0) availableShifts.push('Morning');
+    if (anyAn > 0) availableShifts.push('Afternoon');
+    if (anyNt > 0) availableShifts.push('Night');
+  }
+
   if (availableShifts.length === 0) {
     return ['Morning', 'Afternoon', 'Night'];
   }
@@ -268,9 +321,7 @@ export function getFlightDutyQuotaForDate(
   shiftLabel?: string
 ): number {
   if (!dateStr || !flight) return 0;
-  const parts = dateStr.split('-');
-  const dayNum = parseInt(parts[2] || '1', 10);
-  if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return 0;
+  const dayNum = parseDayNumber(dateStr);
   const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
 
   const matrix = getStoredDutyMatrix();

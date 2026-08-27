@@ -38,8 +38,39 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   const today = new Date();
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth() + 1); // 1-12
+  const [isFullYearView, setIsFullYearView] = useState<boolean>(false);
+  const [onlyHolidaysFilter, setOnlyHolidaysFilter] = useState<boolean>(false);
+  const [customHolidays, setCustomHolidays] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('baf_custom_holidays') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   const [assignments, setAssignments] = useState<DutyAssignment[]>([]);
+  const [allYearAssignments, setAllYearAssignments] = useState<DutyAssignment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Toggle Custom Holiday
+  const handleToggleHoliday = (dateStr: string) => {
+    setCustomHolidays((prev) => {
+      const updated = prev.includes(dateStr)
+        ? prev.filter((d) => d !== dateStr)
+        : [...prev, dateStr];
+      try {
+        localStorage.setItem('baf_custom_holidays', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save custom holidays to localStorage:', err);
+      }
+      return updated;
+    });
+  };
+
+  const isHolidayDate = (dateStr: string, dObj: Date) => {
+    const isWeekend = dObj.getDay() === 5 || dObj.getDay() === 6; // Friday / Saturday in BD
+    return isWeekend || customHolidays.includes(dateStr);
+  };
 
   // View Mode: 'DUTY_MATRIX' (Master BAF Duty Register format) or 'AIRMEN_GRID' (Airman View)
   const [viewMode, setViewMode] = useState<'DUTY_MATRIX' | 'AIRMEN_GRID'>('DUTY_MATRIX');
@@ -101,6 +132,30 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   const [showRatioModal, setShowRatioModal] = useState<boolean>(false);
   const [ratioRefreshTrigger, setRatioRefreshTrigger] = useState<number>(0);
   const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
+
+  // Listen to global duty ratio updates across views
+  useEffect(() => {
+    const handleRatioUpdated = () => {
+      setRatioRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('baf_duty_ratio_updated', handleRatioUpdated);
+    return () => {
+      window.removeEventListener('baf_duty_ratio_updated', handleRatioUpdated);
+    };
+  }, []);
+
+  // Keep bulkIdaShift synchronized with available shifts for selected date and flight
+  useEffect(() => {
+    if (bulkDutyCode === 'IDAC' || bulkDutyCode === 'IDA') {
+      const available = getIdacShiftsForDateAndFlight(
+        bulkFromDate,
+        bulkFlight !== 'All' ? bulkFlight : undefined
+      );
+      if (available.length > 0 && !available.includes(bulkIdaShift)) {
+        setBulkIdaShift(available[0]);
+      }
+    }
+  }, [bulkFromDate, bulkFlight, bulkDutyCode, ratioRefreshTrigger]);
 
   // Cell Edit / Reassign Modal for Duty Matrix Sheet View
   const [cellEditModal, setCellEditModal] = useState<{
@@ -465,10 +520,19 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   const fetchRoster = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/roster?month=${monthKey}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAssignments(data.assignments || []);
+      if (isFullYearView) {
+        const res = await fetch(`/api/roster/year?year=${currentYear}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAllYearAssignments(data.assignments || []);
+          setAssignments(data.assignments || []);
+        }
+      } else {
+        const res = await fetch(`/api/roster?month=${monthKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAssignments(data.assignments || []);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch roster:', err);
@@ -483,6 +547,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
         const res = await fetch('/api/roster/clear-all', { method: 'POST' });
         if (res.ok) {
           setAssignments([]);
+          setAllYearAssignments([]);
           fetchRoster();
           alert('All duty database records have been erased successfully.');
         }
@@ -501,7 +566,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
     return () => {
       window.removeEventListener('baf_state_updated', handleGlobalUpdate);
     };
-  }, [monthKey]);
+  }, [monthKey, currentYear, isFullYearView]);
 
   // Map assignments by key "airmanId_YYYY-MM-DD"
   const assignmentMap = new Map<string, DutyAssignment>();
@@ -510,7 +575,12 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   });
 
   // Calculate duty stats & conflicts
-  const statsList = calculateDutyStats(airmen, assignments, currentYear, currentMonth);
+  const statsList = calculateDutyStats(
+    airmen,
+    assignments,
+    currentYear,
+    isFullYearView ? undefined : currentMonth
+  );
   const statsMap = new Map(statsList.map((s) => [s.airmanId, s]));
   const alerts = detectConflicts(airmen, assignments);
 
@@ -697,13 +767,13 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Month Selector */}
+      {/* Top Banner & Month/Year Selector */}
       <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-2">
             <span>Monthly Duty Register & Auto-Counter</span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-              1st to {daysCount}th
+              {isFullYearView ? `Full Year ${currentYear}` : `1st to ${daysCount}th`}
             </span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -711,32 +781,105 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
           </p>
         </div>
 
-        {/* Month Navigator */}
-        <div className="flex items-center space-x-3">
+        {/* Month / Year & Holiday Controls */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Year Selector */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span className="text-[11px] font-bold text-slate-400 mr-1.5 uppercase">Year:</span>
+            <select
+              value={currentYear}
+              onChange={(e) => setCurrentYear(parseInt(e.target.value, 10))}
+              className="bg-transparent font-bold text-xs text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
+            >
+              {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+                <option key={y} value={y} className="bg-white dark:bg-slate-900">
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Month Selector */}
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
             <button
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+              disabled={isFullYearView}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isFullYearView
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+              title="Previous Month"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="px-4 font-bold text-sm text-slate-900 dark:text-slate-100 min-w-36 text-center">
-              {monthName}
-            </span>
+            <select
+              value={isFullYearView ? 'FULL_YEAR' : currentMonth}
+              onChange={(e) => {
+                if (e.target.value === 'FULL_YEAR') {
+                  setIsFullYearView(true);
+                } else {
+                  setIsFullYearView(false);
+                  setCurrentMonth(parseInt(e.target.value, 10));
+                }
+              }}
+              className="px-2 font-bold text-xs text-slate-900 dark:text-slate-100 bg-transparent outline-none cursor-pointer text-center"
+            >
+              {[
+                { m: 1, name: '01 - January' },
+                { m: 2, name: '02 - February' },
+                { m: 3, name: '03 - March' },
+                { m: 4, name: '04 - April' },
+                { m: 5, name: '05 - May' },
+                { m: 6, name: '06 - June' },
+                { m: 7, name: '07 - July' },
+                { m: 8, name: '08 - August' },
+                { m: 9, name: '09 - September' },
+                { m: 10, name: '10 - October' },
+                { m: 11, name: '11 - November' },
+                { m: 12, name: '12 - December' },
+              ].map((opt) => (
+                <option key={opt.m} value={opt.m} className="bg-white dark:bg-slate-900">
+                  {opt.name}
+                </option>
+              ))}
+              <option value="FULL_YEAR" className="bg-emerald-50 dark:bg-emerald-950 font-bold text-emerald-800 dark:text-emerald-300">
+                ⭐ Full Year (Jan - Dec)
+              </option>
+            </select>
 
             <button
               onClick={handleNextMonth}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+              disabled={isFullYearView}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isFullYearView
+                  ? 'opacity-30 cursor-not-allowed'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+              title="Next Month"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
+          {/* Holiday Filter Toggle */}
+          <button
+            onClick={() => setOnlyHolidaysFilter(!onlyHolidaysFilter)}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+              onlyHolidaysFilter
+                ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-100'
+            }`}
+            title="Filter to show only Friday/Saturday and designated official holidays"
+          >
+            <span>{onlyHolidaysFilter ? '🏖️ Holidays Only' : '📅 All Days'}</span>
+          </button>
+
           <button
             onClick={fetchRoster}
             className="p-2 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-            title="Refresh Monthly Roster"
+            title="Refresh Roster"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -778,14 +921,14 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
         <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs animate-fadeIn">
           <div className="flex items-center space-x-2 text-xs font-bold text-amber-900 dark:text-amber-200">
             <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>সর্বশেষ এন্ট্রি / Last Action: <span className="underline">{lastUndoAction.label}</span></span>
+            <span>Last Entry / Last Action: <span className="underline">{lastUndoAction.label}</span></span>
           </div>
           <button
             onClick={handleUndoLastAction}
             className="px-3.5 py-1.5 text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-700 active:scale-95 rounded-lg shadow-xs transition-all flex items-center justify-center space-x-1.5 shrink-0"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>↩️ Undo / রিভার্ট করুন</span>
+            <span>↩️ Undo / Revert</span>
           </button>
         </div>
       )}
@@ -800,7 +943,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                 Smart Duty Conflict Rule Alerts ({alerts.length} Warnings)
               </h3>
               <p className="text-xs text-amber-800 dark:text-amber-400 mt-0.5">
-                System detected consecutive heavy security duties or shift overlaps in current monthly schedule.
+                System detected consecutive heavy security duties or shift overlaps in current schedule.
               </p>
             </div>
           </div>
@@ -863,7 +1006,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder={viewMode === 'DUTY_MATRIX' ? 'Search Short Code or Airman...' : 'Search BD No or Name...'}
+            placeholder={viewMode === 'DUTY_MATRIX' ? 'Search Short Code or Airman...' : 'Search Name or BD No...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
@@ -912,7 +1055,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
         {loading ? (
           <div className="p-16 text-center text-slate-400">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-500" />
-            <p className="text-xs">Loading Monthly Roster Matrix...</p>
+            <p className="text-xs">Loading Roster Matrix...</p>
           </div>
         ) : viewMode === 'DUTY_MATRIX' ? (
           /* BAF MASTER DUTY REGISTER SHEET VIEW (Matching PDF Format) */
@@ -924,7 +1067,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                   Duty Register : 155 UASU BAF
                 </h2>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  MONTH: <span className="font-bold text-white uppercase">{monthName}</span> | YEAR: <span className="font-bold text-white">{currentYear}</span> | Period: 01 {monthName.substring(0, 3)} {String(currentYear).slice(2)} To {daysCount < 10 ? '0' + daysCount : daysCount} {monthName.substring(0, 3)} {String(currentYear).slice(2)}
+                  MONTH: <span className="font-bold text-white uppercase">{isFullYearView ? 'FULL YEAR (JAN - DEC)' : monthName}</span> | YEAR: <span className="font-bold text-white">{currentYear}</span> | Period: {isFullYearView ? `01 Jan ${currentYear} To 31 Dec ${currentYear}` : `01 ${monthName.substring(0, 3)} ${String(currentYear).slice(2)} To ${daysCount < 10 ? '0' + daysCount : daysCount} ${monthName.substring(0, 3)} ${String(currentYear).slice(2)}`}
                 </p>
               </div>
               <div className="text-right text-[10px] text-slate-400 font-mono hidden sm:block">
@@ -943,29 +1086,49 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                     Flight
                   </th>
 
-                  {daysArray.map((day) => {
-                    const dObj = new Date(currentYear, currentMonth - 1, day);
-                    const isWeekend = dObj.getDay() === 5 || dObj.getDay() === 6;
+                  {daysArray
+                    .filter((day) => {
+                      if (!onlyHolidaysFilter) return true;
+                      const dObj = new Date(currentYear, currentMonth - 1, day);
+                      const dayStr = day < 10 ? `0${day}` : `${day}`;
+                      const dateStr = `${monthKey}-${dayStr}`;
+                      return isHolidayDate(dateStr, dObj);
+                    })
+                    .map((day) => {
+                      const dObj = new Date(currentYear, currentMonth - 1, day);
+                      const dayStr = day < 10 ? `0${day}` : `${day}`;
+                      const dateStr = `${monthKey}-${dayStr}`;
+                      const isHoliday = isHolidayDate(dateStr, dObj);
 
-                    return (
-                      <th
-                        key={day}
-                        className={`py-2 px-1 text-center min-w-9 border-r border-slate-800 font-mono text-[10px] ${
-                          isWeekend ? 'bg-slate-800 text-amber-400' : ''
-                        }`}
-                      >
-                        <div>{day < 10 ? `0${day}` : day}</div>
-                        <div className="text-[9px] text-slate-400 font-sans">
-                          {dObj.toLocaleDateString('en-US', { weekday: 'narrow' })}
-                        </div>
-                      </th>
-                    );
-                  })}
+                      return (
+                        <th
+                          key={day}
+                          className={`py-2 px-1 text-center min-w-9 border-r border-slate-800 font-mono text-[10px] ${
+                            isHoliday ? 'bg-amber-950/80 text-amber-300 border-amber-900' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-center space-x-0.5">
+                            <span>{day < 10 ? `0${day}` : day}</span>
+                            {isHoliday && <span className="text-[8px] text-amber-400 font-black">★</span>}
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-sans">
+                            {dObj.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                          </div>
+                        </th>
+                      );
+                    })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-sans">
                 {(() => {
                   const activeFlights = flightFilter === 'All' ? flightsList : [flightFilter];
+                  const visibleDays = daysArray.filter((day) => {
+                    if (!onlyHolidaysFilter) return true;
+                    const dObj = new Date(currentYear, currentMonth - 1, day);
+                    const dayStr = day < 10 ? `0${day}` : `${day}`;
+                    const dateStr = `${monthKey}-${dayStr}`;
+                    return isHolidayDate(dateStr, dObj);
+                  });
 
                   return bafDutyCategories.map((cat) => {
                     return activeFlights.map((fl, flIdx) => {
@@ -976,7 +1139,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                           key={`${cat.key}-${fl}`}
                           className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors group"
                         >
-                          {/* Duty Name Column (Rowspan across all active flights for this duty) */}
+                          {/* Duty Name Column */}
                           {flIdx === 0 && (
                             <td
                               rowSpan={activeFlights.length}
@@ -1005,8 +1168,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                             </span>
                           </td>
 
-                          {/* Date Columns 1 to N */}
-                          {daysArray.map((day) => {
+                          {/* Date Columns for visible days */}
+                          {visibleDays.map((day) => {
                             const dayStr = day < 10 ? `0${day}` : `${day}`;
                             const dateStr = `${monthKey}-${dayStr}`;
                             const quota = getFlightDutyQuotaForDate(dateStr, fl as FlightName, cat.dutyCode, cat.idaShift);
@@ -1022,6 +1185,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                               }
                               return res.dutyCode === cat.dutyCode;
                             });
+
+                            const remainingSlots = Math.max(0, quota - assigned.length);
 
                             return (
                               <td
@@ -1058,26 +1223,52 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                         </button>
                                       );
                                     })}
+                                    {remainingSlots > 0 && Array.from({ length: remainingSlots }).map((_, sIdx) => (
+                                      <button
+                                        key={`slot-${sIdx}`}
+                                        onClick={() => {
+                                          if (role === 'ADMIN') {
+                                            setCellEditModal({
+                                              flight: fl,
+                                              dutyCode: cat.dutyCode,
+                                              idaShift: cat.idaShift,
+                                              dutyLabel: `${cat.label}${cat.idaShift ? ` (${cat.idaShift})` : ''}`,
+                                              date: dateStr,
+                                              assignedAirman: null,
+                                            });
+                                          }
+                                        }}
+                                        title={`${fl} flight has ${quota} duty quota on ${dateStr}. Click to detail another airman.`}
+                                        className="px-1 py-0.5 rounded text-[8px] font-bold border border-dashed border-emerald-400 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/40 hover:bg-emerald-100 transition-all cursor-pointer"
+                                      >
+                                        + Slot
+                                      </button>
+                                    ))}
                                   </div>
                                 ) : quota > 0 ? (
-                                  <button
-                                    onClick={() => {
-                                      if (role === 'ADMIN') {
-                                        setCellEditModal({
-                                          flight: fl,
-                                          dutyCode: cat.dutyCode,
-                                          idaShift: cat.idaShift,
-                                          dutyLabel: `${cat.label}${cat.idaShift ? ` (${cat.idaShift})` : ''}`,
-                                          date: dateStr,
-                                          assignedAirman: null,
-                                        });
-                                      }
-                                    }}
-                                    title={`${fl} flight has ${quota} duty quota on ${dateStr}. Click to detail airman.`}
-                                    className="px-1.5 py-0.5 rounded text-[9px] font-bold border border-dashed border-emerald-400 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all cursor-pointer"
-                                  >
-                                    + Slot
-                                  </button>
+                                  <div className="flex flex-col items-center justify-center gap-0.5">
+                                    {Array.from({ length: quota }).map((_, sIdx) => (
+                                      <button
+                                        key={`empty-slot-${sIdx}`}
+                                        onClick={() => {
+                                          if (role === 'ADMIN') {
+                                            setCellEditModal({
+                                              flight: fl,
+                                              dutyCode: cat.dutyCode,
+                                              idaShift: cat.idaShift,
+                                              dutyLabel: `${cat.label}${cat.idaShift ? ` (${cat.idaShift})` : ''}`,
+                                              date: dateStr,
+                                              assignedAirman: null,
+                                            });
+                                          }
+                                        }}
+                                        title={`${fl} flight has ${quota} duty quota on ${dateStr}. Click to detail airman.`}
+                                        className="px-1.5 py-0.5 rounded text-[9px] font-bold border border-dashed border-emerald-400 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all cursor-pointer"
+                                      >
+                                        + Slot {quota > 1 ? `${sIdx + 1}` : ''}
+                                      </button>
+                                    ))}
+                                  </div>
                                 ) : (
                                   <button
                                     onClick={() => {
@@ -1110,8 +1301,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
             </table>
           </div>
         ) : (
-          /* AIRMEN GRID VIEW */
-          <div className="overflow-x-auto max-h-[600px]">
+          /* AIRMEN GRID VIEW (Personal Roster - BD No removed, IDAC Morning/Afternoon/Night separate counters) */
+          <div className="overflow-x-auto max-h-[620px]">
             <table className="w-full text-left border-collapse text-xs">
               <thead className="sticky top-0 z-20 bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider">
                 <tr>
@@ -1119,55 +1310,75 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                   <th className="py-3 px-3 w-10 sticky left-0 z-30 bg-slate-900 border-r border-slate-800">
                     Ser
                   </th>
-                  <th className="py-3 px-3 min-w-32 sticky left-10 z-30 bg-slate-900 border-r border-slate-800">
+                  <th className="py-3 px-3 min-w-40 sticky left-10 z-30 bg-slate-900 border-r border-slate-800">
                     Rank & Name
                   </th>
-                  <th className="py-3 px-3 w-24 sticky left-42 z-30 bg-slate-900 border-r border-slate-800">
-                    BD No
-                  </th>
 
-                  {/* Days columns 1 to N */}
-                  {daysArray.map((day) => {
-                    const dayStr = day < 10 ? `0${day}` : `${day}`;
-                    const dateStr = `${monthKey}-${dayStr}`;
-                    const dObj = new Date(currentYear, currentMonth - 1, day);
-                    const isWeekend = dObj.getDay() === 5 || dObj.getDay() === 6; // Fri / Sat in BD
+                  {/* Days columns */}
+                  {daysArray
+                    .filter((day) => {
+                      if (!onlyHolidaysFilter) return true;
+                      const dObj = new Date(currentYear, currentMonth - 1, day);
+                      const dayStr = day < 10 ? `0${day}` : `${day}`;
+                      const dateStr = `${monthKey}-${dayStr}`;
+                      return isHolidayDate(dateStr, dObj);
+                    })
+                    .map((day) => {
+                      const dayStr = day < 10 ? `0${day}` : `${day}`;
+                      const dateStr = `${monthKey}-${dayStr}`;
+                      const dObj = new Date(currentYear, currentMonth - 1, day);
+                      const isHoliday = isHolidayDate(dateStr, dObj);
 
-                    return (
-                      <th
-                        key={day}
-                        className={`py-2 px-1 text-center w-9 border-r border-slate-800 font-mono text-[10px] ${
-                          isWeekend ? 'bg-slate-800 text-amber-400' : ''
-                        }`}
-                      >
-                        <div>{day}</div>
-                        <div className="text-[9px] text-slate-400 font-sans">
-                          {dObj.toLocaleDateString('en-US', { weekday: 'narrow' })}
-                        </div>
-                      </th>
-                    );
-                  })}
+                      return (
+                        <th
+                          key={day}
+                          className={`py-2 px-1 text-center w-9 border-r border-slate-800 font-mono text-[10px] ${
+                            isHoliday ? 'bg-amber-950 text-amber-300 border-amber-900' : ''
+                          }`}
+                        >
+                          <div
+                            onClick={() => handleToggleHoliday(dateStr)}
+                            className="cursor-pointer hover:text-amber-400 transition-colors"
+                            title={`Date: ${dateStr}. Click to toggle Custom Holiday.`}
+                          >
+                            <div className="flex items-center justify-center space-x-0.5">
+                              <span>{day}</span>
+                              {isHoliday && <span className="text-[8px] text-amber-400">★</span>}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-sans">
+                              {dObj.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                            </div>
+                          </div>
+                        </th>
+                      );
+                    })}
 
                   {/* Auto Counter summary sticky right columns */}
-                  <th className="py-3 px-1.5 text-center bg-red-950 text-red-300 w-9 border-l border-slate-800 font-bold" title="Base Security Duty">
+                  <th className="py-3 px-1.5 text-center bg-red-950 text-red-300 w-9 border-l border-slate-800 font-bold" title="Base Security Duty (GD)">
                     GD
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-amber-950 text-amber-300 w-9 border-l border-slate-800 font-bold" title="Base Taskforce Duty">
+                  <th className="py-3 px-1.5 text-center bg-amber-950 text-amber-300 w-9 border-l border-slate-800 font-bold" title="Base Taskforce Duty (BTF)">
                     BTF
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-orange-950 text-orange-300 w-9 border-l border-slate-800 font-bold" title="Najirpara Taskforce Duty">
+                  <th className="py-3 px-1.5 text-center bg-orange-950 text-orange-300 w-9 border-l border-slate-800 font-bold" title="Najirpara Taskforce Duty (NTF)">
                     NTF
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-indigo-950 text-indigo-300 w-9 border-l border-slate-800 font-bold" title="Halishahar Taskforce Duty">
+                  <th className="py-3 px-1.5 text-center bg-indigo-950 text-indigo-300 w-9 border-l border-slate-800 font-bold" title="Halishahar Taskforce Duty (HAL)">
                     HAL
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-blue-950 text-blue-300 w-9 border-l border-slate-800 font-bold" title="Airport Duty">
+                  <th className="py-3 px-1.5 text-center bg-blue-950 text-blue-300 w-9 border-l border-slate-800 font-bold" title="Airport Duty (APT)">
                     APT
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-teal-950 text-teal-300 w-9 border-l border-slate-800 font-bold" title="IDAC Duty">
-                    IDAC
+                  <th className="py-3 px-1.5 text-center bg-sky-950 text-sky-300 w-9 border-l border-slate-800 font-bold" title="IDAC Morning Duty">
+                    I-M
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-rose-950 text-rose-300 w-9 border-l border-slate-800 font-bold" title="Bake N Bite Duty">
+                  <th className="py-3 px-1.5 text-center bg-blue-950 text-blue-300 w-9 border-l border-slate-800 font-bold" title="IDAC Afternoon Duty">
+                    I-A
+                  </th>
+                  <th className="py-3 px-1.5 text-center bg-indigo-950 text-indigo-300 w-9 border-l border-slate-800 font-bold" title="IDAC Night Duty">
+                    I-N
+                  </th>
+                  <th className="py-3 px-1.5 text-center bg-orange-950 text-orange-300 w-9 border-l border-slate-800 font-bold" title="Bake N Bite Duty">
                     BnB
                   </th>
                   <th className="py-3 px-2 text-center bg-emerald-950 text-emerald-300 w-11 border-l border-slate-800 font-bold" title="Total Active Duties">
@@ -1178,6 +1389,13 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredAirmen.map((airman) => {
                   const stat = statsMap.get(airman.id);
+                  const visibleDays = daysArray.filter((day) => {
+                    if (!onlyHolidaysFilter) return true;
+                    const dObj = new Date(currentYear, currentMonth - 1, day);
+                    const dayStr = day < 10 ? `0${day}` : `${day}`;
+                    const dateStr = `${monthKey}-${dayStr}`;
+                    return isHolidayDate(dateStr, dObj);
+                  });
 
                   return (
                     <tr
@@ -1197,7 +1415,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                             </span>
                             <span
                               onClick={() => onViewProfile(airman)}
-                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer truncate max-w-28"
+                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer truncate max-w-36"
                             >
                               {airman.name}
                             </span>
@@ -1217,12 +1435,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                         </div>
                       </td>
 
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-700 dark:text-slate-300 sticky left-42 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800">
-                        {airman.bdNo}
-                      </td>
-
-                      {/* Day cells 1 to N */}
-                      {daysArray.map((day) => {
+                      {/* Day cells */}
+                      {visibleDays.map((day) => {
                         const dayStr = day < 10 ? `0${day}` : `${day}`;
                         const dateStr = `${monthKey}-${dayStr}`;
                         const ass = resolveAirmanDutyForDate(airman.id, dateStr, assignmentMap);
@@ -1266,10 +1480,16 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       <td className="py-2.5 px-1.5 text-center font-bold font-mono text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 border-l border-slate-200 dark:border-slate-800">
                         {stat?.totalAirport || 0}
                       </td>
-                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/20 border-l border-slate-200 dark:border-slate-800">
-                        {stat?.totalIDAC || 0}
+                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20 border-l border-slate-200 dark:border-slate-800" title="IDAC Morning">
+                        {stat?.totalIDACMorning || 0}
                       </td>
-                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/20 border-l border-slate-200 dark:border-slate-800">
+                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 border-l border-slate-200 dark:border-slate-800" title="IDAC Afternoon">
+                        {stat?.totalIDACAfternoon || 0}
+                      </td>
+                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 border-l border-slate-200 dark:border-slate-800" title="IDAC Night">
+                        {stat?.totalIDACNight || 0}
+                      </td>
+                      <td className="py-2.5 px-1.5 text-center font-bold font-mono text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20 border-l border-slate-200 dark:border-slate-800">
                         {stat?.totalBakeNBite || 0}
                       </td>
                       <td className="py-2.5 px-2 text-center font-extrabold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 border-l border-slate-200 dark:border-slate-800">
@@ -1475,24 +1695,48 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                 );
                 return (
                   <div className="space-y-1.5 bg-teal-50/50 dark:bg-teal-950/30 p-3 rounded-xl border border-teal-200 dark:border-teal-800 animate-fadeIn">
-                    <label className="text-xs font-bold text-teal-800 dark:text-teal-300">
-                      Select IDAC Shift
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-teal-800 dark:text-teal-300">
+                        Select IDAC Shift (Ratio Driven)
+                      </label>
+                      <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium">
+                        {bulkFlight !== 'All' ? `${bulkFlight} Flight` : 'All Flights'}
+                      </span>
+                    </div>
                     <div className="flex space-x-2">
-                      {availableShifts.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setBulkIdaShift(s)}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg border text-center transition-all ${
-                            bulkIdaShift === s
-                              ? 'bg-teal-600 text-white border-teal-700 shadow-xs'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                      {availableShifts.map((s) => {
+                        const quota = getFlightDutyQuotaForDate(
+                          bulkFromDate,
+                          bulkFlight !== 'All' ? bulkFlight : 'Mechanics',
+                          'IDAC',
+                          s
+                        );
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setBulkIdaShift(s)}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center space-x-1.5 ${
+                              bulkIdaShift === s
+                                ? 'bg-teal-600 text-white border-teal-700 shadow-xs'
+                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-teal-400'
+                            }`}
+                          >
+                            <span>{s}</span>
+                            {quota > 0 && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                                  bulkIdaShift === s
+                                    ? 'bg-teal-800 text-teal-100'
+                                    : 'bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-200'
+                                }`}
+                              >
+                                {quota} No.
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -1601,7 +1845,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       className="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white transition-colors"
                       title="Set Date Range to Today only"
                     >
-                      Today (আজ)
+                      Today
                     </button>
                     <button
                       type="button"
@@ -1644,7 +1888,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                 <div className="grid grid-cols-2 gap-3 items-center">
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block mb-1">
-                      From Date (শুরুর তারিখ):
+                      From Date:
                     </span>
                     <input
                       type="date"
@@ -1661,7 +1905,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block mb-1">
-                      To Date (শেষের তারিখ):
+                      To Date:
                     </span>
                     <input
                       type="date"
@@ -1673,20 +1917,6 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* 5. Remarks */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  Notes / Remarks (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Annual Leave / Detachment / Course Attachment"
-                  value={bulkNotes}
-                  onChange={(e) => setBulkNotes(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
-                />
               </div>
 
               {/* Success Notification */}
@@ -1875,7 +2105,15 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                 >
                   <option value="">-- Choose Airman ({cellEditProxyFlight || cellEditModal.flight}) --</option>
                   {airmen
-                    .filter((a) => a.flightName === (cellEditProxyFlight || cellEditModal.flight))
+                    .filter((a) => {
+                      if (a.flightName !== (cellEditProxyFlight || cellEditModal.flight)) return false;
+                      // Base Security Duty (GD) is strictly for Cpl & Below (Cpl, LAC, AC1, AC2)
+                      if (cellEditModal.dutyCode === 'GD') {
+                        const rankLower = a.rank.toLowerCase();
+                        return ['cpl', 'lac', 'ac1', 'ac2', 'corporal'].some((r) => rankLower.includes(r));
+                      }
+                      return true;
+                    })
                     .map((a) => {
                       const res = resolveAirmanDutyForDate(a.id, cellEditModal.date, assignmentMap);
                       const isSameDuty = (cellEditModal.dutyCode === 'IDAC' || cellEditModal.dutyCode === 'IDA')

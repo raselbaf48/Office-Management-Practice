@@ -11,6 +11,7 @@ import { ParadeStateFormattedView } from './components/ParadeStateFormattedView'
 import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
 import { LeaveRegisterView } from './components/LeaveRegisterView';
+import { TdyRegisterView } from './components/TdyRegisterView';
 import { MonthlyDutyRegister } from './components/MonthlyDutyRegister';
 import { DutyRosterPeriodView } from './components/DutyRosterPeriodView';
 import { DutyRatioMatrixView } from './components/DutyRatioMatrixView';
@@ -20,8 +21,13 @@ import { AirmanProfileModal } from './components/AirmanProfileModal';
 import { AddEditAirmanModal } from './components/AddEditAirmanModal';
 import { PrintableParadeStateModal } from './components/PrintableParadeStateModal';
 import { AdminPasscodeModal } from './components/AdminPasscodeModal';
-import { Airman, FlightName, ParadeShift, UserRole } from './types';
+import { PdfDutyImportModal } from './components/PdfDutyImportModal';
+import { SettingsModal } from './components/SettingsModal';
+import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
+import { INITIAL_AIRMEN } from './data/initialAirmen';
+import { Logo155UASU } from './components/Logo155UASU';
 import { Shield } from 'lucide-react';
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
@@ -30,11 +36,64 @@ export default function App() {
     return saved === 'ADMIN' ? 'ADMIN' : 'AIRMAN';
   });
   const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+
+  // Theme Preference State (Light / Dark / System)
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
+    const saved = localStorage.getItem('baf_theme_pref');
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    return 'dark';
+  });
   const [darkMode, setDarkMode] = useState<boolean>(true);
+
+  // Apply Theme Preference to document and darkMode state
+  useEffect(() => {
+    localStorage.setItem('baf_theme_pref', themePreference);
+
+    const applyTheme = () => {
+      if (themePreference === 'dark') {
+        document.documentElement.classList.add('dark');
+        setDarkMode(true);
+      } else if (themePreference === 'light') {
+        document.documentElement.classList.remove('dark');
+        setDarkMode(false);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+          setDarkMode(true);
+        } else {
+          document.documentElement.classList.remove('dark');
+          setDarkMode(false);
+        }
+      }
+    };
+
+    applyTheme();
+
+    if (themePreference === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = (e: MediaQueryListEvent) => {
+        if (e.matches) {
+          document.documentElement.classList.add('dark');
+          setDarkMode(true);
+        } else {
+          document.documentElement.classList.remove('dark');
+          setDarkMode(false);
+        }
+      };
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, [themePreference]);
 
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     sessionStorage.setItem('baf_user_role', newRole);
+  };
+
+  const handleManualDarkModeToggle = (dark: boolean) => {
+    setThemePreference(dark ? 'dark' : 'light');
   };
 
   // Sidebar Layout States
@@ -48,8 +107,8 @@ export default function App() {
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
   // Data
-  const [airmen, setAirmen] = useState<Airman[]>([]);
-  const [loadingAirmen, setLoadingAirmen] = useState<boolean>(true);
+  const [airmen, setAirmen] = useState<Airman[]>(INITIAL_AIRMEN);
+  const [loadingAirmen, setLoadingAirmen] = useState<boolean>(false);
   const [conflictCount, setConflictCount] = useState<number>(0);
 
   // Modals
@@ -57,18 +116,20 @@ export default function App() {
   const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
   const [airmanToEdit, setAirmanToEdit] = useState<Airman | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isPdfImportModalOpen, setIsPdfImportModalOpen] = useState<boolean>(false);
 
-  // Fetch airmen from backend API
+  // Fetch airmen from backend API with graceful fallback
   const fetchAirmen = async () => {
-    setLoadingAirmen(true);
     try {
       const res = await fetch('/api/airmen');
       if (res.ok) {
         const data = await res.json();
-        setAirmen(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setAirmen(data);
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch airmen:', err);
+      // Fallback already provided by INITIAL_AIRMEN
     } finally {
       setLoadingAirmen(false);
     }
@@ -130,10 +191,10 @@ export default function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
 
-    // 15-second background sync fallback
+    // 30-second background sync fallback
     const interval = setInterval(() => {
       window.dispatchEvent(new CustomEvent('baf_state_updated'));
-    }, 15000);
+    }, 30000);
 
     return () => {
       if (eventSource) eventSource.close();
@@ -244,6 +305,10 @@ export default function App() {
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
         airmenCount={airmen.length}
+        onOpenImportModal={() => setIsPdfImportModalOpen(true)}
+        onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
+        onLogoutAdmin={() => handleRoleChange('AIRMAN')}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
       {/* Right Content Wrapper */}
@@ -251,22 +316,19 @@ export default function App() {
         {/* Top Header Bar */}
         <TopHeader
           activeTab={activeTab}
-          role={role}
-          setRole={handleRoleChange}
-          onRequestAdminAccess={() => setIsPasscodeModalOpen(true)}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-          conflictCount={conflictCount}
+          role={role}
+          onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
+          onLogoutAdmin={() => handleRoleChange('AIRMAN')}
         />
+
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
           {activeTab === 'overview' && (
             <DashboardParadeState
               role={role}
+              airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
               selectedShift={selectedShift}
@@ -275,17 +337,7 @@ export default function App() {
               setSelectedFlight={setSelectedFlight}
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
               onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
-            />
-          )}
-
-          {activeTab === 'parade-state' && (
-            <ParadeStateFormattedView
-              role={role}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              airmen={airmen}
-              onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
           )}
 
@@ -322,6 +374,14 @@ export default function App() {
 
           {activeTab === 'leave-register' && (
             <LeaveRegisterView
+              role={role}
+              airmen={airmen}
+              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+            />
+          )}
+
+          {activeTab === 'tdy-register' && (
+            <TdyRegisterView
               role={role}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
@@ -372,8 +432,8 @@ export default function App() {
         {/* Footer */}
         <footer className="border-t border-slate-200 dark:border-slate-800/80 py-5 bg-white dark:bg-slate-900 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <div className="flex items-center space-x-2">
-              <Shield className="w-4 h-4 text-emerald-600" />
+            <div className="flex items-center space-x-2.5">
+              <Logo155UASU className="w-5 h-6" />
               <span className="font-bold text-slate-700 dark:text-slate-300">
                 155 UASU BAF • Duty & Office Management System
               </span>
@@ -381,6 +441,7 @@ export default function App() {
             <p>© 2026 Bangladesh Air Force • Confidential Personnel Duty Register</p>
           </div>
         </footer>
+
       </div>
 
       {/* Modals */}
@@ -419,6 +480,37 @@ export default function App() {
           onClose={() => setIsPrintModalOpen(false)}
         />
       )}
+
+      {/* AI PDF / Image Duty Data Import Modal */}
+      <PdfDutyImportModal
+        isOpen={isPdfImportModalOpen}
+        onClose={() => setIsPdfImportModalOpen(false)}
+        airmen={airmen}
+        onImportSuccess={(dates) => {
+          if (dates && dates.length > 0) {
+            setSelectedDate(dates[0]);
+          }
+          window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        }}
+        onNavigateToTab={(tab, date) => {
+          if (date) setSelectedDate(date);
+          setActiveTab(tab);
+        }}
+      />
+
+      {/* System Settings Modal (Theme, Passcode, Import History, Backup) */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        role={role}
+        currentTheme={themePreference}
+        onThemeChange={(newTheme) => setThemePreference(newTheme)}
+        onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
+        onRosterUpdated={() => {
+          fetchAirmen();
+          window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        }}
+      />
     </div>
   );
 }

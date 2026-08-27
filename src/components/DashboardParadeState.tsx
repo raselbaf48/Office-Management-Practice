@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, ShieldCheck, UserMinus, Plane, Calendar, Filter,
   Search, RefreshCw, Moon, ShieldAlert, Coffee,
-  Plus, CalendarRange, X, Check, Sliders, Eye, EyeOff, Activity, Clock, History
+  Plus, CalendarRange, X, Check, Sliders, Eye, EyeOff, Activity, Clock, History, Sparkles, CheckSquare, Square
 } from 'lucide-react';
 import { FlightName, ParadeShift, Airman, DutyCategoryCode, IDAShift, UserRole } from '../types';
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
-import { getIdacShiftsForDateAndFlight } from '../data/officialDutyRatioMatrix';
+import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { EntryHistoryModal } from './EntryHistoryModal';
+import { AssignDutyModal } from './AssignDutyModal';
 
 interface DashboardParadeStateProps {
   role?: UserRole;
+  airmen?: Airman[];
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   selectedShift: ParadeShift;
@@ -21,6 +23,7 @@ interface DashboardParadeStateProps {
   setSelectedFlight: (flight: FlightName | 'Overall') => void;
   onOpenPrintModal?: () => void;
   onViewAirmanProfile: (airman: Airman) => void;
+  onOpenImportModal?: () => void;
 }
 
 interface ParadeData {
@@ -55,11 +58,13 @@ interface ParadeData {
 
 export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
   role = 'ADMIN',
+  airmen,
   selectedDate,
   setSelectedDate,
   selectedFlight,
   setSelectedFlight,
   onViewAirmanProfile,
+  onOpenImportModal,
 }) => {
   const [data, setData] = useState<ParadeData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -73,239 +78,23 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
   } | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState<string>('');
 
-  // Quick Assign Duty Modal State
+  // Interactive Batch Assign Duty Modal State
   const [showAssignModal, setShowAssignModal] = useState<boolean>(false);
-  const [assignDateMode, setAssignDateMode] = useState<'single' | 'multi'>('single');
-  const [assignFlight, setAssignFlight] = useState<FlightName>('Avionics');
-  const [assignDutyCode, setAssignDutyCode] = useState<DutyCategoryCode>('GD');
-  const [assignProxyForFlight, setAssignProxyForFlight] = useState<FlightName | ''>('');
-  const [assignLeaveType, setAssignLeaveType] = useState<'Casual' | 'Annual'>('Casual');
-  const [assignAirmanId, setAssignAirmanId] = useState<string>('');
-  const [initialDetailedAirmanId, setInitialDetailedAirmanId] = useState<string>('');
-  const [assignIdaShift, setAssignIdaShift] = useState<IDAShift>('Morning');
-  const [assignFromDate, setAssignFromDate] = useState<string>(selectedDate);
-  const [assignToDate, setAssignToDate] = useState<string>(selectedDate);
-  const [assignNotes, setAssignNotes] = useState<string>('');
-  const [assignLoading, setAssignLoading] = useState<boolean>(false);
-  const [assignSuccessMsg, setAssignSuccessMsg] = useState<string>('');
 
   // Flight Duty Ratio / Quota States
   const [showRatioModal, setShowRatioModal] = useState<boolean>(false);
   const [ratioRefreshTrigger, setRatioRefreshTrigger] = useState<number>(0);
-  const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
 
-  // Keep date inputs updated with top selectedDate
+  // Listen to global duty ratio updates across modals and views
   useEffect(() => {
-    setAssignFromDate(selectedDate);
-    setAssignToDate(selectedDate);
-  }, [selectedDate]);
-
-  // Helper to get required count (ratio) for a duty code on assignFromDate
-  const getRequiredCountForDuty = (dutyCode: DutyCategoryCode, targetFlight?: FlightName) => {
-    const currentRatios = getStoredDutyRatiosForDate(assignFromDate);
-    const fl = targetFlight || assignFlight;
-    const found = currentRatios.find(
-      (r) => r.flight === fl && r.dutyCode === dutyCode
-    );
-    return found ? found.requiredCount : 0;
-  };
-
-  // Helper to calculate how many airmen are currently assigned to a duty
-  const getAssignedCountForDuty = (dutyCode: DutyCategoryCode, targetFlight?: FlightName) => {
-    const src = effectiveModalData || data;
-    if (!src || !src.personnelStatusList) return 0;
-    const fl = targetFlight || assignFlight;
-    return src.personnelStatusList.filter((p) => {
-      if (p.airman.flightName !== fl) return false;
-      return p.dutyCode === dutyCode;
-    }).length;
-  };
-
-  // Auto-navigate to flight with remaining quota when clicking duty category
-  const handleSelectDutyCategory = (dutyCode: DutyCategoryCode) => {
-    setAssignDutyCode(dutyCode);
-    const flights: FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
-    const currentRatios = getStoredDutyRatiosForDate(assignFromDate);
-    
-    let targetFlight: FlightName | null = null;
-    for (const fl of flights) {
-      const ratio = currentRatios.find((r) => r.flight === fl && r.dutyCode === dutyCode);
-      const req = ratio ? ratio.requiredCount : 0;
-      const assigned = (effectiveModalData?.personnelStatusList || []).filter(
-        (p) => p.airman.flightName === fl && p.dutyCode === dutyCode
-      ).length;
-      if (req > assigned) {
-        targetFlight = fl;
-        break;
-      }
-    }
-    if (!targetFlight) {
-      for (const fl of flights) {
-        const ratio = currentRatios.find((r) => r.flight === fl && r.dutyCode === dutyCode);
-        if (ratio && ratio.requiredCount > 0) {
-          targetFlight = fl;
-          break;
-        }
-      }
-    }
-    if (targetFlight) {
-      setAssignFlight(targetFlight);
-      setAssignProxyForFlight('');
-    }
-  };
-
-  // Auto select valid duty if filterByRatio is enabled and assignFlight changes
-  useEffect(() => {
-    if (!showAssignModal) return;
-    const req = getRequiredCountForDuty(assignDutyCode);
-    if (filterByRatio && req === 0) {
-      const firstReq = DUTY_TYPES.find(
-        (dt) => dt.code !== 'ON_PARADE' && getRequiredCountForDuty(dt.code) > 0
-      );
-      if (firstReq) {
-        setAssignDutyCode(firstReq.code);
-      }
-    }
-  }, [assignFlight, assignFromDate, ratioRefreshTrigger, filterByRatio, showAssignModal]);
-
-  const [modalParadeData, setModalParadeData] = useState<ParadeData | null>(null);
-
-  // Fetch parade state for modal's selected date (assignFromDate) so detailed personnel are 100% accurate
-  useEffect(() => {
-    if (!showAssignModal) return;
-    let isMounted = true;
-    const fetchModalParade = async () => {
-      try {
-        const params = new URLSearchParams({
-          date: assignFromDate,
-          shift: 'Morning',
-          flight: 'Overall',
-        });
-        const res = await fetch(`/api/parade-state?${params.toString()}`);
-        if (res.ok && isMounted) {
-          const result = await res.json();
-          setModalParadeData(result);
-        }
-      } catch (err) {
-        console.error('Failed to fetch modal parade state for date:', assignFromDate, err);
-      }
+    const handleRatioUpdated = () => {
+      setRatioRefreshTrigger((prev) => prev + 1);
     };
-    fetchModalParade();
+    window.addEventListener('baf_duty_ratio_updated', handleRatioUpdated);
     return () => {
-      isMounted = false;
+      window.removeEventListener('baf_duty_ratio_updated', handleRatioUpdated);
     };
-  }, [showAssignModal, assignFromDate]);
-
-  const effectiveModalData = assignFromDate === selectedDate && data ? data : (modalParadeData || data);
-
-  // Helper to determine airman's availability status on selected date(s)
-  const getAirmanCurrentStatus = (airmanId: string, useModalDate = false) => {
-    const sourceData = useModalDate ? effectiveModalData : data;
-    if (!sourceData || !sourceData.personnelStatusList) return { status: 'PARADE', dutyName: 'On Parade' };
-    const item = sourceData.personnelStatusList.find((p) => p.airman.id === airmanId);
-    if (!item) return { status: 'PARADE', dutyName: 'On Parade' };
-
-    if (item.statusCategory === 'LEAVE') return { status: 'LEAVE', dutyName: 'On Leave' };
-    if (item.statusCategory === 'TDY') return { status: 'TDY', dutyName: 'On TDY' };
-    if (item.statusCategory === 'DUTY') {
-      if (item.dutyCode === 'IDAC' || item.dutyCode === 'IDA') {
-        const s = item.idaShift || 'Morning';
-        return { status: 'DUTY', dutyName: `IDAC ${s}`, idaShift: s };
-      }
-      const dt = DUTY_TYPE_MAP.get(item.dutyCode as any);
-      return { status: 'DUTY', dutyName: dt ? dt.name : item.dutyCode };
-    }
-    if (item.statusCategory === 'OFF' || item.dutyCode === 'DUTY_OFF') {
-      return { status: 'OFF', dutyName: item.dutyName || 'Duty Off' };
-    }
-    return { status: 'PARADE', dutyName: 'On Parade' };
-  };
-
-  // Get eligible airmen for the quick assign modal (filtered by Flight, Duty Code, and Rank eligibility)
-  const getModalEligibleAirmen = () => {
-    if (!effectiveModalData) return [];
-    // If a proxy flight is selected, filter eligible airmen from that proxy flight; otherwise from assignFlight
-    const targetFlight = assignProxyForFlight ? assignProxyForFlight : assignFlight;
-
-    return effectiveModalData.personnelStatusList
-      .filter(({ airman }) => {
-        if (targetFlight && airman.flightName !== targetFlight) return false;
-
-        const st = getAirmanCurrentStatus(airman.id, true);
-        if ((assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') && (st.status === 'LEAVE' || st.status === 'TDY')) {
-          return false;
-        }
-
-        if (assignDutyCode === 'GD') {
-          const rankLower = airman.rank.toLowerCase();
-          const isCplOrBelow = ['cpl', 'lac', 'ac1', 'ac2', 'corporal'].some((r) => rankLower.includes(r));
-          if (!isCplOrBelow) return false;
-        }
-
-        return true;
-      })
-      .map(({ airman }) => airman)
-      .sort((a, b) => {
-        const stA = getAirmanCurrentStatus(a.id, true);
-        const stB = getAirmanCurrentStatus(b.id, true);
-        // If assigning IDAC Night, prioritize airman doing IDAC Morning
-        if ((assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') && assignIdaShift === 'Night') {
-          const isAIdacMorn = (stA.dutyName || '').includes('IDAC Morning');
-          const isBIdacMorn = (stB.dutyName || '').includes('IDAC Morning');
-          if (isAIdacMorn && !isBIdacMorn) return -1;
-          if (!isAIdacMorn && isBIdacMorn) return 1;
-        }
-        const order = { PARADE: 0, DUTY: 1, OFF: 2, LEAVE: 3, TDY: 4 };
-        return (order[stA.status as keyof typeof order] ?? 5) - (order[stB.status as keyof typeof order] ?? 5);
-      });
-  };
-
-  const modalEligibleAirmen = getModalEligibleAirmen();
-
-  // Helper to find airmen already detailed to the selected duty and shift on assignFromDate
-  const getCurrentlyDetailedPersonnel = () => {
-    if (!effectiveModalData || !effectiveModalData.personnelStatusList) return [];
-    return effectiveModalData.personnelStatusList.filter((p) => {
-      if (p.airman.flightName !== assignFlight) return false;
-      if (assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') {
-        return (p.dutyCode === 'IDAC' || p.dutyCode === 'IDA') && p.idaShift === assignIdaShift;
-      }
-      return p.dutyCode === assignDutyCode;
-    });
-  };
-
-  const currentlyDetailedList = getCurrentlyDetailedPersonnel();
-
-  // Auto select currently detailed airman or first AVAILABLE airman
-  useEffect(() => {
-    if (!showAssignModal) return;
-    const detailed = getCurrentlyDetailedPersonnel();
-    if (detailed.length > 0) {
-      setAssignAirmanId(detailed[0].airman.id);
-      setInitialDetailedAirmanId(detailed[0].airman.id);
-    } else {
-      setInitialDetailedAirmanId('');
-      const eligible = getModalEligibleAirmen();
-      if ((assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') && assignIdaShift === 'Night') {
-        const idacMorningGuy = eligible.find((a) => {
-          const st = getAirmanCurrentStatus(a.id, true);
-          return (st.dutyName || '').includes('IDAC Morning');
-        });
-        if (idacMorningGuy) {
-          setAssignAirmanId(idacMorningGuy.id);
-          return;
-        }
-      }
-      const available = eligible.find((a) => getAirmanCurrentStatus(a.id, true).status === 'PARADE');
-      if (available) {
-        setAssignAirmanId(available.id);
-      } else if (eligible.length > 0) {
-        setAssignAirmanId(eligible[0].id);
-      } else {
-        setAssignAirmanId('');
-      }
-    }
-  }, [assignFlight, assignProxyForFlight, assignDutyCode, assignIdaShift, assignFromDate, showAssignModal, effectiveModalData]);
+  }, []);
 
   const fetchParadeData = async (targetDate?: string) => {
     setLoading(true);
@@ -324,116 +113,6 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
       console.error('Failed to fetch parade state:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Handle quick assign modal submit (supporting replace/swap and deselect)
-  const handleModalAssignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!assignDutyCode || !assignFromDate || !assignToDate) return;
-
-    setAssignLoading(true);
-    setAssignSuccessMsg('');
-    try {
-      // Handle Deselect / Clear Personnel
-      if (!assignAirmanId) {
-        if (initialDetailedAirmanId || currentlyDetailedList.length > 0) {
-          const targetId = initialDetailedAirmanId || currentlyDetailedList[0]?.airman.id;
-          await fetch('/api/roster/delete-range', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              airmanId: targetId,
-              fromDate: assignFromDate,
-              toDate: assignToDate,
-            }),
-          });
-          setAssignSuccessMsg('🗑️ Duty entry cleared (Personnel returned to On Parade)!');
-          window.dispatchEvent(new CustomEvent('baf_state_updated'));
-          if (selectedDate !== assignFromDate) {
-            setSelectedDate(assignFromDate);
-          } else {
-            await fetchParadeData(assignFromDate);
-          }
-          setTimeout(() => {
-            setShowAssignModal(false);
-            setAssignSuccessMsg('');
-          }, 1200);
-        } else {
-          setShowAssignModal(false);
-        }
-        return;
-      }
-
-      // If replacing an existing detailed airman with a new one, remove previous airman's assignment first
-      const replacingOldAirmanId = initialDetailedAirmanId && initialDetailedAirmanId !== assignAirmanId
-        ? initialDetailedAirmanId
-        : undefined;
-
-      if (replacingOldAirmanId) {
-        await fetch('/api/roster/delete-range', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            airmanId: replacingOldAirmanId,
-            fromDate: assignFromDate,
-            toDate: assignToDate,
-          }),
-        });
-      }
-
-      let notesPayload = assignNotes;
-      if (assignDutyCode === 'LEAVE') {
-        const prefix = assignLeaveType === 'Annual' ? 'Annual Leave (AL)' : 'Casual Leave (CL)';
-        notesPayload = assignNotes ? `${prefix} - ${assignNotes}` : prefix;
-      }
-
-      const res = await fetch('/api/roster/assign-range', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          airmanId: assignAirmanId,
-          replaceAirmanId: replacingOldAirmanId,
-          dutyCode: assignDutyCode,
-          idaShift: assignDutyCode === 'IDAC' || assignDutyCode === 'IDA' ? assignIdaShift : undefined,
-          proxyForFlight: assignProxyForFlight && assignFlight !== 'All' ? assignFlight : undefined,
-          fromDate: assignFromDate,
-          toDate: assignToDate,
-          notes: notesPayload,
-        }),
-      });
-
-      const result = await res.json().catch(() => ({}));
-
-      if (res.ok && result.success) {
-        const selectedA = (effectiveModalData?.personnelStatusList || data?.personnelStatusList || []).find((p) => p.airman.id === assignAirmanId)?.airman;
-        const nameLabel = selectedA ? `${selectedA.rank} ${selectedA.name}` : 'Airman';
-        const prevA = replacingOldAirmanId
-          ? (effectiveModalData?.personnelStatusList || data?.personnelStatusList || []).find((p) => p.airman.id === replacingOldAirmanId)?.airman
-          : null;
-
-        const replaceText = prevA ? ` (Replaced ${prevA.rank} ${prevA.name})` : '';
-        setAssignSuccessMsg(`✅ Duty successfully assigned to ${nameLabel}${replaceText} for ${result.count || 1} day(s)!`);
-        
-        window.dispatchEvent(new CustomEvent('baf_state_updated'));
-        if (selectedDate !== assignFromDate) {
-          setSelectedDate(assignFromDate);
-        } else {
-          await fetchParadeData(assignFromDate);
-        }
-        
-        setTimeout(() => {
-          setShowAssignModal(false);
-          setAssignSuccessMsg('');
-        }, 1300);
-      } else {
-        alert(result.error || 'Failed to assign duty range');
-      }
-    } catch (err: any) {
-      console.error('Failed to submit assign modal:', err);
-      alert(`Error assigning duty: ${err?.message || 'Network request failed'}`);
-    } finally {
-      setAssignLoading(false);
     }
   };
 
@@ -485,7 +164,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
             <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <input
               type="date"
-              value={selectedDate}
+              value={selectedDate || ''}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-transparent border-none outline-none font-semibold cursor-pointer text-slate-900 dark:text-slate-100"
             />
@@ -506,6 +185,18 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Import Roster Button (Admin Only) */}
+          {role === 'ADMIN' && onOpenImportModal && (
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center space-x-1.5 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-3 py-2 rounded-lg shadow-xs transition-all cursor-pointer"
+              title="Import Duty Roster from PDF / Image (Gemini AI Powered)"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>Import Roster</span>
+            </button>
+          )}
 
           {/* Last Entry Button (Admin Only) */}
           {role === 'ADMIN' && (
@@ -787,490 +478,18 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
         </div>
       </div>
 
-      {/* Quick Assign Duty Modal */}
+      {/* Interactive Batch Assign Duty Modal */}
       {showAssignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                  <CalendarRange className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                    Assign Personnel Duty
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Pick duty, flight, and airman. Only available (On Parade) personnel are listed by default.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowAssignModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Success Message */}
-            {assignSuccessMsg && (
-              <div className="p-3 bg-emerald-100 dark:bg-emerald-950/90 text-emerald-900 dark:text-emerald-200 rounded-xl border border-emerald-300 dark:border-emerald-800 text-xs font-bold animate-fadeIn">
-                {assignSuccessMsg}
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleModalAssignSubmit} className="space-y-4">
-              {/* 1. Date Selection: Single vs Multi-Date */}
-              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    1. Select Date Mode & Date
-                  </label>
-                  <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAssignDateMode('single');
-                        setAssignToDate(assignFromDate);
-                      }}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
-                        assignDateMode === 'single'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                      }`}
-                    >
-                      Single Date
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAssignDateMode('multi')}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
-                        assignDateMode === 'multi'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                      }`}
-                    >
-                      Multi-Date (From - To)
-                    </button>
-                  </div>
-                </div>
-
-                {assignDateMode === 'single' ? (
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block mb-1">Target Date:</span>
-                    <input
-                      type="date"
-                      value={assignFromDate}
-                      onChange={(e) => {
-                        const d = e.target.value;
-                        setAssignFromDate(d);
-                        setAssignToDate(d);
-                      }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
-                      required
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">From Date:</span>
-                      <input
-                        type="date"
-                        value={assignFromDate}
-                        onChange={(e) => {
-                          const newFrom = e.target.value;
-                          setAssignFromDate(newFrom);
-                          if (!assignToDate || assignToDate < newFrom) {
-                            setAssignToDate(newFrom);
-                          }
-                        }}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">To Date:</span>
-                      <input
-                        type="date"
-                        value={assignToDate}
-                        min={assignFromDate}
-                        onChange={(e) => setAssignToDate(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. Duty Category Option */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
-                    <span>2. Select Duty Category</span>
-                    {assignDutyCode === 'GD' && (
-                      <span className="text-[10px] font-extrabold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/80 px-1.5 py-0.5 rounded border border-red-300 dark:border-red-800">
-                        GD: Cpl & Below Only
-                      </span>
-                    )}
-                  </label>
-
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setFilterByRatio(!filterByRatio)}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 flex items-center space-x-1"
-                      title="Toggle showing only duties required by Flight Ratio vs All duties"
-                    >
-                      {filterByRatio ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      <span>{filterByRatio ? 'Ratio Only' : 'Show All'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowRatioModal(true)}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center space-x-1"
-                      title="Set / Edit Flight Duty Ratios"
-                    >
-                      <Sliders className="w-3 h-3" />
-                      <span>Ratio Config</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                  {(() => {
-                    const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
-                    const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code) > 0);
-                    const dutiesToRender = filterByRatio && ratioFiltered.length > 0 ? ratioFiltered : allDuties;
-
-                    return dutiesToRender.map((dt) => {
-                      const isSelected = assignDutyCode === dt.code;
-                      const reqCount = getRequiredCountForDuty(dt.code);
-                      const assignedCount = getAssignedCountForDuty(dt.code);
-                      const remainingCount = Math.max(0, reqCount - assignedCount);
-
-                      return (
-                        <button
-                          key={dt.code}
-                          type="button"
-                          onClick={() => handleSelectDutyCategory(dt.code)}
-                          className={`relative p-2.5 rounded-xl text-xs font-bold text-left border transition-all flex flex-col justify-between space-y-1.5 ${
-                            isSelected
-                              ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-sm bg-emerald-50/60 dark:bg-emerald-950/40'
-                              : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                          }`}
-                        >
-                          {/* Notification-style remaining badge on top right */}
-                          {reqCount > 0 && remainingCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md animate-pulse z-10 border-2 border-white dark:border-slate-900">
-                              {remainingCount}
-                            </span>
-                          )}
-                          {reqCount > 0 && remainingCount === 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md z-10 border-2 border-white dark:border-slate-900" title="Target fulfilled">
-                              ✓
-                            </span>
-                          )}
-
-                          <div className="flex items-center justify-between w-full">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold ${dt.badgeBg} ${dt.badgeText}`}>
-                              {dt.shortName}
-                            </span>
-
-                            {reqCount > 0 ? (
-                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
-                                Req: {reqCount}
-                              </span>
-                            ) : (
-                              <span className="text-[9px] text-slate-400 font-normal">
-                                Optional
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center justify-between w-full mt-0.5">
-                            <span className="truncate text-[11px] font-bold">{dt.name}</span>
-                            {reqCount > 0 && (
-                              <span className="text-[9px] font-extrabold text-slate-500 dark:text-slate-400">
-                                {assignedCount}/{reqCount}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-
-                {/* Sub-Option for Leave */}
-                {assignDutyCode === 'LEAVE' && (
-                  <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800 space-y-2 animate-fadeIn">
-                    <label className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center justify-between">
-                      <span>Leave Sub-Category</span>
-                      <span className="text-[10px] font-normal text-purple-700 dark:text-purple-300">Choose type of leave</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setAssignLeaveType('Casual')}
-                        className={`py-1.5 px-3 text-xs font-bold rounded-lg border text-center transition-all ${
-                          assignLeaveType === 'Casual'
-                            ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800'
-                        }`}
-                      >
-                        Casual Leave (CL)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAssignLeaveType('Annual')}
-                        className={`py-1.5 px-3 text-xs font-bold rounded-lg border text-center transition-all ${
-                          assignLeaveType === 'Annual'
-                            ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800'
-                        }`}
-                      >
-                        Annual Leave (AL / Priv)
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* IDAC Shift Picker */}
-                {(assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') && (() => {
-                  const availableShifts = getIdacShiftsForDateAndFlight(
-                    assignFromDate,
-                    assignFlight
-                  );
-                  return (
-                    <div className="space-y-1.5 bg-teal-50/50 dark:bg-teal-950/30 p-3 rounded-xl border border-teal-200 dark:border-teal-800 animate-fadeIn">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-teal-800 dark:text-teal-300">
-                          Select IDAC Shift
-                        </label>
-                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium">
-                          Note: Night shift is on Parade during day
-                        </span>
-                      </div>
-                      <div className="flex space-x-2">
-                        {availableShifts.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setAssignIdaShift(s)}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg border text-center transition-all ${
-                              assignIdaShift === s
-                                ? 'bg-teal-600 text-white border-teal-700 shadow-xs'
-                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-                            }`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* 3. Select Flight Option */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                  <span>3. Select Duty Flight</span>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    {assignFlight} Flight Duty
-                  </span>
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => (
-                    <button
-                      key={fl}
-                      type="button"
-                      onClick={() => {
-                        setAssignFlight(fl);
-                        if (assignProxyForFlight === fl) setAssignProxyForFlight('');
-                      }}
-                      className={`py-2 px-2 text-xs font-bold rounded-xl border text-center transition-all truncate ${
-                        assignFlight === fl
-                          ? fl === 'Avionics'
-                            ? 'bg-cyan-600 text-white border-cyan-700 shadow-xs'
-                            : fl === 'Mechanics'
-                            ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                            : fl === 'GCS'
-                            ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
-                            : 'bg-slate-700 text-white border-slate-800 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
-                      }`}
-                    >
-                      {fl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 4. Compact Proxy Duty Selection */}
-              <div className="p-2.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-amber-900 dark:text-amber-300">
-                    Proxy Duty (Optional)
-                  </label>
-                  {assignProxyForFlight ? (
-                    <button
-                      type="button"
-                      onClick={() => setAssignProxyForFlight('')}
-                      className="text-[10px] text-red-600 dark:text-red-400 font-bold hover:underline"
-                    >
-                      Clear Proxy
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-amber-700 dark:text-amber-400">
-                      Covering other flight
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setAssignProxyForFlight('')}
-                    className={`py-1.5 px-2 text-[11px] font-bold rounded-lg border text-center transition-all ${
-                      !assignProxyForFlight
-                        ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Own Flt
-                  </button>
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[])
-                    .filter((fl) => fl !== assignFlight)
-                    .map((fl) => (
-                      <button
-                        key={fl}
-                        type="button"
-                        onClick={() => setAssignProxyForFlight(fl)}
-                        className={`py-1.5 px-2 text-[11px] font-bold rounded-lg border text-center transition-all ${
-                          assignProxyForFlight === fl
-                            ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        {fl}
-                      </button>
-                    ))}
-                </div>
-              </div>
-
-              {/* 5. Select Airman Name Option */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    5. Select Airman
-                  </label>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                    {modalEligibleAirmen.length} Candidates ({assignProxyForFlight ? `${assignProxyForFlight} (Proxy)` : assignFlight})
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  <select
-                    value={assignAirmanId}
-                    onChange={(e) => setAssignAirmanId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    <option value="">-- Clear / Deselect Personnel (Return to Parade) --</option>
-                    {modalEligibleAirmen.map((a) => {
-                      const st = getAirmanCurrentStatus(a.id, true);
-                      const isIdacMorn = (st.dutyName || '').includes('IDAC Morning');
-                      const isNightAssignment = (assignDutyCode === 'IDAC' || assignDutyCode === 'IDA') && assignIdaShift === 'Night';
-                      const isDetailedToThis = currentlyDetailedList.some((d) => d.airman.id === a.id);
-                      
-                      // Available if parade or currently assigned to this or (IDAC night and is on IDAC morning)
-                      const isAvailable = st.status === 'PARADE' || (isNightAssignment && isIdacMorn) || isDetailedToThis;
-
-                      let statusDesc = '';
-                      if (st.status === 'LEAVE') statusDesc = 'On Leave';
-                      else if (st.status === 'TDY') statusDesc = 'On TDY';
-                      else if (st.status === 'DUTY') statusDesc = st.dutyName || 'On Duty';
-                      else if (st.status === 'OFF') statusDesc = st.dutyName || 'Duty Off';
-
-                      let extraTag = '';
-                      if (isNightAssignment && isIdacMorn) {
-                        extraTag = ' (IDAC Morning - Recommended for Night)';
-                      } else if (isDetailedToThis) {
-                        extraTag = ' (Currently Detailed)';
-                      } else if (!isAvailable && statusDesc) {
-                        extraTag = ` - ${statusDesc}`;
-                      }
-
-                      const flightTag = assignProxyForFlight ? ` (${a.flightName})` : '';
-                      const label = `${a.rank} ${a.name}${flightTag}${extraTag}`;
-
-                      return (
-                        <option
-                          key={a.id}
-                          value={a.id}
-                          disabled={!isAvailable}
-                          className={`font-semibold ${
-                            isAvailable
-                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                          }`}
-                        >
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Select an available airman, or choose &quot;Clear / Deselect Personnel&quot; to return to On Parade.
-                  </p>
-                </div>
-              </div>
-
-              {/* Optional Notes */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Notes (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={assignNotes}
-                  onChange={(e) => setAssignNotes(e.target.value)}
-                  placeholder="e.g. Night shift, special assignment, etc."
-                  className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
-                />
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAssignModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={assignLoading || (!assignAirmanId && !initialDetailedAirmanId)}
-                  className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5"
-                >
-                  {assignLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Check className="w-4 h-4" />
-                  )}
-                  <span>Assign Duty Now</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <AssignDutyModal
+          isOpen={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          onRefreshParadeData={fetchParadeData}
+          airmen={airmen || data?.personnelStatusList.map((p) => p.airman) || []}
+        />
       )}
+
 
       {/* Strength Category Detailed Nominal Modal */}
       {strengthCategoryModal && (
@@ -1380,7 +599,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                       ) : (
                         filtered.map((item, idx) => (
                           <tr
-                            key={item.airman.id}
+                            key={`${item.airman.id}-${item.dutyCode || ''}-${item.idaShift || ''}-${idx}`}
                             onClick={() => onViewAirmanProfile(item.airman)}
                             className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
                           >
@@ -1494,7 +713,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
       {/* Flight Duty Ratio Configurator Modal */}
       {showRatioModal && (
         <FlightDutyRatioModal
-          date={assignFromDate || selectedDate}
+          date={selectedDate}
           onClose={() => setShowRatioModal(false)}
           onRatiosUpdated={() => setRatioRefreshTrigger((prev) => prev + 1)}
         />

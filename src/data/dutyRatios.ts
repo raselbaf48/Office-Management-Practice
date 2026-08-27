@@ -31,20 +31,12 @@ export const DEFAULT_FLIGHT_DUTY_RATIOS: FlightDutyQuota[] = [
 const RATIO_STORAGE_KEY = 'baf_flight_duty_ratios_v1';
 
 export function getStoredDutyRatiosForDate(dateStr: string): FlightDutyQuota[] {
-  try {
-    const raw = localStorage.getItem(`${RATIO_STORAGE_KEY}_${dateStr}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {
-    console.error('Failed to load flight duty ratios:', e);
-  }
-  // Fallback to exact daily quotas calculated from the official BAF 155 UASU Duty Matrix!
+  // Always derive exact live daily quotas directly from the official BAF 155 UASU Duty Matrix
   return getDailyQuotasFromMatrix(dateStr);
 }
 
 export function saveDutyRatiosForDate(dateStr: string, ratios: FlightDutyQuota[]) {
+  // Retained for backward compatibility
   try {
     localStorage.setItem(`${RATIO_STORAGE_KEY}_${dateStr}`, JSON.stringify(ratios));
   } catch (e) {

@@ -1,29 +1,67 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LogoProps {
   className?: string;
   size?: number | 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
+  customLogoUrl?: string | null;
 }
 
 export const Logo155UASU: React.FC<LogoProps> = ({
   className = 'w-12 h-14',
   size,
+  customLogoUrl,
 }) => {
+  const [logoSrc, setLogoSrc] = useState<string | null>(() => {
+    if (customLogoUrl) return customLogoUrl;
+    return localStorage.getItem('baf_custom_logo');
+  });
+
+  useEffect(() => {
+    if (customLogoUrl !== undefined) {
+      setLogoSrc(customLogoUrl);
+    }
+  }, [customLogoUrl]);
+
+  useEffect(() => {
+    const handleLogoUpdated = (e: any) => {
+      const newLogo = e?.detail?.logoUrl !== undefined ? e.detail.logoUrl : localStorage.getItem('baf_custom_logo');
+      setLogoSrc(newLogo);
+    };
+
+    window.addEventListener('baf_logo_updated', handleLogoUpdated);
+    return () => window.removeEventListener('baf_logo_updated', handleLogoUpdated);
+  }, []);
+
   let sizeStyle: React.CSSProperties = {};
 
   if (typeof size === 'number') {
-    sizeStyle = { width: size, height: (size * 1.2) };
+    sizeStyle = { width: size, height: size };
   }
 
   const getSizeClass = () => {
     if (typeof size === 'number') return '';
-    if (size === 'sm') return 'w-8 h-10';
-    if (size === 'md') return 'w-12 h-15';
-    if (size === 'lg') return 'w-18 h-22';
-    if (size === 'xl') return 'w-24 h-30';
+    if (size === 'sm') return 'w-8 h-8';
+    if (size === 'md') return 'w-12 h-12';
+    if (size === 'lg') return 'w-18 h-18';
+    if (size === 'xl') return 'w-24 h-24';
     return className;
   };
+
+  if (logoSrc) {
+    return (
+      <div
+        className={`inline-flex items-center justify-center shrink-0 select-none overflow-hidden rounded-full ${getSizeClass()}`}
+        style={sizeStyle}
+      >
+        <img
+          src={logoSrc}
+          alt="155 UASU BAF Logo"
+          className="w-full h-full object-contain drop-shadow-md"
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -37,6 +75,7 @@ export const Logo155UASU: React.FC<LogoProps> = ({
         className="w-full h-full drop-shadow-md overflow-visible"
         aria-label="155 UASU BAF Crest"
       >
+
         <defs>
           {/* Gold Gradients */}
           <linearGradient id="goldMetallic" x1="0%" y1="0%" x2="100%" y2="100%">

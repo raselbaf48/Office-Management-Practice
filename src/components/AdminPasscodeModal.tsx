@@ -1,14 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, ShieldAlert, Lock, Unlock, KeyRound, X, CheckCircle2, AlertTriangle, ArrowRight, Delete } from 'lucide-react';
-import { Logo155UASU } from './Logo155UASU';
+import { ShieldCheck, ShieldAlert, Lock, Unlock, KeyRound, X, CheckCircle2, AlertTriangle, Delete, Loader2 } from 'lucide-react';
 
 interface AdminPasscodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const CORRECT_PASSCODE = '1124';
 
 export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   isOpen,
@@ -18,6 +15,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -30,6 +28,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
       setDigits(['', '', '', '']);
       setErrorMsg('');
       setIsSuccess(false);
+      setIsVerifying(false);
       setTimeout(() => {
         inputRefs[0].current?.focus();
       }, 100);
@@ -67,7 +66,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   };
 
   const handleKeypadPress = (val: string) => {
-    if (isSuccess) return;
+    if (isSuccess || isVerifying) return;
 
     if (val === 'backspace') {
       const lastFilledIndex = digits.map((d, i) => (d ? i : -1)).filter((i) => i >= 0).pop();
@@ -107,20 +106,50 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
     }
   };
 
-  const verifyPasscode = (code: string) => {
-    if (code === CORRECT_PASSCODE) {
-      setIsSuccess(true);
-      setErrorMsg('');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 700);
-    } else {
-      setErrorMsg('ভুল পাসকোড! সঠিক পাসকোড: 1124');
-      setDigits(['', '', '', '']);
-      setTimeout(() => {
-        inputRefs[0].current?.focus();
-      }, 50);
+  const verifyPasscode = async (code: string) => {
+    if (isVerifying || code.length !== 4) return;
+    setIsVerifying(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: code }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsSuccess(true);
+        setErrorMsg('');
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 600);
+      } else {
+        setErrorMsg(data.error || 'Incorrect passcode! Please try again.');
+        setDigits(['', '', '', '']);
+        setTimeout(() => {
+          inputRefs[0].current?.focus();
+        }, 50);
+      }
+    } catch {
+      // Fallback check
+      if (code === '1124') {
+        setIsSuccess(true);
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 600);
+      } else {
+        setErrorMsg('Incorrect passcode! Please try again.');
+        setDigits(['', '', '', '']);
+        setTimeout(() => {
+          inputRefs[0].current?.focus();
+        }, 50);
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -147,6 +176,8 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
             <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-md">
               {isSuccess ? (
                 <Unlock className="w-8 h-8 text-emerald-500 animate-bounce" />
+              ) : isVerifying ? (
+                <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
               ) : (
                 <Lock className="w-8 h-8" />
               )}
@@ -162,10 +193,10 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           </div>
 
           <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-            Enter Admin Passcode
+            Admin Login
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
-            Admin SNCO মোডে ডিউটি এসাইন ও পরিবর্তনের জন্য ৪ ডিজিটের পাসকোড দিন।
+            Enter 4-digit passcode to unlock Admin SNCO controls, duty assignment, and import tools.
           </p>
         </div>
 
@@ -182,7 +213,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 value={digit}
                 onChange={(e) => handleDigitChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                disabled={isSuccess}
+                disabled={isSuccess || isVerifying}
                 className={`w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black rounded-2xl border-2 outline-none transition-all ${
                   isSuccess
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
@@ -207,7 +238,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           {isSuccess && (
             <div className="mt-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-1.5 animate-fadeIn">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>পাসকোড সঠিক! Admin Mode আনলক হচ্ছে...</span>
+              <span>Passcode verified! Unlocking Admin Mode...</span>
             </div>
           )}
         </div>
@@ -219,7 +250,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
               key={num}
               type="button"
               onClick={() => handleKeypadPress(num)}
-              className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs"
+              className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer"
             >
               {num}
             </button>
@@ -227,38 +258,38 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           <button
             type="button"
             onClick={() => handleKeypadPress('clear')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={() => handleKeypadPress('0')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer"
           >
             0
           </button>
           <button
             type="button"
             onClick={() => handleKeypadPress('backspace')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
           >
             <Delete className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Hint footer */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-          <span>Passcode: <strong className="text-amber-600 dark:text-amber-400 font-mono">1124</strong></span>
+        {/* Footer */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center text-[12px] text-slate-400">
           <button
             type="button"
             onClick={onClose}
             className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium hover:underline"
           >
-            Cancel (Remain in Airman View)
+            Cancel (Stay in Airman View)
           </button>
         </div>
       </div>
     </div>
   );
 };
+

@@ -407,10 +407,10 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
             <span>Official Duty Roster Generator • 155 UASU BAF</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            Duty Roster (ডিউটি রোস্টার ফরম্যাট)
+            Duty Roster Formats
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            BAF 155 UASU এর নির্ধারিত ২টি স্ট্যান্ডার্ড ফরমেটে প্রিন্ট এবং ওয়ার্ড ডকুমেন্ট ডাউনলোড করুন।
+            Export and print standard BAF 155 UASU duty roster formats and Word documents.
           </p>
         </div>
 
@@ -472,7 +472,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
             <span className="text-slate-500 font-semibold">From:</span>
             <input
               type="date"
-              value={fromDate}
+              value={fromDate || ''}
               onChange={(e) => {
                 setFromDate(e.target.value);
                 setWeekPreset('CUSTOM');
@@ -482,7 +482,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
             <span className="text-slate-400 font-semibold">To:</span>
             <input
               type="date"
-              value={toDate}
+              value={toDate || ''}
               onChange={(e) => {
                 setToDate(e.target.value);
                 setWeekPreset('CUSTOM');

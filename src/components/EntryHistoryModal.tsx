@@ -180,7 +180,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-2">
-                <span>Last Entry • সর্বশেষ এন্ট্রি (Last 10 Records)</span>
+                <span>Last Entries (Last 10 Records)</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
                   {last10Entries.length} of 10
                 </span>
@@ -439,7 +439,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                           <span>
                             {item.fromDate === item.toDate
                               ? `${item.fromDate} (1 Day)`
-                              : `${item.fromDate} থেকে ${item.toDate} (${diffDays} Days)`}
+                              : `${item.fromDate} to ${item.toDate} (${diffDays} Days)`}
                           </span>
                         </span>
 

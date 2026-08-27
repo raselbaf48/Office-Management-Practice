@@ -730,32 +730,36 @@ export async function exportParadeStateSingleDocx(
   // Format airman names
   const toDisplay = (airmenList: Airman[]) => airmenList.map((a) => ({ displayName: `${a.rank} ${a.name}` }));
 
-  // Format Duty Off as: `${rank} ${name}-${duty} Off`
+  // Format Duty Off as: `${rank} ${name} - ${duty} Off`
   const dutyOffDisplay = dutyOff.map((item) => {
-    let dutyNote = item.note || 'GD';
-    if (!dutyNote.toLowerCase().includes('off')) {
+    let dutyNote = item.note || 'GD Off';
+    if (dutyNote.toLowerCase().includes('imported')) dutyNote = 'GD Off';
+    if (!dutyNote.toLowerCase().endsWith('off')) {
       dutyNote = `${dutyNote} Off`;
     }
     return {
-      displayName: `${item.airman.rank} ${item.airman.name}-${dutyNote}`,
+      displayName: `${item.airman.rank} ${item.airman.name} - ${dutyNote}`,
     };
   });
 
-  const dutyOnDisplay = dutyOn.map((item) => ({
-    displayName: `${item.airman.rank} ${item.airman.name}${item.note ? ` (${item.note})` : ''}`,
-  }));
+  const dutyOnDisplay = dutyOn.map((item) => {
+    const dutyNote = item.note && !item.note.toLowerCase().includes('imported') ? item.note : 'GD';
+    return {
+      displayName: `${item.airman.rank} ${item.airman.name} - ${dutyNote}`,
+    };
+  });
 
-  // Col 1: On Parade 1..15
+  // Col 1: On Parade 1..15 on left, 16+ on right
   const onParade1To15 = onParade.slice(0, 15);
   const onParade16Plus = onParade.slice(15);
 
-  const col1Children: Paragraph[] = [
+  const col1Children: (Paragraph | Table)[] = [
     new Paragraph({
       alignment: AlignmentType.LEFT,
       spacing: { after: 40 },
       children: [
         new TextRun({
-          text: 'ON PARADE',
+          text: isPt ? 'ON PT' : 'ON PARADE',
           font: 'Arial',
           bold: true,
           size: 24,
@@ -765,162 +769,184 @@ export async function exportParadeStateSingleDocx(
     }),
   ];
 
-  if (onParade1To15.length === 0) {
+  if (onParade.length === 0) {
     col1Children.push(
       new Paragraph({
-        children: [new TextRun({ text: '-', font: 'Arial', size: 24 })],
+        children: [new TextRun({ text: 'Nil', font: 'Arial', bold: true, size: 24 })],
       })
     );
-  } else {
-    onParade1To15.forEach((item, idx) => {
+  } else if (onParade.length <= 15) {
+    onParade.forEach((a, idx) => {
       col1Children.push(
         new Paragraph({
           spacing: { after: 20 },
           children: [
             new TextRun({
-              text: `${idx + 1}. ${item.rank} ${item.name}`,
+              text: `${idx + 1}. ${a.rank} ${a.name}`,
               font: 'Arial',
-              size: 24,
+              size: 22,
             }),
           ],
         })
       );
     });
+  } else {
+    const maxRows = Math.max(onParade1To15.length, onParade16Plus.length);
+    const innerRows: TableRow[] = [];
+
+    for (let i = 0; i < maxRows; i++) {
+      const leftItem = onParade1To15[i];
+      const rightItem = onParade16Plus[i];
+      const leftText = leftItem ? `${i + 1}. ${leftItem.rank} ${leftItem.name}` : '';
+      const rightText = rightItem ? `${16 + i}. ${rightItem.rank} ${rightItem.name}` : '';
+
+      innerRows.push(
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 2520, type: WidthType.DXA },
+              borders: invisibleBorders,
+              margins: { top: 0, bottom: 20, left: 0, right: 20 },
+              children: [
+                new Paragraph({
+                  spacing: { after: 20 },
+                  children: leftText
+                    ? [
+                        new TextRun({
+                          text: leftText,
+                          font: 'Arial',
+                          size: 22,
+                        }),
+                      ]
+                    : [],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 2520, type: WidthType.DXA },
+              borders: invisibleBorders,
+              margins: { top: 0, bottom: 20, left: 20, right: 0 },
+              children: [
+                new Paragraph({
+                  spacing: { after: 20 },
+                  children: rightText
+                    ? [
+                        new TextRun({
+                          text: rightText,
+                          font: 'Arial',
+                          size: 22,
+                        }),
+                      ]
+                    : [],
+                }),
+              ],
+            }),
+          ],
+        })
+      );
+    }
+
+    const onParadeSubTable = new Table({
+      width: { size: 5040, type: WidthType.DXA },
+      columnWidths: [2520, 2520],
+      borders: invisibleBorders,
+      rows: innerRows,
+    });
+
+    col1Children.push(onParadeSubTable);
   }
 
   const col1 = new TableCell({
-    width: { size: 2520, type: WidthType.DXA },
+    width: { size: 5040, type: WidthType.DXA },
     borders: invisibleBorders,
     margins: { top: 40, bottom: 40, left: 40, right: 40 },
     children: col1Children,
   });
 
-  // Col 2: On Parade 16 onwards
-  const col2Children: Paragraph[] = [
-    new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 40 },
-      children: [
-        new TextRun({
-          text: ' ',
-          font: 'Arial',
-          size: 24,
-        }),
-      ],
-    }),
-  ];
+  // Col 2 Disposals: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT
+  const col2Paragraphs: Paragraph[] = [];
+  const secLeave = buildDisposalSection('LEAVE', toDisplay(leave), col2Paragraphs.length === 0);
+  if (secLeave.length > 0) col2Paragraphs.push(...secLeave);
 
-  onParade16Plus.forEach((item, idx) => {
-    col2Children.push(
-      new Paragraph({
-        spacing: { after: 20 },
-        children: [
-          new TextRun({
-            text: `${16 + idx}. ${item.rank} ${item.name}`,
-            font: 'Arial',
-            size: 24,
-          }),
-        ],
-      })
-    );
-  });
+  const secBakeBite = buildDisposalSection('BAKE & BITE', toDisplay(bakeBite), col2Paragraphs.length === 0);
+  if (secBakeBite.length > 0) col2Paragraphs.push(...secBakeBite);
+
+  const secEssn = buildDisposalSection('ESSN', toDisplay(essn), col2Paragraphs.length === 0);
+  if (secEssn.length > 0) col2Paragraphs.push(...secEssn);
+
+  const secCmh = buildDisposalSection('BNS/BSH/CMH', toDisplay(cmh), col2Paragraphs.length === 0);
+  if (secCmh.length > 0) col2Paragraphs.push(...secCmh);
+
+  const secSick = buildDisposalSection('SICK REPORT', toDisplay(sickReport), col2Paragraphs.length === 0);
+  if (secSick.length > 0) col2Paragraphs.push(...secSick);
 
   const col2 = new TableCell({
-    width: { size: 2520, type: WidthType.DXA },
+    width: { size: 3360, type: WidthType.DXA },
     borders: invisibleBorders,
     margins: { top: 40, bottom: 40, left: 40, right: 40 },
-    children: col2Children,
+    children: col2Paragraphs.length > 0 ? col2Paragraphs : [new Paragraph({ children: [] })],
   });
 
-  // Col 3 Disposals: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT
+  // Col 3 Disposals: ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C, Other[0]
   const col3Paragraphs: Paragraph[] = [];
-  const secLeave = buildDisposalSection('LEAVE', toDisplay(leave), col3Paragraphs.length === 0);
-  if (secLeave.length > 0) col3Paragraphs.push(...secLeave);
+  const secTdy = buildDisposalSection('ATT/TDY/DETT', toDisplay(tdy), col3Paragraphs.length === 0);
+  if (secTdy.length > 0) col3Paragraphs.push(...secTdy);
 
-  const secBakeBite = buildDisposalSection('BAKE & BITE', toDisplay(bakeBite), col3Paragraphs.length === 0);
-  if (secBakeBite.length > 0) col3Paragraphs.push(...secBakeBite);
+  const secReception = buildDisposalSection('RECEPTION', toDisplay(reception), col3Paragraphs.length === 0);
+  if (secReception.length > 0) col3Paragraphs.push(...secReception);
 
-  const secEssn = buildDisposalSection('ESSN', toDisplay(essn), col3Paragraphs.length === 0);
-  if (secEssn.length > 0) col3Paragraphs.push(...secEssn);
+  const secAirFd = buildDisposalSection('AIR FD DUTY', toDisplay(airFdDuty), col3Paragraphs.length === 0);
+  if (secAirFd.length > 0) col3Paragraphs.push(...secAirFd);
 
-  const secCmh = buildDisposalSection('BNS/BSH/CMH', toDisplay(cmh), col3Paragraphs.length === 0);
-  if (secCmh.length > 0) col3Paragraphs.push(...secCmh);
+  const secAdmin = buildDisposalSection('ADMIN ORDER', toDisplay(adminOrder), col3Paragraphs.length === 0);
+  if (secAdmin.length > 0) col3Paragraphs.push(...secAdmin);
 
-  const secSick = buildDisposalSection('SICK REPORT', toDisplay(sickReport), col3Paragraphs.length === 0);
-  if (secSick.length > 0) col3Paragraphs.push(...secSick);
+  const secClass = buildDisposalSection('CLASS/TRG', toDisplay(classTrg), col3Paragraphs.length === 0);
+  if (secClass.length > 0) col3Paragraphs.push(...secClass);
 
-  if (col3Paragraphs.length === 0) {
-    col3Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
+  const secDrill = buildDisposalSection('DRILL CAT-C', toDisplay(drillCatC), col3Paragraphs.length === 0);
+  if (secDrill.length > 0) col3Paragraphs.push(...secDrill);
+
+  if (otherDisposals && otherDisposals.length > 0) {
+    const secOther0 = buildDisposalSection(otherDisposals[0].title.toUpperCase(), toDisplay(otherDisposals[0].airmen), col3Paragraphs.length === 0);
+    if (secOther0.length > 0) col3Paragraphs.push(...secOther0);
   }
 
   const col3 = new TableCell({
-    width: { size: 3456, type: WidthType.DXA },
+    width: { size: 3360, type: WidthType.DXA },
     borders: invisibleBorders,
     margins: { top: 40, bottom: 40, left: 40, right: 40 },
-    children: col3Paragraphs,
+    children: col3Paragraphs.length > 0 ? col3Paragraphs : [new Paragraph({ children: [] })],
   });
 
-  // Col 4 Disposals: ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C
+  // Col 4 Disposals: DUTY ON, DUTY OFF, GAMES, ABSENT, Remaining Other Disposals
   const col4Paragraphs: Paragraph[] = [];
-  const secTdy = buildDisposalSection('ATT/TDY/DETT', toDisplay(tdy), col4Paragraphs.length === 0);
-  if (secTdy.length > 0) col4Paragraphs.push(...secTdy);
+  const secDutyOn = buildDisposalSection('DUTY ON', dutyOnDisplay, col4Paragraphs.length === 0);
+  if (secDutyOn.length > 0) col4Paragraphs.push(...secDutyOn);
 
-  const secReception = buildDisposalSection('RECEPTION', toDisplay(reception), col4Paragraphs.length === 0);
-  if (secReception.length > 0) col4Paragraphs.push(...secReception);
+  if (!isPt) {
+    const secDutyOff = buildDisposalSection('DUTY OFF', dutyOffDisplay, col4Paragraphs.length === 0);
+    if (secDutyOff.length > 0) col4Paragraphs.push(...secDutyOff);
+  }
 
-  const secAirFd = buildDisposalSection('AIR FD DUTY', toDisplay(airFdDuty), col4Paragraphs.length === 0);
-  if (secAirFd.length > 0) col4Paragraphs.push(...secAirFd);
+  const secGames = buildDisposalSection('GAMES', toDisplay(games), col4Paragraphs.length === 0);
+  if (secGames.length > 0) col4Paragraphs.push(...secGames);
 
-  const secAdmin = buildDisposalSection('ADMIN ORDER', toDisplay(adminOrder), col4Paragraphs.length === 0);
-  if (secAdmin.length > 0) col4Paragraphs.push(...secAdmin);
+  const secAbsent = buildDisposalSection('ABSENT', toDisplay(absent), col4Paragraphs.length === 0);
+  if (secAbsent.length > 0) col4Paragraphs.push(...secAbsent);
 
-  const secClass = buildDisposalSection('CLASS/TRG', toDisplay(classTrg), col4Paragraphs.length === 0);
-  if (secClass.length > 0) col4Paragraphs.push(...secClass);
-
-  const secDrill = buildDisposalSection('DRILL CAT-C', toDisplay(drillCatC), col4Paragraphs.length === 0);
-  if (secDrill.length > 0) col4Paragraphs.push(...secDrill);
-
-  if (col4Paragraphs.length === 0) {
-    col4Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
+  if (otherDisposals && otherDisposals.length > 1) {
+    for (let odIdx = 1; odIdx < otherDisposals.length; odIdx++) {
+      const secRem = buildDisposalSection(otherDisposals[odIdx].title.toUpperCase(), toDisplay(otherDisposals[odIdx].airmen), col4Paragraphs.length === 0);
+      if (secRem.length > 0) col4Paragraphs.push(...secRem);
+    }
   }
 
   const col4 = new TableCell({
-    width: { size: 3312, type: WidthType.DXA },
+    width: { size: 3360, type: WidthType.DXA },
     borders: invisibleBorders,
     margins: { top: 40, bottom: 40, left: 40, right: 40 },
-    children: col4Paragraphs,
-  });
-
-  // Col 5 Disposals: DUTY ON, DUTY OFF, GAMES, ABSENT, Other custom disposals
-  const col5Paragraphs: Paragraph[] = [];
-  const secDutyOn = buildDisposalSection('DUTY ON', dutyOnDisplay, col5Paragraphs.length === 0);
-  if (secDutyOn.length > 0) col5Paragraphs.push(...secDutyOn);
-
-  const secDutyOff = buildDisposalSection('DUTY OFF', dutyOffDisplay, col5Paragraphs.length === 0);
-  if (secDutyOff.length > 0) col5Paragraphs.push(...secDutyOff);
-
-  const secGames = buildDisposalSection('GAMES', toDisplay(games), col5Paragraphs.length === 0);
-  if (secGames.length > 0) col5Paragraphs.push(...secGames);
-
-  const secAbsent = buildDisposalSection('ABSENT', toDisplay(absent), col5Paragraphs.length === 0);
-  if (secAbsent.length > 0) col5Paragraphs.push(...secAbsent);
-
-  if (otherDisposals && otherDisposals.length > 0) {
-    otherDisposals.forEach((od) => {
-      const customSec = buildDisposalSection(od.title.toUpperCase(), toDisplay(od.airmen), col5Paragraphs.length === 0);
-      if (customSec.length > 0) col5Paragraphs.push(...customSec);
-    });
-  }
-
-  if (col5Paragraphs.length === 0) {
-    col5Paragraphs.push(new Paragraph({ children: [new TextRun({ text: '-', font: 'Arial', size: 24 })] }));
-  }
-
-  const col5 = new TableCell({
-    width: { size: 3312, type: WidthType.DXA },
-    borders: invisibleBorders,
-    margins: { top: 40, bottom: 40, left: 40, right: 40 },
-    children: col5Paragraphs,
+    children: col4Paragraphs.length > 0 ? col4Paragraphs : [new Paragraph({ children: [] })],
   });
 
   // Spacer Row between 1st & 2nd rows: height 0.6 inch = 864 DXA
@@ -928,7 +954,7 @@ export async function exportParadeStateSingleDocx(
     height: { value: 864, rule: HeightRule.EXACT },
     children: [
       new TableCell({
-        columnSpan: 5,
+        columnSpan: 4,
         width: { size: 15120, type: WidthType.DXA },
         borders: invisibleBorders,
         children: [new Paragraph({ children: [] })],
@@ -936,7 +962,7 @@ export async function exportParadeStateSingleDocx(
     ],
   });
 
-  // 2nd Row: 1st & 2nd Column Merged (Left Officer Sgt Nahid), 3rd & 4th empty, Last column (Right Officer WO Shahin)
+  // 2nd Row: 1st Column (Left Officer Sgt Nahid), 2nd & 3rd empty, Last column (Right Officer WO Shahin)
   const leftSigName = params.leftSig?.name || 'MD NAHID HASAN KHAN';
   const leftSigRank = params.leftSig?.rank || 'SGT';
   const leftSigDesig = params.leftSig?.desig || 'UWO';
@@ -948,7 +974,6 @@ export async function exportParadeStateSingleDocx(
   const signatureRow = new TableRow({
     children: [
       new TableCell({
-        columnSpan: 2,
         width: { size: 5040, type: WidthType.DXA },
         borders: invisibleBorders,
         margins: { top: 120, bottom: 40, left: 40, right: 40 },
@@ -1001,19 +1026,17 @@ export async function exportParadeStateSingleDocx(
         ],
       }),
       new TableCell({
-        width: { size: 3456, type: WidthType.DXA },
+        width: { size: 3360, type: WidthType.DXA },
         borders: invisibleBorders,
-        margins: { top: 120, bottom: 40, left: 40, right: 40 },
         children: [new Paragraph({ children: [] })],
       }),
       new TableCell({
-        width: { size: 3312, type: WidthType.DXA },
+        width: { size: 3360, type: WidthType.DXA },
         borders: invisibleBorders,
-        margins: { top: 120, bottom: 40, left: 40, right: 40 },
         children: [new Paragraph({ children: [] })],
       }),
       new TableCell({
-        width: { size: 3312, type: WidthType.DXA },
+        width: { size: 3360, type: WidthType.DXA },
         borders: invisibleBorders,
         margins: { top: 120, bottom: 40, left: 40, right: 40 },
         children: [
@@ -1067,17 +1090,19 @@ export async function exportParadeStateSingleDocx(
     ],
   });
 
+  const disposalTableRows = [
+    new TableRow({
+      children: [col1, col2, col3, col4],
+    }),
+    spacerRow,
+    signatureRow,
+  ];
+
   const disposalTable = new Table({
     width: { size: 15120, type: WidthType.DXA },
-    columnWidths: [2520, 2520, 3456, 3312, 3312],
+    columnWidths: [5040, 3360, 3360, 3360],
     borders: invisibleBorders,
-    rows: [
-      new TableRow({
-        children: [col1, col2, col3, col4, col5],
-      }),
-      spacerRow,
-      signatureRow,
-    ],
+    rows: disposalTableRows,
   });
 
   docChildren.push(disposalTable);

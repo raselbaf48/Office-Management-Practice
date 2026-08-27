@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
 import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Sun, Moon, Plus, RefreshCw, X, Check, FileText, History } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
@@ -16,7 +16,7 @@ interface LeaveRecord {
   annualLeaveDays: number;
   recreationLeaveDays: number;
   totalLeaveDays: number;
-  weekendDaysExcluded: number;
+  f295Days: number;
   currentlyOnLeave: boolean;
   currentLeaveType?: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Leave';
   currentLeaveRange?: string;
@@ -24,11 +24,11 @@ interface LeaveRecord {
     date: string;
     type: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Leave';
     notes?: string;
-    isWeekend?: boolean;
+    isF295?: boolean;
   }>;
 }
 
-// Helper to check if a date string is Friday or Saturday (BAF weekend)
+// Helper to check if a date string is Friday or Saturday (BAF weekend / F-295 candidate)
 const isWeekendDay = (dateStr: string): boolean => {
   try {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -39,32 +39,73 @@ const isWeekendDay = (dateStr: string): boolean => {
   }
 };
 
-// Helper to calculate Net Leave days between two dates excluding Friday and Saturday
-const calculateNetLeaveDays = (startStr: string, endStr: string): { totalDays: number; netDays: number; weekendDays: number } => {
+/**
+ * Military F-295 Weekend Prefix/Suffix Calculation:
+ * When an airman goes on leave (e.g. 30 days, 15 days, 7 days):
+ * - Middle Fridays & Saturdays during the leave span are counted towards their leave balance.
+ * - ONLY contiguous Friday & Saturday at the very START (prefix) or very END (suffix) of the leave span
+ *   are exempted / credited as free weekend duty pass (F-295).
+ */
+export const calculateLeaveDaysWithF295 = (
+  startStr: string,
+  endStr: string
+): { totalCalendarDays: number; netLeaveDays: number; f295Days: number; dayEntries: Array<{ date: string; isF295: boolean }> } => {
   try {
     const [sY, sM, sD] = startStr.split('-').map(Number);
     const [eY, eM, eD] = endStr.split('-').map(Number);
     const curr = new Date(Date.UTC(sY, sM - 1, sD));
     const end = new Date(Date.UTC(eY, eM - 1, eD));
-    let total = 0;
-    let weekend = 0;
-    let net = 0;
-    let limit = 0;
 
+    const dates: string[] = [];
+    let limit = 0;
     while (curr <= end && limit < 366) {
-      total++;
-      const day = curr.getUTCDay();
-      if (day === 5 || day === 6) {
-        weekend++;
-      } else {
-        net++;
-      }
+      const y = curr.getUTCFullYear();
+      const m = String(curr.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(curr.getUTCDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${d}`);
       curr.setUTCDate(curr.getUTCDate() + 1);
       limit++;
     }
-    return { totalDays: total, netDays: net, weekendDays: weekend };
+
+    if (dates.length === 0) {
+      return { totalCalendarDays: 1, netLeaveDays: 1, f295Days: 0, dayEntries: [{ date: startStr, isF295: false }] };
+    }
+
+    const n = dates.length;
+    // Find contiguous weekends at the start (Prefix F-295)
+    let startWeekendCount = 0;
+    while (startWeekendCount < n && isWeekendDay(dates[startWeekendCount])) {
+      startWeekendCount++;
+    }
+
+    // Find contiguous weekends at the end (Suffix F-295)
+    // CRITICAL BAF RULE: An airman NEVER receives F-295 twice on the same leave.
+    // They receive F-295 on EITHER the start side OR the end side, never both.
+    let endWeekendCount = 0;
+    if (startWeekendCount === 0) {
+      while (endWeekendCount < n && isWeekendDay(dates[n - 1 - endWeekendCount])) {
+        endWeekendCount++;
+      }
+    }
+
+    const dayEntries = dates.map((dStr, idx) => {
+      const isStartF295 = idx < startWeekendCount;
+      const isEndF295 = startWeekendCount === 0 && idx >= n - endWeekendCount;
+      const isF295 = isStartF295 || isEndF295;
+      return { date: dStr, isF295 };
+    });
+
+    const f295Days = startWeekendCount > 0 ? startWeekendCount : endWeekendCount;
+    const netLeaveDays = Math.max(0, n - f295Days);
+
+    return {
+      totalCalendarDays: n,
+      netLeaveDays,
+      f295Days,
+      dayEntries,
+    };
   } catch {
-    return { totalDays: 1, netDays: 1, weekendDays: 0 };
+    return { totalCalendarDays: 1, netLeaveDays: 1, f295Days: 0, dayEntries: [{ date: startStr, isF295: false }] };
   }
 };
 
@@ -82,15 +123,99 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
   // Grant / Record Leave Modal
   const [showGrantLeaveModal, setShowGrantLeaveModal] = useState<boolean>(false);
+  const [grantLeaveFlight, setGrantLeaveFlight] = useState<FlightName>('Avionics');
   const [leaveAirmanId, setLeaveAirmanId] = useState<string>('');
   const [leaveType, setLeaveType] = useState<'Casual' | 'Annual' | 'Recreation'>('Casual');
   const [leaveFromDate, setLeaveFromDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [leaveToDate, setLeaveToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [leaveNotes, setLeaveNotes] = useState<string>('Casual Leave (CL)');
   const [savingLeave, setSavingLeave] = useState<boolean>(false);
   const [leaveSuccessMsg, setLeaveSuccessMsg] = useState<string>('');
 
-  // Fetch all assignments for the year to calculate Casual, Annual, and Recreation leave (excluding Friday & Saturday)
+  // F-295 Inclusion in Modal
+  const [includeF295, setIncludeF295] = useState<boolean>(false);
+  const [f295Option, setF295Option] = useState<'2' | '3' | 'custom'>('2');
+  const [f295CustomDays, setF295CustomDays] = useState<number>(2);
+  const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(null);
+
+  // Calculate calendar days in current leave selection
+  const leaveDurationDays = useMemo(() => {
+    try {
+      const [sY, sM, sD] = leaveFromDate.split('-').map(Number);
+      const [eY, eM, eD] = leaveToDate.split('-').map(Number);
+      const curr = new Date(Date.UTC(sY, sM - 1, sD));
+      const end = new Date(Date.UTC(eY, eM - 1, eD));
+      const diff = Math.round((end.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return diff > 0 ? diff : 1;
+    } catch {
+      return 1;
+    }
+  }, [leaveFromDate, leaveToDate]);
+
+  // Auto-select Leave Type based on duration (<=10 days => Casual Leave, >10 days => Annual/Recreation)
+  useEffect(() => {
+    if (leaveDurationDays <= 10) {
+      setLeaveType('Casual');
+    } else if (leaveType === 'Casual') {
+      setLeaveType('Annual');
+    }
+  }, [leaveDurationDays]);
+
+  // Filter airmen for Grant Leave Modal (Strictly 4 flights: Avionics, Mechanics, GCS, Admin)
+  const grantAirmenList = useMemo(() => {
+    const list = airmen.filter((a) => a.flightName === grantLeaveFlight);
+    return sortAirmenBySeniority(list);
+  }, [airmen, grantLeaveFlight]);
+
+  // Ensure valid airman selected when flight filter changes
+  useEffect(() => {
+    if (grantAirmenList.length > 0) {
+      const exists = grantAirmenList.some((a) => a.id === leaveAirmanId);
+      if (!exists) {
+        setLeaveAirmanId(grantAirmenList[0].id);
+      }
+    }
+  }, [grantAirmenList, leaveAirmanId]);
+
+  // Helper to add days from leaveFromDate with optional F-295 days
+  const applyPresetDays = (baseDays: number, f295Enabled: boolean = includeF295, opt: '2' | '3' | 'custom' = f295Option, customVal: number = f295CustomDays) => {
+    try {
+      setSelectedPresetDays(baseDays);
+      let extraDays = 0;
+      if (f295Enabled) {
+        extraDays = opt === '2' ? 2 : opt === '3' ? 3 : Math.max(1, customVal || 1);
+      }
+      const totalDays = baseDays + extraDays;
+      const [y, m, d] = leaveFromDate.split('-').map(Number);
+      const start = new Date(Date.UTC(y, m - 1, d));
+      // totalDays - 1 because start date is inclusive
+      start.setUTCDate(start.getUTCDate() + (totalDays - 1));
+      const endYear = start.getUTCFullYear();
+      const endMonth = String(start.getUTCMonth() + 1).padStart(2, '0');
+      const endDay = String(start.getUTCDate()).padStart(2, '0');
+      setLeaveToDate(`${endYear}-${endMonth}-${endDay}`);
+      if (baseDays > 10 && leaveType === 'Casual') {
+        setLeaveType('Annual');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleF295Toggle = (enabled: boolean) => {
+    setIncludeF295(enabled);
+    if (selectedPresetDays !== null) {
+      applyPresetDays(selectedPresetDays, enabled, f295Option, f295CustomDays);
+    }
+  };
+
+  const handleF295OptionChange = (opt: '2' | '3' | 'custom', customVal: number = f295CustomDays) => {
+    setF295Option(opt);
+    if (selectedPresetDays !== null && includeF295) {
+      applyPresetDays(selectedPresetDays, true, opt, customVal);
+    }
+  };
+
+  // Fetch all assignments for the year to calculate Casual, Annual, and Recreation leave (with F-295 prefix/suffix rule)
   const fetchLeaves = async () => {
     setLoading(true);
     try {
@@ -130,7 +255,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           annualLeaveDays: 0,
           recreationLeaveDays: 0,
           totalLeaveDays: 0,
-          weekendDaysExcluded: 0,
+          f295Days: 0,
           currentlyOnLeave: false,
           leaveEntries: [],
         };
@@ -170,10 +295,13 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           spans.push(currentSpan);
         }
 
-        // Process each contiguous span
+        // Process each contiguous span with Military F-295 prefix/suffix rule
         spans.forEach((span) => {
           const spanLength = span.length;
           const isSpanAnnual = spanLength > 7;
+          const firstDate = span[0].date;
+          const lastDate = span[span.length - 1].date;
+          const spanF295Calc = calculateLeaveDaysWithF295(firstDate, lastDate);
 
           span.forEach((ass) => {
             const notesLower = (ass.notes || '').toLowerCase();
@@ -192,11 +320,12 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
               type = spanLength > 7 ? 'Annual Leave' : 'Casual Leave';
             }
 
-            const isWeekend = isWeekendDay(ass.date);
+            // Check if this date in the span falls into F-295 (prefix/suffix weekend)
+            const dayEntry = spanF295Calc.dayEntries.find((de) => de.date === ass.date);
+            const isF295 = !!dayEntry?.isF295;
 
-            // If Friday or Saturday, exclude from leave balance count
-            if (isWeekend) {
-              rec.weekendDaysExcluded++;
+            if (isF295) {
+              rec.f295Days++;
             } else {
               if (type === 'Recreation Leave') {
                 rec.recreationLeaveDays++;
@@ -212,7 +341,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
               date: ass.date,
               type,
               notes: ass.notes,
-              isWeekend,
+              isF295,
             });
 
             if (ass.date === todayStr) {
@@ -256,8 +385,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
     setSavingLeave(true);
     try {
-      const shortCode = leaveType === 'Casual' ? 'CL' : leaveType === 'Annual' ? 'AL' : 'RL';
-      const notes = `${leaveType} Leave (${shortCode})${leaveNotes ? `: ${leaveNotes}` : ''}`;
+      const fullTypeName = leaveType === 'Casual' ? 'Casual Leave' : leaveType === 'Annual' ? 'Annual Leave' : 'Recreation Leave';
       const res = await fetch('/api/roster/assign-range', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,23 +394,25 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           dutyCode: 'LEAVE',
           fromDate: leaveFromDate,
           toDate: leaveToDate,
-          notes,
+          notes: fullTypeName,
         }),
       });
 
       const result = await res.json().catch(() => ({}));
       if (res.ok && result.success) {
         const found = airmen.find((a) => a.id === leaveAirmanId);
-        const { totalDays, netDays, weekendDays } = calculateNetLeaveDays(leaveFromDate, leaveToDate);
+        const { netLeaveDays, f295Days } = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate);
         setLeaveSuccessMsg(
-          `✅ ${leaveType} Leave granted to ${found?.rank} ${found?.name}: ${netDays} Net Leave day(s) (${weekendDays} Fri/Sat weekend days excluded)!`
+          `✅ ${fullTypeName} granted to ${found?.rank} ${found?.name}: ${netLeaveDays} Net Leave day(s)${
+            f295Days > 0 ? ` + ${f295Days} day(s) credited to F-295 free weekend` : ''
+          }!`
         );
         window.dispatchEvent(new CustomEvent('baf_state_updated'));
         await fetchLeaves();
         setTimeout(() => {
           setShowGrantLeaveModal(false);
           setLeaveSuccessMsg('');
-        }, 1500);
+        }, 1300);
       } else {
         alert(result.error || 'Failed to grant leave');
       }
@@ -318,10 +448,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   const totalAnnual = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.annualLeaveDays, 0);
   const totalRecreation = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.recreationLeaveDays, 0);
   const totalNetLeave = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.totalLeaveDays, 0);
-  const totalWeekendExcluded = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.weekendDaysExcluded, 0);
+  const totalF295 = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.f295Days, 0);
   const totalOnLeaveToday = leaveRecords.filter((r: LeaveRecord) => r.currentlyOnLeave).length;
 
-  const modalDaysCalc = calculateNetLeaveDays(leaveFromDate, leaveToDate);
+  const modalDaysCalc = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate);
 
   const handlePrint = () => {
     window.print();
@@ -337,10 +467,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
             <span>Workforce Management • 155 UASU BAF</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            Leave Register (ছুটি রেজিস্টার • CL / AL / RL)
+            Leave Register
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Casual, Annual & Recreation Leave tracking with automatic Friday & Saturday weekend exclusion rule.
+            Casual Leave, Annual Leave & Recreation Leave tracking with military prefix/suffix weekend exclusion rule (F-295).
           </p>
         </div>
 
@@ -364,7 +494,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           <button
             onClick={fetchLeaves}
             disabled={loading}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors"
+            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors cursor-pointer"
             title="Refresh Leave Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-500' : ''}`} />
@@ -374,7 +504,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           {role === 'ADMIN' && (
             <button
               onClick={() => setShowHistoryModal(true)}
-              className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs shadow-xs transition-colors"
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
               title="View Entry History, revert wrong entries, or edit"
             >
               <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -390,7 +520,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
               }
               setShowGrantLeaveModal(true);
             }}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Grant Leave</span>
@@ -399,7 +529,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           {/* Print Button */}
           <button
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>Print Register</span>
@@ -411,7 +541,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-            Casual Leave (CL)
+            Casual Leave
           </div>
           <div className="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1">
             {totalCasual} <span className="text-xs font-semibold text-slate-400">Days</span>
@@ -421,7 +551,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-            Annual Leave (AL)
+            Annual Leave
           </div>
           <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
             {totalAnnual} <span className="text-xs font-semibold text-slate-400">Days</span>
@@ -431,12 +561,12 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-            Recreation Leave (RL)
+            Recreation Leave
           </div>
           <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
             {totalRecreation} <span className="text-xs font-semibold text-slate-400">Days</span>
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Recreation leave (RL)</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">Recreation leave balance</div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
@@ -447,7 +577,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
             {totalNetLeave} <span className="text-xs font-semibold text-slate-400">Days</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-0.5 font-medium">
-            {totalWeekendExcluded > 0 ? `(${totalWeekendExcluded} Fri/Sat excluded)` : 'Fri & Sat excluded'}
+            {totalF295 > 0 ? `(${totalF295} days F-295 pass)` : 'Prefix/Suffix F-295 rule applied'}
           </div>
         </div>
 
@@ -507,19 +637,19 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 <th className="py-3 px-4">Flight</th>
                 <th className="py-3 px-4">Trade</th>
                 <th className="py-3 px-3 text-center bg-sky-50 dark:bg-sky-950/30 text-sky-900 dark:text-sky-300">
-                  Casual (CL)
+                  Casual Leave
                 </th>
                 <th className="py-3 px-3 text-center bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300">
-                  Annual (AL)
+                  Annual Leave
                 </th>
                 <th className="py-3 px-3 text-center bg-indigo-50 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-300">
-                  Recreation (RL)
+                  Recreation Leave
                 </th>
                 <th className="py-3 px-3 text-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 font-black">
-                  Net Days <span className="text-[9px] font-normal block text-emerald-700 dark:text-emerald-400">(Excl. Fri/Sat)</span>
+                  Net Days
                 </th>
-                <th className="py-3 px-3 text-center text-slate-500 dark:text-slate-400">
-                  Fri/Sat Excl.
+                <th className="py-3 px-3 text-center text-slate-600 dark:text-slate-300 bg-purple-50 dark:bg-purple-950/20 font-black">
+                  F-295
                 </th>
                 <th className="py-3 px-4 text-center">Current Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -546,7 +676,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                     annualLeaveDays: 0,
                     recreationLeaveDays: 0,
                     totalLeaveDays: 0,
-                    weekendDaysExcluded: 0,
+                    f295Days: 0,
                     currentlyOnLeave: false,
                     leaveEntries: [],
                   };
@@ -618,13 +748,13 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                           <span className="text-slate-300 dark:text-slate-600">0</span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-center font-mono font-semibold text-slate-500 dark:text-slate-400">
-                        {rec.weekendDaysExcluded > 0 ? (
-                          <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[11px] text-slate-600 dark:text-slate-300 font-bold">
-                            +{rec.weekendDaysExcluded}d
+                      <td className="py-3 px-3 text-center font-mono font-bold bg-purple-50/40 dark:bg-purple-950/10">
+                        {rec.f295Days > 0 ? (
+                          <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[11px] text-purple-700 dark:text-purple-300 font-black">
+                            {rec.f295Days}d
                           </span>
                         ) : (
-                          <span className="text-slate-300 dark:text-slate-600">-</span>
+                          <span className="text-slate-300 dark:text-slate-600">0</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -669,12 +799,12 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   <h3 className="text-base font-black text-slate-900 dark:text-white">
                     Grant / Record Airman Leave
                   </h3>
-                  <p className="text-xs text-slate-400">Record Casual (CL), Annual (AL), or Recreation Leave (RL)</p>
+                  <p className="text-xs text-slate-400">Record Casual Leave, Annual Leave, or Recreation Leave</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowGrantLeaveModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -687,73 +817,50 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
             )}
 
             <form onSubmit={handleGrantLeaveSubmit} className="space-y-4">
-              {/* Select Airman */}
+              {/* Flight Filter Selector (Strictly 4 Flights) */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Select Airman (BD No & Rank)
+                  Flight
                 </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => (
+                    <button
+                      key={flt}
+                      type="button"
+                      onClick={() => setGrantLeaveFlight(flt)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                        grantLeaveFlight === flt
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                      }`}
+                    >
+                      {flt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Select Airman (Strictly Rank & Name only) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                    Select Airman
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-semibold">
+                    {grantAirmenList.length} Airmen available
+                  </span>
+                </div>
                 <select
                   value={leaveAirmanId}
                   onChange={(e) => setLeaveAirmanId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                 >
-                  {airmen.map((a) => (
+                  {grantAirmenList.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.bdNo} • {a.rank} {a.name} ({a.flightName} Flight)
+                      {a.rank} {a.name}
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Leave Type (Casual vs Annual vs Recreation) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Leave Type
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLeaveType('Casual');
-                      setLeaveNotes('Casual Leave (CL)');
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                      leaveType === 'Casual'
-                        ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Casual (CL)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLeaveType('Annual');
-                      setLeaveNotes('Annual Leave (AL)');
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                      leaveType === 'Annual'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Annual (AL)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLeaveType('Recreation');
-                      setLeaveNotes('Recreation Leave (RL)');
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                      leaveType === 'Recreation'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Recreation (RL)
-                  </button>
-                </div>
               </div>
 
               {/* Date Range */}
@@ -789,38 +896,184 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 </div>
               </div>
 
-              {/* Real-time duration & Weekend Exclusion summary badge */}
-              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs">
-                <div className="flex items-center justify-between font-bold text-emerald-900 dark:text-emerald-200">
-                  <span>Net Leave Duration:</span>
-                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">
-                    {modalDaysCalc.netDays} Day{modalDaysCalc.netDays > 1 ? 's' : ''}
-                  </span>
+              {/* Quick Duration Presets & F-295 */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Quick Leave Presets:</span>
+                  <span className="text-[11px] text-slate-400">Sets 'To Date' automatically</span>
                 </div>
-                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-between">
-                  <span>Total Calendar Span: {modalDaysCalc.totalDays} day(s)</span>
-                  {modalDaysCalc.weekendDays > 0 ? (
-                    <span className="font-semibold text-amber-700 dark:text-amber-400">
-                      ⚡ {modalDaysCalc.weekendDays} weekend day(s) (Fri/Sat) excluded from leave count
-                    </span>
-                  ) : (
-                    <span>No Fri/Sat in this span</span>
+                
+                {/* 3, 4, 7, 15, 21, 30 days presets */}
+                <div className="grid grid-cols-6 gap-1.5">
+                  {[3, 4, 7, 15, 21, 30].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => applyPresetDays(days)}
+                      className={`py-1.5 px-1 bg-white dark:bg-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs text-center ${
+                        selectedPresetDays === days ? 'ring-2 ring-emerald-500 bg-emerald-50 text-emerald-800' : ''
+                      }`}
+                    >
+                      {days} Days
+                    </button>
+                  ))}
+                </div>
+
+                {/* incl. F-295 Option */}
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center space-x-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={includeF295}
+                        onChange={(e) => handleF295Toggle(e.target.checked)}
+                        className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                        incl. F-295 (Weekend Duty Pass)
+                      </span>
+                    </label>
+                    {includeF295 && (
+                      <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                        +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added
+                      </span>
+                    )}
+                  </div>
+
+                  {includeF295 && (
+                    <div className="flex flex-wrap items-center gap-2 pl-6 animate-fadeIn">
+                      <button
+                        type="button"
+                        onClick={() => handleF295OptionChange('2')}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          f295Option === '2'
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                        }`}
+                      >
+                        2 Days
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleF295OptionChange('3')}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          f295Option === '3'
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                        }`}
+                      >
+                        3 Days
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleF295OptionChange('custom')}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          f295Option === 'custom'
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                        }`}
+                      >
+                        Custom
+                      </button>
+
+                      {f295Option === 'custom' && (
+                        <div className="flex items-center space-x-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={f295CustomDays}
+                            onChange={(e) => {
+                              const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                              setF295CustomDays(val);
+                              handleF295OptionChange('custom', val);
+                            }}
+                            className="w-14 px-2 py-0.5 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white outline-none"
+                          />
+                          <span className="text-[11px] text-slate-500">Days</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Notes */}
+              {/* Leave Type Section (Auto-Select <=10 days => Casual Leave, >10 days => Annual/Recreation options) */}
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  Leave Details / Station Out Note
-                </label>
-                <input
-                  type="text"
-                  value={leaveNotes}
-                  onChange={(e) => setLeaveNotes(e.target.value)}
-                  placeholder="e.g. Recreation Leave (RL) - Station Leave"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                    Leave Type
+                  </label>
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Duration: {leaveDurationDays} Day{leaveDurationDays > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {leaveDurationDays <= 10 ? (
+                  <div className="p-3 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-sky-600 text-white font-black text-xs">
+                        Casual Leave
+                      </span>
+                      <span className="text-xs text-sky-800 dark:text-sky-300 font-semibold">
+                        Auto-selected (≤ 10 days)
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-sky-700 dark:text-sky-400">
+                      Casual
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLeaveType('Annual')}
+                        className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                          leaveType === 'Annual'
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        Annual Leave
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLeaveType('Recreation')}
+                        className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                          leaveType === 'Recreation'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        Recreation Leave
+                      </button>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400">
+                      Duration is &gt; 10 days: select either Annual Leave or Recreation Leave.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Real-time duration & Military F-295 summary badge */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs space-y-1.5">
+                <div className="flex items-center justify-between font-bold text-emerald-900 dark:text-emerald-200">
+                  <span>Net Leave Balance Count:</span>
+                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">
+                    {modalDaysCalc.netLeaveDays} Day{modalDaysCalc.netLeaveDays > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between border-t border-emerald-200/60 dark:border-emerald-800/60 pt-1.5">
+                  <span>Total Calendar Span: <strong>{modalDaysCalc.totalCalendarDays} Days</strong></span>
+                  {modalDaysCalc.f295Days > 0 ? (
+                    <span className="font-bold text-purple-700 dark:text-purple-300 bg-purple-100/80 dark:bg-purple-900/60 px-2 py-0.5 rounded-md">
+                      F-295 (Free Weekend): {modalDaysCalc.f295Days} Day(s)
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 dark:text-slate-400">No start/end weekend (F-295: 0)</span>
+                  )}
+                </div>
               </div>
 
               {/* Modal Buttons */}

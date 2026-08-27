@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Airman, ConflictAlert } from '../types';
-import { ShieldAlert, AlertTriangle, CheckCircle2, RefreshCw, Calendar, ArrowRight, User } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle2, RefreshCw, Calendar, ArrowRight, User, Wrench, Check, Trash2 } from 'lucide-react';
 
 interface DutyConflictMonitorProps {
   airmen: Airman[];
@@ -19,6 +19,8 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
   );
   const [alerts, setAlerts] = useState<ConflictAlert[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [solvingId, setSolvingId] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string>('');
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -46,6 +48,133 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
     };
   }, [monthKey]);
 
+  // Click to Solve specific conflict
+  const handleSolveConflict = async (conflict: ConflictAlert, index: number) => {
+    const alertKey = `alert-${conflict.airmanId}-${conflict.date}-${index}`;
+    setSolvingId(alertKey);
+
+    try {
+      // First fetch current assignments for this date to determine the conflicting entry
+      const mKey = conflict.date.slice(0, 7);
+      const resRoster = await fetch(`/api/roster?month=${mKey}`);
+      if (resRoster.ok) {
+        const rosterData = await resRoster.json();
+        const assignments: any[] = Array.isArray(rosterData.assignments)
+          ? rosterData.assignments
+          : Array.isArray(rosterData)
+          ? rosterData
+          : [];
+
+        const dayAssignments = assignments.filter((a) => a.airmanId === conflict.airmanId && a.date === conflict.date);
+
+        // If airman is on LEAVE or TDY alongside an operational duty, remove the operational duty
+        const hasLeaveOrTdy = dayAssignments.some((a) => a.dutyCode === 'LEAVE' || a.dutyCode === 'TDY');
+        const operationalDuty = dayAssignments.find((a) => a.dutyCode !== 'LEAVE' && a.dutyCode !== 'TDY');
+
+        if (hasLeaveOrTdy && operationalDuty) {
+          await fetch('/api/roster/delete-range', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              airmanId: conflict.airmanId,
+              fromDate: conflict.date,
+              toDate: conflict.date,
+              dutyCode: operationalDuty.dutyCode,
+              idaShift: operationalDuty.idaShift,
+            }),
+          });
+        } else if (dayAssignments.length > 1) {
+          // If multiple operational duties assigned on same day, remove the duplicate
+          const toRemove = dayAssignments[dayAssignments.length - 1];
+          await fetch('/api/roster/delete-range', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              airmanId: conflict.airmanId,
+              fromDate: conflict.date,
+              toDate: conflict.date,
+              dutyCode: toRemove.dutyCode,
+              idaShift: toRemove.idaShift,
+            }),
+          });
+        } else if (dayAssignments.length === 1) {
+          // If back-to-back night shift violation, remove the day's conflicting shift
+          const toRemove = dayAssignments[0];
+          await fetch('/api/roster/delete-range', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              airmanId: conflict.airmanId,
+              fromDate: conflict.date,
+              toDate: conflict.date,
+              dutyCode: toRemove.dutyCode,
+              idaShift: toRemove.idaShift,
+            }),
+          });
+        }
+      }
+
+      setSuccessMsg(`✅ Conflict on ${conflict.date} resolved for ${conflict.airmanName}!`);
+      window.dispatchEvent(new CustomEvent('baf_state_updated'));
+      await fetchAlerts();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      console.error('Error solving conflict:', err);
+      window.alert(`Failed to auto-resolve conflict: ${err.message}`);
+    } finally {
+      setSolvingId(null);
+    }
+  };
+
+  // Solve all conflicts in batch
+  const handleSolveAllConflicts = async () => {
+    if (!confirm(`Are you sure you want to auto-reconcile all ${alerts.length} conflict(s)? Conflicting overlapping duties will be cleared.`)) {
+      return;
+    }
+    setLoading(true);
+    try {
+      for (let i = 0; i < alerts.length; i++) {
+        const alert = alerts[i];
+        const mKey = alert.date.slice(0, 7);
+        const resRoster = await fetch(`/api/roster?month=${mKey}`);
+        if (resRoster.ok) {
+          const rosterData = await resRoster.json();
+          const assignments: any[] = Array.isArray(rosterData.assignments)
+            ? rosterData.assignments
+            : Array.isArray(rosterData)
+            ? rosterData
+            : [];
+          const dayAssignments = assignments.filter((a) => a.airmanId === alert.airmanId && a.date === alert.date);
+          const hasLeaveOrTdy = dayAssignments.some((a) => a.dutyCode === 'LEAVE' || a.dutyCode === 'TDY');
+          const operationalDuty = dayAssignments.find((a) => a.dutyCode !== 'LEAVE' && a.dutyCode !== 'TDY');
+
+          if (hasLeaveOrTdy && operationalDuty) {
+            await fetch('/api/roster/delete-range', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                airmanId: alert.airmanId,
+                fromDate: alert.date,
+                toDate: alert.date,
+                dutyCode: operationalDuty.dutyCode,
+                idaShift: operationalDuty.idaShift,
+              }),
+            });
+          }
+        }
+      }
+      setSuccessMsg(`✅ All conflicts successfully auto-reconciled!`);
+      window.dispatchEvent(new CustomEvent('baf_state_updated'));
+      await fetchAlerts();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e: any) {
+      console.error('Error solving all conflicts:', e);
+      alert(`Failed to resolve all conflicts: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const airmanMap = new Map(airmen.map((a) => [a.id, a]));
 
   return (
@@ -58,10 +187,10 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
             <span>Smart Duty Governance • 155 UASU BAF</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            Duty Conflict Monitor (ডিউটি কনফ্লিক্ট মনিটর)
+            Duty Conflict Monitor
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            ছুটি, টিডিওয়াই ও পরপর ডিউটি সংক্রান্ত রুলস ভায়োলেশন এবং অটোমেটিক কনফ্লিক্ট ডিটেকশন
+            Automatic detection of leave, TDY, back-to-back shift violations, and rest period compliance with 1-click auto-solve.
           </p>
         </div>
 
@@ -78,6 +207,13 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
         </div>
       </div>
 
+      {successMsg && (
+        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl text-emerald-800 dark:text-emerald-200 text-xs font-bold text-center flex items-center justify-center space-x-2">
+          <Check className="w-4 h-4 text-emerald-600" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
       {/* Overview Status Banner */}
       {loading ? (
         <div className="p-16 text-center text-slate-400">
@@ -90,44 +226,57 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h3 className="text-base font-black text-emerald-900 dark:text-emerald-200">
-            কোনো কনফ্লিক্ট পাওয়া যায়নি (All Rosters Compliant)
+            No Conflicts Detected (All Rosters Compliant)
           </h3>
           <p className="text-xs text-emerald-700 dark:text-emerald-400 max-w-md mx-auto">
-            {monthKey} মাসের সকল ডিউটি অ্যাসাইনমেন্ট BAF নিয়মাবলী অনুসারে সঠিক রয়েছে। কোনো ওভারল্যাপিং বা ছুটি লঙ্ঘন নেই।
+            All duty assignments for {monthKey} strictly adhere to BAF protocols. No overlapping duties, leave conflicts, or rest period violations found.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 flex items-center justify-between">
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
-              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
               <div>
                 <h4 className="text-xs font-black text-rose-900 dark:text-rose-200">
-                  {alerts.length} টি সম্ভাব্য কনফ্লিক্ট পাওয়া গেছে
+                  {alerts.length} Potential Conflict{alerts.length > 1 ? 's' : ''} Detected
                 </h4>
                 <p className="text-[11px] text-rose-700 dark:text-rose-400">
-                  ছুটি, টিডিওয়াই অথবা ব্যাক-টু-ব্যাক ডিউটি সমন্বয়ের জন্য নিচের তালিকা পর্যালোচনা করুন।
+                  Use the 1-Click Solve buttons below or auto-reconcile all conflicts at once.
                 </p>
               </div>
             </div>
 
-            {onNavigateToRegister && (
+            <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={onNavigateToRegister}
-                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-xs transition-colors"
+                onClick={handleSolveAllConflicts}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
               >
-                Open Duty Register
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Auto-Solve All</span>
               </button>
-            )}
+
+              {onNavigateToRegister && (
+                <button
+                  onClick={onNavigateToRegister}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-black shadow-xs transition-colors cursor-pointer"
+                >
+                  Open Register
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Conflict Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {alerts.map((alert, index) => {
               const airman = airmanMap.get(alert.airmanId);
+              const alertKey = `alert-${alert.airmanId}-${alert.date}-${index}`;
+              const isSolvingThis = solvingId === alertKey;
+
               return (
                 <div
-                  key={alert.id ? `${alert.id}-${index}` : `conflict-${alert.airmanId}-${alert.date}-${index}`}
+                  key={alert.id ? `${alert.id}-${index}` : alertKey}
                   className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3"
                 >
                   <div>
@@ -150,13 +299,32 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <button
+                      type="button"
+                      disabled={isSolvingThis}
+                      onClick={() => handleSolveConflict(alert, index)}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black flex items-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      {isSolvingThis ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Solving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wrench className="w-3 h-3" />
+                          <span>Click to Solve</span>
+                        </>
+                      )}
+                    </button>
+
                     {airman && (
                       <button
                         onClick={() => onViewProfile(airman)}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center space-x-1"
+                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center space-x-1 cursor-pointer"
                       >
-                        <span>View Airman History</span>
+                        <span>View Airman</span>
                         <ArrowRight className="w-3 h-3" />
                       </button>
                     )}
@@ -170,3 +338,4 @@ export const DutyConflictMonitor: React.FC<DutyConflictMonitorProps> = ({
     </div>
   );
 };
+

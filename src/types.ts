@@ -64,6 +64,7 @@ export interface DutyAssignment {
   dutyCode: DutyCategoryCode;
   idaShift?: IDAShift;
   proxyForFlight?: FlightName;
+  disposalScope?: 'ALL' | 'PARADE' | 'PT';
   notes?: string;
   previousDutyName?: string;
   assignedBy?: string;
@@ -101,6 +102,9 @@ export interface AirmanDutyStats {
   totalHalishahar: number;
   totalAirport: number;
   totalIDAC: number;
+  totalIDACMorning: number;
+  totalIDACAfternoon: number;
+  totalIDACNight: number;
   totalBakeNBite: number;
   totalTDY: number;
   totalLeave: number;
@@ -124,6 +128,7 @@ export interface PersonnelStatusItem {
   airman: Airman;
   dutyCode: DutyCategoryCode;
   idaShift?: IDAShift;
+  disposalScope?: 'ALL' | 'PARADE' | 'PT';
   notes?: string;
   dutyName?: string;
   previousDutyName?: string;
@@ -133,7 +138,7 @@ export interface PersonnelStatusItem {
 export interface ActivityHistoryItem {
   id: string;
   timestamp: string;
-  actionType: 'ASSIGN_DUTY' | 'ASSIGN_RANGE' | 'GRANT_LEAVE' | 'DELETE_ASSIGNMENT' | 'CLEAR_RANGE' | 'EDIT_DUTY';
+  actionType: 'ASSIGN_DUTY' | 'ASSIGN_RANGE' | 'GRANT_LEAVE' | 'DELETE_ASSIGNMENT' | 'CLEAR_RANGE' | 'EDIT_DUTY' | 'IMPORT_PDF_ROSTER';
   airmanId: string;
   airmanName: string;
   airmanRank?: string;
@@ -144,6 +149,42 @@ export interface ActivityHistoryItem {
   toDate: string;
   notes?: string;
   previousAssignments?: Array<{ airmanId: string; date: string; dutyCode?: DutyCategoryCode; idaShift?: IDAShift; notes?: string }>;
+}
+
+export interface ParsedDutyAssignment {
+  rawText: string;
+  dutyCode: DutyCategoryCode;
+  dutyName: string;
+  idaShift?: IDAShift | null;
+  matchedAirmanId: string | null;
+  matchedAirmanName?: string;
+  matchedAirmanRank?: Rank;
+  matchedAirmanTrade?: string;
+  matchedAirmanFlight?: FlightName;
+  matchedAirmanBdNo?: string;
+  confidence: number;
+  isIgnored?: boolean;
+}
+
+export interface ParsedDateEntry {
+  date: string;
+  dayName: string;
+  assignments: ParsedDutyAssignment[];
+}
+
+export interface DocumentAnalysisResult {
+  documentTitle: string;
+  detectedFlight: FlightName | 'Overall';
+  year: number;
+  month: number;
+  totalDates: number;
+  totalPages?: number;
+  totalFiles?: number;
+  dateRange: { start: string; end: string };
+  dates: ParsedDateEntry[];
+  totalAssignmentsCount: number;
+  matchedCount: number;
+  unmatchedCount: number;
 }
 
 export interface ParadeStateResponse {
@@ -166,3 +207,33 @@ export interface ParadeStateResponse {
   }>;
   personnelStatusList: PersonnelStatusItem[];
 }
+
+export type ThemePreference = 'dark' | 'light' | 'system';
+
+export interface ImportHistoryBatch {
+  id: string;
+  timestamp: string;
+  sourceDoc: string;
+  dutyCount: number;
+  datesCount: number;
+  dates: string[];
+  airmenNames?: string[];
+  importedAssignments: Array<{
+    airmanId: string;
+    airmanName?: string;
+    airmanRank?: string;
+    airmanFlight?: FlightName;
+    date: string;
+    dutyCode: DutyCategoryCode;
+    idaShift?: IDAShift;
+    notes?: string;
+  }>;
+  previousAssignments: Array<{
+    airmanId: string;
+    date: string;
+    dutyCode?: DutyCategoryCode;
+    idaShift?: IDAShift;
+    notes?: string;
+  }>;
+}
+

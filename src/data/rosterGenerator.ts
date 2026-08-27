@@ -12,112 +12,8 @@ export function formatMonthKey(year: number, month: number): string {
 }
 
 export function generateSeedAssignments(airmen: Airman[], year: number, month: number): DutyAssignment[] {
-  // If July or August 2026, load the official authentic UASU parade state records
-  if (month === 7 || month === 8) {
-    return generateOfficialMonthAssignments(year, month);
-  }
-
-  const assignments: DutyAssignment[] = [];
-  const totalDays = getDaysInMonth(year, month);
-  const monthStr = month < 10 ? `0${month}` : `${month}`;
-
-  // Deterministic seed generation based on airman index and day
-  airmen.forEach((airman, index) => {
-    for (let day = 1; day <= totalDays; day++) {
-      const dayStr = day < 10 ? `0${day}` : `${day}`;
-      const date = `${year}-${monthStr}-${dayStr}`;
-
-      // Leave pattern
-      if ((index === 46 && day >= 10 && day <= 18) || (index === 8 && day >= 20 && day <= 25)) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'LEAVE',
-          notes: 'Casual Leave (CL)',
-        });
-        continue;
-      }
-
-      // TDY pattern
-      if (index === 10 && day >= 5 && day <= 15) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'TDY',
-          notes: 'Joint Ops Command HQ TDY',
-        });
-        continue;
-      }
-
-      // Cycle duties amongst non-SWO/WO airmen
-      const hash = (index * 7 + day * 13) % 31;
-
-      if (hash === 1 || hash === 15) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'GD',
-          notes: 'Gate-1 Guard Post',
-        });
-      } else if (hash === 3) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'BTF',
-          notes: 'Base Patrol Taskforce',
-        });
-      } else if (hash === 5) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'NTF',
-          notes: 'Najirpara Perimeter',
-        });
-      } else if (hash === 8) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'HALISHAHAR',
-          notes: 'Halishahar Taskforce',
-        });
-      } else if (hash === 12) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'AIRPORT',
-          notes: 'Airfield Duty',
-        });
-      } else if (hash === 15) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'IDAC',
-          idaShift: 'Morning',
-          notes: 'IDAC Shift A',
-        });
-      } else if (hash === 17) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'BAKE_N_BITE',
-        });
-      } else if (hash === 22) {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'DUTY_OFF',
-        });
-      } else {
-        assignments.push({
-          airmanId: airman.id,
-          date,
-          dutyCode: 'ON_PARADE',
-        });
-      }
-    }
-  });
-
-  return assignments;
+  // Returns clean empty assignment register - ready for live user entry or PDF/document roster import
+  return [];
 }
 
 export function resolveAirmanDutyForDate(
@@ -185,6 +81,9 @@ export function calculateDutyStats(
       totalHalishahar: 0,
       totalAirport: 0,
       totalIDAC: 0,
+      totalIDACMorning: 0,
+      totalIDACAfternoon: 0,
+      totalIDACNight: 0,
       totalBakeNBite: 0,
       totalTDY: 0,
       totalLeave: 0,
@@ -235,6 +134,15 @@ export function calculateDutyStats(
           case 'IDAC':
           case 'IDA':
             stat.totalIDAC++;
+            if (ass.idaShift === 'Morning') {
+              stat.totalIDACMorning++;
+            } else if (ass.idaShift === 'Afternoon') {
+              stat.totalIDACAfternoon++;
+            } else if (ass.idaShift === 'Night') {
+              stat.totalIDACNight++;
+            } else {
+              stat.totalIDACMorning++;
+            }
             stat.totalDutyCount++;
             break;
           case 'BAKE_N_BITE':
@@ -282,6 +190,15 @@ export function calculateDutyStats(
         case 'IDAC':
         case 'IDA':
           stat.totalIDAC++;
+          if (ass.idaShift === 'Morning') {
+            stat.totalIDACMorning++;
+          } else if (ass.idaShift === 'Afternoon') {
+            stat.totalIDACAfternoon++;
+          } else if (ass.idaShift === 'Night') {
+            stat.totalIDACNight++;
+          } else {
+            stat.totalIDACMorning++;
+          }
           stat.totalDutyCount++;
           break;
         case 'BAKE_N_BITE':
@@ -341,22 +258,22 @@ export function detectConflicts(airmen: Airman[], assignments: DutyAssignment[])
             airmanName: `${airman.rank} ${airman.name}`,
             date,
             severity: 'error',
-            message: `ছুটি (Leave) অথবা TDY চলাকালীন অবস্থায় কোনো দায়িত্ব (Duty) দেওয়া যাবে না। ${airman.rank} ${airman.name} ${date} তারিখে ছুটি/টিডিওয়াই তালিকায় থাকা সত্ত্বেও ডিউটি নির্ধারিত হয়েছে।`,
+            message: `No active duty may be assigned during Leave or TDY deployment. ${airman.rank} ${airman.name} is on Leave/TDY on ${date} but has an active duty scheduled.`,
             ruleType: 'LEAVE_TDY_OVERLAP',
           });
         }
       }
 
-      // 2. Check Guard Duty (GD) rank limitation: Strictly Cpl & Below
+      // 2. Check Guard / Security Duty (GD) rank limitation: Strictly Cpl & Below (Never Sgt, WO, SWO, MWO)
       const hasGD = dateAssignments.some((a) => a.dutyCode === 'GD');
-      if (hasGD && ['SWO', 'WO', 'Sgt'].includes(airman.rank)) {
+      if (hasGD && ['MWO', 'SWO', 'WO', 'Sgt'].includes(airman.rank)) {
         alerts.push({
           id: `conflict-gd-rank-${airmanId}-${date}`,
           airmanId,
           airmanName: `${airman.rank} ${airman.name}`,
           date,
           severity: 'error',
-          message: `গার্ড ডিউটি (GD) শুধুমাত্র Cpl ও LAC এর জন্য প্রযোজ্য। ${airman.rank} ${airman.name} কে ${date} তারিখে GD অ্যাসাইন করা নিয়মবহির্ভূত।`,
+          message: `Security Duty (GD) assignment violation: Sgt, WO, SWO, and MWO are strictly prohibited from Guard / Security Duty. GD is authorized only for Cpl and LAC ranks (${airman.rank} ${airman.name} on ${date}).`,
           ruleType: 'RANK_INELIGIBLE_GD',
         });
       }

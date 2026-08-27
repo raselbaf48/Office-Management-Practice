@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FlightName, ParadeShift, Airman, ParadeStateResponse } from '../types';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
+import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyFormatter';
 import { Logo155UASU } from './Logo155UASU';
 import { X, Printer, Filter } from 'lucide-react';
 
@@ -9,6 +10,7 @@ interface PrintableParadeStateModalProps {
   shift: ParadeShift;
   flight: FlightName | 'Overall';
   airmen: Airman[];
+  documentType?: 'PARADE' | 'PT';
   onClose: () => void;
 }
 
@@ -17,6 +19,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   shift,
   flight,
   airmen,
+  documentType = 'PARADE',
   onClose,
 }) => {
   const [fromDate, setFromDate] = useState(date);
@@ -100,7 +103,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   useEffect(() => {
     const fetchSingle = async () => {
       try {
-        const res = await fetch(`/api/parade-state?date=${fromDate}&shift=${shift}&flight=Overall`);
+        const res = await fetch(`/api/parade-state?date=${fromDate}&shift=${shift}&flight=Overall&stateType=${documentType}`);
         if (res.ok) {
           const d = await res.json();
           setSingleParadeData(d);
@@ -110,7 +113,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       }
     };
     fetchSingle();
-  }, [fromDate, shift]);
+  }, [fromDate, shift, documentType]);
 
   // Multi Day Fetch (Always fetch Overall to compute multi-day matrices)
   useEffect(() => {
@@ -118,7 +121,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       setLoadingMultiDay(true);
       Promise.all(
         datesInRange.map((dStr) =>
-          fetch(`/api/parade-state?date=${dStr}&shift=${shift}&flight=Overall`)
+          fetch(`/api/parade-state?date=${dStr}&shift=${shift}&flight=Overall&stateType=${documentType}`)
             .then((res) => (res.ok ? res.json() : null))
             .catch(() => null)
         )
@@ -133,7 +136,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
         setLoadingMultiDay(false);
       });
     }
-  }, [fromDate, toDate, shift, isMultiDay]);
+  }, [fromDate, toDate, shift, isMultiDay, datesInRange.length, documentType]);
 
   const handlePrint = () => {
     window.print();
@@ -184,26 +187,46 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     let airFdDutyCount = 0;
     let gamesCount = 0;
     let absentCount = 0;
+    let othersCount = 0;
 
     if (pList.length > 0) {
       pList.forEach((item) => {
         const { dutyCode, statusCategory, notes } = item;
-        if (dutyCode === 'LEAVE') {
+        const codeUpper = (dutyCode || '').toUpperCase();
+        const notesLower = (notes || '').toLowerCase();
+
+        if (codeUpper === 'ON_PARADE' || statusCategory === 'PARADE') {
+          // Available on Parade / PT
+        } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
           leaveCount++;
-        } else if (dutyCode === 'TDY' || dutyCode === 'ATT' || dutyCode === 'DETT') {
+        } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
           detTdyCount++;
-        } else if (dutyCode === 'BAKE_BITE' || dutyCode === 'BAKE_N_BITE' || statusCategory === 'BAKE_N_BITE') {
+        } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
           bakeBiteCount++;
-        } else if (dutyCode === 'RECEPTION' || notes?.toLowerCase().includes('reception')) {
+        } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
           koReceptionCount++;
-        } else if (dutyCode === 'ESSN' || notes?.toLowerCase().includes('essn')) {
+        } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
           essnCount++;
-        } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIR_FD' || notes?.toLowerCase().includes('air fd')) {
+        } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
+          hospitalCount++;
+        } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
+          sickExCount++;
+        } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+          drillCatCCount++;
+        } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
+          adminCommCount++;
+        } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
+          classTrgCount++;
+        } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
           airFdDutyCount++;
-        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'DUTY_OFF'].includes(dutyCode)) {
+        } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
+          gamesCount++;
+        } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
+          absentCount++;
+        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'DUTY_OFF'].includes(codeUpper) || statusCategory === 'DUTY' || statusCategory === 'OFF') {
           guardDutyCount++;
-        } else if (statusCategory === 'DUTY') {
-          guardDutyCount++;
+        } else {
+          othersCount++;
         }
       });
     }
@@ -225,7 +248,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       classTrgCount +
       airFdDutyCount +
       gamesCount +
-      absentCount;
+      absentCount +
+      othersCount;
 
     const onPtParadeCount = Math.max(0, effStr - totalOutPt);
 
@@ -250,6 +274,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       onPtParadeCount,
       gamesCount,
       absentCount,
+      othersCount,
     };
   };
 
@@ -274,6 +299,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const gamesList: { airman: Airman; note?: string }[] = [];
   const absentList: { airman: Airman; note?: string }[] = [];
+  const customDisposalsMap: Record<string, { airman: Airman; note?: string }[]> = {};
 
   const rawList = singleParadeData?.personnelStatusList;
   const statusList = rawList
@@ -285,39 +311,48 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   if (statusList) {
     statusList.forEach((item) => {
       const { airman, dutyCode, statusCategory, idaShift, notes } = item;
+      const codeUpper = (dutyCode || '').toUpperCase();
+      const notesLower = (notes || '').toLowerCase();
 
-      if (statusCategory === 'PARADE' || dutyCode === 'ON_PARADE') {
-        onPtList.push({ airman, note: notes });
-      } else if (dutyCode === 'LEAVE') {
-        leaveList.push({ airman, note: notes });
-      } else if (dutyCode === 'TDY' || dutyCode === 'ATT' || dutyCode === 'DETT') {
-        tdyList.push({ airman, note: notes || 'TDY' });
-      } else if (dutyCode === 'BAKE_BITE' || dutyCode === 'BAKE_N_BITE' || statusCategory === 'BAKE_N_BITE') {
-        bakeBiteList.push({ airman, note: notes || 'Bake & Bite' });
-      } else if (dutyCode === 'RECEPTION' || notes?.toLowerCase().includes('reception')) {
-        receptionList.push({ airman, note: notes || 'Reception' });
-      } else if (dutyCode === 'ESSN' || notes?.toLowerCase().includes('essn')) {
-        essnList.push({ airman, note: notes || 'ESSN' });
-      } else if (dutyCode === 'CMH' || notes?.toLowerCase().includes('cmh') || notes?.toLowerCase().includes('bns') || notes?.toLowerCase().includes('bsh')) {
-        cmhList.push({ airman, note: notes || 'BNS/BSH/CMH' });
-      } else if (dutyCode === 'SICK_REPORT' || notes?.toLowerCase().includes('sick')) {
-        sickReportList.push({ airman, note: notes || 'Sick Report' });
-      } else if (dutyCode === 'DRILL_CAT_C' || notes?.toLowerCase().includes('drill')) {
-        drillCatCList.push({ airman, note: notes || 'Drill Cat-C' });
-      } else if (dutyCode === 'ADMIN_ORDER' || notes?.toLowerCase().includes('admin order')) {
-        adminOrderList.push({ airman, note: notes || 'Admin Order' });
-      } else if (dutyCode === 'CLASS_TRG' || notes?.toLowerCase().includes('class') || notes?.toLowerCase().includes('trg')) {
-        classTrgList.push({ airman, note: notes || 'Class/Trg' });
-      } else if (dutyCode === 'GAMES' || notes?.toLowerCase().includes('game')) {
-        gamesList.push({ airman, note: notes || 'Games' });
-      } else if (dutyCode === 'ABSENT' || notes?.toLowerCase().includes('absent')) {
-        absentList.push({ airman, note: notes || 'Absent' });
-      } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIR_FD' || notes?.toLowerCase().includes('air fd')) {
-        airFdDutyList.push({ airman, note: notes || 'Air Fd Duty' });
-      } else if (dutyCode === 'DUTY_OFF') {
-        dutyOffList.push({ airman, note: notes || 'GD Off' });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(dutyCode) || statusCategory === 'DUTY') {
-        dutyOnList.push({ airman, note: idaShift ? `IDAC ${idaShift}` : notes || dutyCode });
+      if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE') {
+        onPtList.push({ airman, note: '' });
+      } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
+        leaveList.push({ airman, note: '' });
+      } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
+        tdyList.push({ airman, note: notes && !notesLower.includes('imported') ? notes : 'TDY' });
+      } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
+        bakeBiteList.push({ airman, note: 'Bake & Bite' });
+      } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
+        receptionList.push({ airman, note: 'Reception' });
+      } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
+        essnList.push({ airman, note: 'ESSN' });
+      } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
+        cmhList.push({ airman, note: 'BNS/BSH/CMH' });
+      } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
+        sickReportList.push({ airman, note: 'Sick Report' });
+      } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        drillCatCList.push({ airman, note: "Drill Cat 'C'" });
+      } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
+        adminOrderList.push({ airman, note: 'Admin Order' });
+      } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
+        classTrgList.push({ airman, note: 'Class/Trg' });
+      } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
+        gamesList.push({ airman, note: 'Games' });
+      } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
+        absentList.push({ airman, note: 'Absent' });
+      } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
+        airFdDutyList.push({ airman, note: 'Air Fd Duty' });
+      } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
+        const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
+        dutyOffList.push({ airman, note: offName });
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'AIRFIELD_DUTY', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+        const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
+        dutyOnList.push({ airman, note: dutyDisplay });
+      } else {
+        const customKey = dutyCode || 'OTHER DISPOSAL';
+        if (!customDisposalsMap[customKey]) customDisposalsMap[customKey] = [];
+        const safeNotes = notes && !notesLower.includes('imported') ? notes : undefined;
+        customDisposalsMap[customKey].push({ airman, note: safeNotes });
       }
     });
   } else {
@@ -325,6 +360,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       onPtList.push({ airman });
     });
   }
+
+  const otherDisposals: { title: string; airmen: Airman[] }[] = Object.entries(customDisposalsMap).map(
+    ([title, items]) => ({
+      title,
+      airmen: items.map((i) => i.airman),
+    })
+  );
 
   // Chunk ON PARADE into max 15 items per vertical column
   const onPtChunks: { airman: Airman; note?: string; globalIndex: number }[][] = [];
@@ -408,49 +450,86 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
           {/* CONTROLS: DATE RANGE + FLIGHT FILTER */}
           <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-300 text-xs">
-            <div className="flex items-center space-x-1.5">
-              <span className="font-bold text-slate-700">From:</span>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-bold text-slate-700">To:</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            {/* Flight Selector */}
-            <div className="flex items-center space-x-1 bg-white px-2 py-1 rounded-lg border border-slate-300 font-bold">
-              <Filter className="w-3 h-3 text-slate-400" />
-              <select
-                value={currentFlight}
-                onChange={(e) => setCurrentFlight(e.target.value as any)}
-                className="bg-transparent text-slate-900 outline-none cursor-pointer text-xs"
-              >
-                <option value="Overall">Flight: Overall (All)</option>
-                <option value="Avionics">Avionics Flight</option>
-                <option value="Mechanics">Mechanics Flight</option>
-                <option value="GCS">GCS Flight</option>
-                <option value="Admin">Admin Flight</option>
-              </select>
-            </div>
-
-            {isMultiDay ? (
-              <span className="bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                Multi-Day Format ({datesInRange.length} Days)
-              </span>
+            {documentType === 'PT' ? (
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold text-slate-700">Date:</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setToDate(e.target.value);
+                    }}
+                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                {/* Flight Selector */}
+                <div className="flex items-center space-x-1 bg-white px-2 py-1 rounded-lg border border-slate-300 font-bold">
+                  <Filter className="w-3 h-3 text-slate-400" />
+                  <select
+                    value={currentFlight}
+                    onChange={(e) => setCurrentFlight(e.target.value as any)}
+                    className="bg-transparent text-slate-900 outline-none cursor-pointer text-xs"
+                  >
+                    <option value="Overall">Flight: Overall (All)</option>
+                    <option value="Avionics">Avionics Flight</option>
+                    <option value="Mechanics">Mechanics Flight</option>
+                    <option value="GCS">GCS Flight</option>
+                    <option value="Admin">Admin Flight</option>
+                  </select>
+                </div>
+                <span className="bg-blue-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider ml-1">
+                  PT State Format
+                </span>
+              </div>
             ) : (
-              <span className="bg-blue-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                Single-Day Format (Flight-Wise)
-              </span>
+              <>
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold text-slate-700">From:</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold text-slate-700">To:</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Flight Selector */}
+                <div className="flex items-center space-x-1 bg-white px-2 py-1 rounded-lg border border-slate-300 font-bold">
+                  <Filter className="w-3 h-3 text-slate-400" />
+                  <select
+                    value={currentFlight}
+                    onChange={(e) => setCurrentFlight(e.target.value as any)}
+                    className="bg-transparent text-slate-900 outline-none cursor-pointer text-xs"
+                  >
+                    <option value="Overall">Flight: Overall (All)</option>
+                    <option value="Avionics">Avionics Flight</option>
+                    <option value="Mechanics">Mechanics Flight</option>
+                    <option value="GCS">GCS Flight</option>
+                    <option value="Admin">Admin Flight</option>
+                  </select>
+                </div>
+
+                {isMultiDay ? (
+                  <span className="bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Multi-Day Format ({datesInRange.length} Days)
+                  </span>
+                ) : (
+                  <span className="bg-blue-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Single-Day Format (Flight-Wise)
+                  </span>
+                )}
+              </>
             )}
           </div>
 
@@ -868,65 +947,53 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                   }}
                 >
                   <colgroup>
-                    <col style={{ width: '1.75in' }} />
-                    <col style={{ width: '1.75in' }} />
+                    <col style={{ width: '3.5in' }} />
+                    <col style={{ width: '2.3in' }} />
+                    <col style={{ width: '2.3in' }} />
                     <col style={{ width: '2.4in' }} />
-                    <col style={{ width: '2.3in' }} />
-                    <col style={{ width: '2.3in' }} />
                   </colgroup>
                   <tbody>
                     <tr>
-                      {/* 1st Column: 1.75 inch -> ON PARADE (1 to 15) */}
+                      {/* 1st Column: 3.5 inch -> ON PARADE / ON PT (1 to 15 left, 16+ right, Nil if empty) */}
                       <td
                         style={{
-                          width: '1.75in',
+                          width: '3.5in',
                           verticalAlign: 'top',
                           border: 'none',
-                          paddingRight: '0.1in',
+                          paddingRight: '0.15in',
                         }}
                       >
                         <div className="font-bold underline uppercase mb-1.5">
-                          ON PARADE
+                          {documentType === 'PT' ? 'ON PT' : 'ON PARADE'}
                         </div>
-                        <ol className="space-y-0.5 font-normal leading-tight">
-                          {onPtList.slice(0, 15).length > 0 ? (
-                            onPtList.slice(0, 15).map((item, idx) => (
-                              <li key={idx} className="whitespace-nowrap">
-                                {idx + 1}. {item.airman.rank} {item.airman.name}
-                              </li>
-                            ))
-                          ) : (
-                            <li className="list-none">-</li>
-                          )}
-                        </ol>
+                        {onPtList.length > 0 ? (
+                          <div className="flex items-start space-x-4">
+                            <ol className="space-y-0.5 font-normal leading-tight">
+                              {onPtList.slice(0, 15).map((item, idx) => (
+                                <li key={idx} className="whitespace-nowrap">
+                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                </li>
+                              ))}
+                            </ol>
+                            {onPtList.length > 15 && (
+                              <ol className="space-y-0.5 font-normal leading-tight">
+                                {onPtList.slice(15).map((item, idx) => (
+                                  <li key={idx} className="whitespace-nowrap">
+                                    {16 + idx}. {item.airman.rank} {item.airman.name}
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="font-bold text-black">Nil</div>
+                        )}
                       </td>
 
-                      {/* 2nd Column: 1.75 inch -> ON PARADE (16 onwards) */}
+                      {/* 2nd Column: 2.3 inch -> LEAVE, BAKE & BITE, CMH, SICK REPORT */}
                       <td
                         style={{
-                          width: '1.75in',
-                          verticalAlign: 'top',
-                          border: 'none',
-                          paddingRight: '0.1in',
-                        }}
-                      >
-                        {/* Spacing to align with Col 1 list start */}
-                        <div className="font-bold uppercase mb-1.5 invisible select-none">
-                          &nbsp;
-                        </div>
-                        <ol className="space-y-0.5 font-normal leading-tight">
-                          {onPtList.slice(15).map((item, idx) => (
-                            <li key={idx} className="whitespace-nowrap">
-                              {16 + idx}. {item.airman.rank} {item.airman.name}
-                            </li>
-                          ))}
-                        </ol>
-                      </td>
-
-                      {/* 3rd Column: 2.4 inch -> LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT */}
-                      <td
-                        style={{
-                          width: '2.4in',
+                          width: '2.3in',
                           verticalAlign: 'top',
                           border: 'none',
                           paddingRight: '0.15in',
@@ -1006,17 +1073,9 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             </ol>
                           </div>
                         )}
-
-                        {leaveList.length === 0 &&
-                          bakeBiteList.length === 0 &&
-                          essnList.length === 0 &&
-                          cmhList.length === 0 &&
-                          sickReportList.length === 0 && (
-                            <div>-</div>
-                          )}
                       </td>
 
-                      {/* 4th Column: 2.3 inch -> ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
+                      {/* 3rd Column: 2.3 inch -> ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
                       <td
                         style={{
                           width: '2.3in',
@@ -1115,20 +1174,26 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           </div>
                         )}
 
-                        {tdyList.length === 0 &&
-                          receptionList.length === 0 &&
-                          airFdDutyList.length === 0 &&
-                          adminOrderList.length === 0 &&
-                          classTrgList.length === 0 &&
-                          drillCatCList.length === 0 && (
-                            <div>-</div>
-                          )}
+                        {otherDisposals.length > 0 && (
+                          <div className="mb-4">
+                            <div className="font-bold underline uppercase mb-1.5">
+                              {otherDisposals[0].title}
+                            </div>
+                            <ol className="space-y-0.5 font-normal leading-tight">
+                              {otherDisposals[0].airmen.map((a, aIdx) => (
+                                <li key={aIdx} className="whitespace-nowrap">
+                                  {aIdx + 1}. {a.rank} {a.name}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
                       </td>
 
-                      {/* 5th Column: 2.3 inch -> DUTY ON, DUTY OFF, GAMES, ABSENT */}
+                      {/* 4th Column: 2.4 inch -> DUTY ON, DUTY OFF, GAMES, ABSENT */}
                       <td
                         style={{
-                          width: '2.3in',
+                          width: '2.4in',
                           verticalAlign: 'top',
                           border: 'none',
                         }}
@@ -1139,30 +1204,33 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                               DUTY ON
                             </div>
                             <ol className="space-y-0.5 font-normal leading-tight">
-                              {dutyOnList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
-                                  {item.note ? ` (${item.note})` : ''}
-                                </li>
-                              ))}
+                              {dutyOnList.map((item, idx) => {
+                                const noteText = item.note || 'GD';
+                                return (
+                                  <li key={idx} className="whitespace-nowrap">
+                                    {idx + 1}. {item.airman.rank} {item.airman.name} - {noteText}
+                                  </li>
+                                );
+                              })}
                             </ol>
                           </div>
                         )}
 
-                        {dutyOffList.length > 0 && (
+                        {documentType !== 'PT' && dutyOffList.length > 0 && (
                           <div className="mb-4">
                             <div className="font-bold underline uppercase mb-1.5">
                               DUTY OFF
                             </div>
                             <ol className="space-y-0.5 font-normal leading-tight">
                               {dutyOffList.map((item, idx) => {
-                                let dNote = item.note || 'GD';
-                                if (!dNote.toLowerCase().includes('off')) {
+                                let dNote = item.note || 'GD Off';
+                                if (dNote.toLowerCase().includes('imported')) dNote = 'GD Off';
+                                if (!dNote.toLowerCase().endsWith('off')) {
                                   dNote = `${dNote} Off`;
                                 }
                                 return (
                                   <li key={idx} className="whitespace-nowrap">
-                                    {idx + 1}. {item.airman.rank} {item.airman.name}-{dNote}
+                                    {idx + 1}. {item.airman.rank} {item.airman.name} - {dNote}
                                   </li>
                                 );
                               })}
@@ -1200,27 +1268,35 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           </div>
                         )}
 
-                        {dutyOnList.length === 0 &&
-                          dutyOffList.length === 0 &&
-                          gamesList.length === 0 &&
-                          absentList.length === 0 && (
-                            <div>-</div>
-                          )}
+                        {otherDisposals.length > 1 &&
+                          otherDisposals.slice(1).map((cat, cIdx) => (
+                            <div key={cIdx} className="mb-4">
+                              <div className="font-bold underline uppercase mb-1.5">
+                                {cat.title}
+                              </div>
+                              <ol className="space-y-0.5 font-normal leading-tight">
+                                {cat.airmen.map((a, aIdx) => (
+                                  <li key={aIdx} className="whitespace-nowrap">
+                                    {aIdx + 1}. {a.rank} {a.name}
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          ))}
                       </td>
                     </tr>
 
                     {/* SPACER ROW BETWEEN 1ST & 2ND ROWS: HEIGHT 0.2 INCH (approx 19px) */}
                     {!isMultiDay && (
                       <tr style={{ height: '0.2in', maxHeight: '0.2in' }}>
-                        <td colSpan={5} style={{ height: '0.2in', border: 'none', padding: 0 }} />
+                        <td colSpan={4} style={{ height: '0.2in', border: 'none', padding: 0 }} />
                       </tr>
                     )}
 
-                    {/* 2nd Row: 1st & 2nd Column Merged (Sgt Nahid), Last column (WO Shahin) */}
+                    {/* 2nd Row: 1st Column (Sgt Nahid), Last column (WO Shahin) */}
                     {!isMultiDay && (
                       <tr>
                         <td
-                          colSpan={2}
                           style={{
                             width: '3.5in',
                             verticalAlign: 'top',
@@ -1237,11 +1313,11 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             <p className="font-normal text-black">155 UASU BAF</p>
                           </div>
                         </td>
-                        <td style={{ width: '2.4in', border: 'none', paddingTop: '10px' }} />
+                        <td style={{ width: '2.3in', border: 'none', paddingTop: '10px' }} />
                         <td style={{ width: '2.3in', border: 'none', paddingTop: '10px' }} />
                         <td
                           style={{
-                            width: '2.3in',
+                            width: '2.4in',
                             verticalAlign: 'top',
                             border: 'none',
                             paddingTop: '10px',

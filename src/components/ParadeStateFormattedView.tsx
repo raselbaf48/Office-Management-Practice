@@ -9,6 +9,7 @@ import {
   IDAShift,
 } from '../types';
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
+import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyFormatter';
 import { Logo155UASU } from './Logo155UASU';
 import {
   Calendar,
@@ -33,6 +34,7 @@ import {
   Download,
   FileDown,
   UserPlus,
+  Sparkles,
 } from 'lucide-react';
 import { DutyCellPopover } from './DutyCellPopover';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
@@ -50,8 +52,10 @@ interface ParadeStateFormattedViewProps {
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   airmen: Airman[];
+  initialDocumentType?: 'PARADE' | 'PT';
   onOpenPrintModal?: () => void;
   onViewAirmanProfile?: (airman: Airman) => void;
+  onOpenImportModal?: () => void;
 }
 
 export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> = ({
@@ -59,9 +63,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   selectedDate,
   setSelectedDate,
   airmen,
+  initialDocumentType = 'PARADE',
   onOpenPrintModal,
   onViewAirmanProfile,
+  onOpenImportModal,
 }) => {
+  const isPtDocument = initialDocumentType === 'PT';
   const [fromDate, setFromDate] = useState<string>(selectedDate);
   const [toDate, setToDate] = useState<string>(selectedDate);
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
@@ -94,12 +101,28 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [disposalFlight, setDisposalFlight] = useState<FlightName>('Avionics');
   const [disposalCategory, setDisposalCategory] = useState<string>('ESSN');
   const [disposalCustomTitle, setDisposalCustomTitle] = useState<string>('');
-  const [disposalAirmanId, setDisposalAirmanId] = useState<string>('');
+  const [selectedDisposalAirmenIds, setSelectedDisposalAirmenIds] = useState<string[]>([]);
+  const [disposalPersonnelStatusMap, setDisposalPersonnelStatusMap] = useState<Record<string, { statusCategory: string; dutyCode: string; notes?: string; dutyName?: string }>>({});
   const [disposalFromDate, setDisposalFromDate] = useState<string>(selectedDate);
   const [disposalToDate, setDisposalToDate] = useState<string>(selectedDate);
+  const [disposalScope, setDisposalScope] = useState<'ALL' | 'PARADE' | 'PT'>('ALL');
   const [disposalNotes, setDisposalNotes] = useState<string>('');
   const [disposalLoading, setDisposalLoading] = useState<boolean>(false);
   const [disposalSuccessMsg, setDisposalSuccessMsg] = useState<string>('');
+
+  // Edit / Change Disposal Modal State
+  const [editDisposalModal, setEditDisposalModal] = useState<{
+    airman: Airman;
+    date: string;
+    currentDutyCode: string;
+    currentDutyName?: string;
+    notes?: string;
+  } | null>(null);
+  const [editDisposalCategory, setEditDisposalCategory] = useState<string>('LEAVE');
+  const [editDisposalCustomTitle, setEditDisposalCustomTitle] = useState<string>('');
+  const [editDisposalFromDate, setEditDisposalFromDate] = useState<string>(selectedDate);
+  const [editDisposalToDate, setEditDisposalToDate] = useState<string>(selectedDate);
+  const [editDisposalLoading, setEditDisposalLoading] = useState<boolean>(false);
 
   // Flight Duty Ratio / Quota States
   const [showRatioModal, setShowRatioModal] = useState<boolean>(false);
@@ -122,6 +145,26 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     setDisposalFromDate(selectedDate);
     setDisposalToDate(selectedDate);
   }, [selectedDate]);
+
+  // Fetch personnel status for disposal fromDate
+  useEffect(() => {
+    if (!showAddDisposalModal || !disposalFromDate) return;
+    fetch(`/api/parade-state?date=${disposalFromDate}&shift=Morning`)
+      .then((r) => r.json())
+      .then((data: ParadeStateResponse) => {
+        const map: Record<string, { statusCategory: string; dutyCode: string; notes?: string; dutyName?: string }> = {};
+        (data?.personnelStatusList || []).forEach((item) => {
+          map[item.airman.id] = {
+            statusCategory: item.statusCategory,
+            dutyCode: item.dutyCode,
+            notes: item.notes,
+            dutyName: item.dutyName,
+          };
+        });
+        setDisposalPersonnelStatusMap(map);
+      })
+      .catch((err) => console.error('Failed to fetch disposal personnel statuses:', err));
+  }, [showAddDisposalModal, disposalFromDate]);
 
   // Format Date: e.g. "14 Aug 26"
   const formatDateShort = (dStr: string) => {
@@ -195,7 +238,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const fetchSingle = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/parade-state?date=${fromDate}&shift=Morning&flight=Overall`);
+      const stateType = isPtDocument ? 'PT' : 'PARADE';
+      const res = await fetch(`/api/parade-state?date=${fromDate}&shift=Morning&flight=Overall&stateType=${stateType}`);
       if (res.ok) {
         const d = await res.json();
         setSingleParadeData(d);
@@ -211,9 +255,10 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const fetchMulti = async () => {
     setLoading(true);
     try {
+      const stateType = isPtDocument ? 'PT' : 'PARADE';
       const results = await Promise.all(
         datesInRange.map((dStr) =>
-          fetch(`/api/parade-state?date=${dStr}&shift=Morning&flight=Overall`)
+          fetch(`/api/parade-state?date=${dStr}&shift=Morning&flight=Overall&stateType=${stateType}`)
             .then((res) => (res.ok ? res.json() : null))
             .catch(() => null)
         )
@@ -246,7 +291,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     return () => {
       window.removeEventListener('baf_state_updated', handleGlobalUpdate);
     };
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, isPtDocument]);
 
   // Quick Preset Handlers (Calculated relative to selected fromDate)
   const handleSetPreset = (type: 'today' | '7days' | '15days' | 'month') => {
@@ -345,53 +390,162 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     }
   };
 
-  // Handle Add Disposal submit
+  // Handle Add Disposal submit (multi-person support)
   const handleAddDisposalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!disposalAirmanId || !disposalFromDate || !disposalToDate) return;
+    if (selectedDisposalAirmenIds.length === 0 || !disposalFromDate || !disposalToDate) return;
 
     setDisposalLoading(true);
     setDisposalSuccessMsg('');
     try {
       const isCustom = disposalCategory === 'OTHERS';
       const effectiveDutyCode = isCustom ? 'OTHERS' : disposalCategory;
-      const effectiveNotes = isCustom
-        ? (disposalCustomTitle.trim() ? `${disposalCustomTitle.trim()}${disposalNotes ? ` - ${disposalNotes}` : ''}` : disposalNotes)
-        : disposalNotes;
+      const effectiveNotes = isCustom ? (disposalCustomTitle.trim() || 'Custom Disposal') : undefined;
 
-      const res = await fetch('/api/roster/assign-range', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          airmanId: disposalAirmanId,
-          dutyCode: effectiveDutyCode,
-          fromDate: disposalFromDate,
-          toDate: disposalToDate,
-          notes: effectiveNotes,
-        }),
-      });
+      const promises = selectedDisposalAirmenIds.map((airmanId) =>
+        fetch('/api/roster/assign-range', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            airmanId,
+            dutyCode: effectiveDutyCode,
+            fromDate: disposalFromDate,
+            toDate: disposalToDate,
+            disposalScope: 'ALL',
+            notes: effectiveNotes,
+          }),
+        }).then((r) => r.json().catch(() => ({})))
+      );
 
-      const result = await res.json().catch(() => ({}));
+      const results = await Promise.all(promises);
+      const successCount = results.filter((r) => r.success).length;
 
-      if (res.ok && result.success) {
-        const selectedA = airmen.find((a) => a.id === disposalAirmanId);
-        const nameLabel = selectedA ? `${selectedA.rank} ${selectedA.name}` : 'Airman';
-        setDisposalSuccessMsg(`✅ Disposal assigned to ${nameLabel} successfully!`);
+      if (successCount > 0) {
+        setDisposalSuccessMsg(`✅ Disposal assigned to ${successCount} personnel successfully!`);
         window.dispatchEvent(new CustomEvent('baf_state_updated'));
         if (isMultiDay) await fetchMulti();
         else await fetchSingle();
         setTimeout(() => {
           setShowAddDisposalModal(false);
           setDisposalSuccessMsg('');
+          setSelectedDisposalAirmenIds([]);
         }, 1200);
       } else {
-        alert(result.error || 'Failed to add disposal');
+        alert('Failed to add disposal for selected personnel');
       }
     } catch (err: any) {
       console.error('Failed to submit disposal:', err);
       alert(`Error adding disposal: ${err?.message || 'Network request failed'}`);
     } finally {
       setDisposalLoading(false);
+    }
+  };
+
+  // Open Edit / Change Disposal Modal for a specific airman
+  const openEditDisposal = (airman: Airman, dutyCode: string, dutyName?: string, note?: string) => {
+    const isStandardCat = [
+      'ESSN',
+      'CMH',
+      'SICK_REPORT',
+      'DRILL_CAT_C',
+      'LEAVE',
+      'BAKE_N_BITE',
+      'RECEPTION',
+      'TDY',
+      'ADMIN_ORDER',
+      'CLASS_TRG',
+      'AIRFIELD_DUTY',
+      'GAMES',
+      'ABSENT',
+      'DUTY_ON',
+      'DUTY_OFF',
+    ].includes(dutyCode);
+
+    setEditDisposalModal({
+      airman,
+      date: fromDate,
+      currentDutyCode: dutyCode,
+      currentDutyName: dutyName || dutyCode,
+      notes: note,
+    });
+    setEditDisposalCategory(isStandardCat ? dutyCode : 'OTHERS');
+    setEditDisposalCustomTitle(!isStandardCat ? (dutyName || note || dutyCode || '') : '');
+    setEditDisposalFromDate(fromDate);
+    setEditDisposalToDate(isMultiDay ? toDate : fromDate);
+  };
+
+  // Save changes to edited disposal
+  const handleSaveEditDisposal = async () => {
+    if (!editDisposalModal || !editDisposalFromDate || !editDisposalToDate) return;
+    setEditDisposalLoading(true);
+    try {
+      if (editDisposalCategory === 'ON_PARADE') {
+        // If changed to On Parade, clear disposal
+        await handleDeleteEditDisposal();
+        return;
+      }
+
+      const isCustom = editDisposalCategory === 'OTHERS';
+      const effectiveDutyCode = isCustom ? 'OTHERS' : editDisposalCategory;
+      const effectiveNotes = isCustom ? (editDisposalCustomTitle.trim() || 'Custom Disposal') : undefined;
+
+      const res = await fetch('/api/roster/assign-range', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          airmanId: editDisposalModal.airman.id,
+          dutyCode: effectiveDutyCode,
+          fromDate: editDisposalFromDate,
+          toDate: editDisposalToDate,
+          disposalScope: 'ALL',
+          notes: effectiveNotes,
+        }),
+      });
+
+      if (res.ok) {
+        window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        if (isMultiDay) await fetchMulti();
+        else await fetchSingle();
+        setEditDisposalModal(null);
+      } else {
+        alert('Failed to update disposal');
+      }
+    } catch (err: any) {
+      console.error('Failed to update disposal:', err);
+      alert(`Error updating disposal: ${err?.message || 'Network error'}`);
+    } finally {
+      setEditDisposalLoading(false);
+    }
+  };
+
+  // Delete / Clear disposal (Revert to On Parade)
+  const handleDeleteEditDisposal = async () => {
+    if (!editDisposalModal || !editDisposalFromDate || !editDisposalToDate) return;
+    setEditDisposalLoading(true);
+    try {
+      const res = await fetch('/api/roster/delete-range', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          airmanId: editDisposalModal.airman.id,
+          fromDate: editDisposalFromDate,
+          toDate: editDisposalToDate,
+        }),
+      });
+
+      if (res.ok) {
+        window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        if (isMultiDay) await fetchMulti();
+        else await fetchSingle();
+        setEditDisposalModal(null);
+      } else {
+        alert('Failed to remove disposal');
+      }
+    } catch (err: any) {
+      console.error('Failed to delete disposal:', err);
+      alert(`Error deleting disposal: ${err?.message || 'Network error'}`);
+    } finally {
+      setEditDisposalLoading(false);
     }
   };
 
@@ -504,6 +658,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       await exportParadeStateSingleDocx({
         dateStr: formatDateShort(fromDate),
         flight: selectedFlight,
+        documentType: isPtDocument ? 'PT' : 'PARADE',
         stats,
         onParade: onPtList.map((i) => i.airman),
         leave: leaveList.map((i) => i.airman),
@@ -513,6 +668,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         dutyOn: dutyOnList,
         dutyOff: dutyOffList,
         airFdDuty: airFdDutyList.map((i) => i.airman),
+        essn: essnList.map((i) => i.airman),
+        cmh: cmhList.map((i) => i.airman),
+        sickReport: sickReportList.map((i) => i.airman),
+        drillCatC: drillCatCList.map((i) => i.airman),
+        adminOrder: adminOrderList.map((i) => i.airman),
+        classTrg: classTrgList.map((i) => i.airman),
+        games: gamesList.map((i) => i.airman),
+        absent: absentList.map((i) => i.airman),
+        otherDisposals,
       });
     }
   };
@@ -547,7 +711,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         const codeUpper = (dutyCode || '').toUpperCase();
         const notesLower = (notes || '').toLowerCase();
 
-        if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
+        if (codeUpper === 'ON_PARADE' || statusCategory === 'PARADE') {
+          // Available on Parade / PT
+        } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
           leaveCount++;
         } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
           detTdyCount++;
@@ -663,42 +829,45 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       const notesLower = (notes || '').toLowerCase();
 
       if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE') {
-        onPtList.push({ airman, note: notes });
+        onPtList.push({ airman, note: '' });
       } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
-        leaveList.push({ airman, note: notes });
+        leaveList.push({ airman, note: '' });
       } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
-        essnList.push({ airman, note: notes || 'ESSN' });
+        essnList.push({ airman, note: 'ESSN' });
       } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
-        cmhList.push({ airman, note: notes || codeUpper });
+        cmhList.push({ airman, note: 'CMH' });
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
-        sickReportList.push({ airman, note: notes || 'Sick Report' });
+        sickReportList.push({ airman, note: 'Sick Report' });
       } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
-        drillCatCList.push({ airman, note: notes || "Drill Cat 'C'" });
+        drillCatCList.push({ airman, note: "Drill Cat 'C'" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
-        tdyList.push({ airman, note: notes || 'TDY' });
+        tdyList.push({ airman, note: 'TDY' });
       } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
-        bakeBiteList.push({ airman, note: notes || 'Bake & Bite' });
+        bakeBiteList.push({ airman, note: 'Bake & Bite' });
       } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-        receptionList.push({ airman, note: notes || 'Reception' });
+        receptionList.push({ airman, note: 'Reception' });
       } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
-        airFdDutyList.push({ airman, note: notes || 'Air Fd Duty' });
+        airFdDutyList.push({ airman, note: 'Air Fd Duty' });
       } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
-        adminOrderList.push({ airman, note: notes || 'Admin Order' });
+        adminOrderList.push({ airman, note: 'Admin Order' });
       } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
-        classTrgList.push({ airman, note: notes || 'Class/Trg' });
+        classTrgList.push({ airman, note: 'Class/Trg' });
       } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
-        gamesList.push({ airman, note: notes || 'G/H & Games' });
+        gamesList.push({ airman, note: 'G/H & Games' });
       } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
-        absentList.push({ airman, note: notes || 'Absent' });
+        absentList.push({ airman, note: 'Absent' });
       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
-        dutyOffList.push({ airman, note: notes || '' });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper) || statusCategory === 'DUTY') {
-        dutyOnList.push({ airman, note: idaShift ? `IDAC ${idaShift}` : notes || dutyCode });
+        const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
+        dutyOffList.push({ airman, note: offName });
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'AIRFIELD_DUTY', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+        const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
+        dutyOnList.push({ airman, note: dutyDisplay });
       } else {
         // Other dynamic custom disposal
         const customKey = dutyCode || 'OTHER DISPOSAL';
         if (!customDisposalsMap[customKey]) customDisposalsMap[customKey] = [];
-        customDisposalsMap[customKey].push({ airman, note: notes });
+        const safeNotes = notes && !notes.toLowerCase().includes('imported') ? notes : undefined;
+        customDisposalsMap[customKey].push({ airman, note: safeNotes });
       }
     });
   } else {
@@ -706,6 +875,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       onPtList.push({ airman });
     });
   }
+
+  const otherDisposals: { title: string; airmen: Airman[] }[] = Object.entries(customDisposalsMap).map(
+    ([title, items]) => ({
+      title,
+      airmen: items.map((i) => i.airman),
+    })
+  );
 
   // Chunk ON PARADE into max 15 items per vertical column
   const onPtChunks: { airman: Airman; note?: string; globalIndex: number }[][] = [];
@@ -730,6 +906,54 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
           </li>
         ))}
+      </ol>
+    );
+  };
+
+  // Helper to render interactive disposal list items (with ✏️ edit click for admin)
+  const renderDisposalAirmenList = (
+    list: { airman: Airman; note?: string }[],
+    dutyCode: string,
+    dutyName: string
+  ) => {
+    return (
+      <ol className="space-y-0.5 font-normal leading-tight">
+        {list.map((item, i) => {
+          const isDutyOn = dutyCode === 'DUTY_ON' || ['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT'].includes(dutyCode);
+          const isDutyOff = dutyCode === 'DUTY_OFF';
+          let noteText = item.note && !item.note.toLowerCase().includes('imported') ? item.note : '';
+
+          return (
+            <li
+              key={item.airman.id || i}
+              onClick={() => {
+                if (role === 'ADMIN') {
+                  openEditDisposal(item.airman, dutyCode, dutyName, item.note);
+                }
+              }}
+              className={`truncate group flex items-center justify-between ${
+                role === 'ADMIN'
+                  ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
+                  : ''
+              }`}
+              title={role === 'ADMIN' ? 'Click to edit, change or remove disposal' : undefined}
+            >
+              <span className="truncate">
+                {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                {(isDutyOn || isDutyOff) && noteText ? (
+                  <span className="text-slate-800 dark:text-slate-200 font-medium"> - {noteText}</span>
+                ) : noteText && noteText !== dutyName && noteText !== dutyCode ? (
+                  <span className="text-[9px] text-slate-400 ml-1">({noteText})</span>
+                ) : null}
+              </span>
+              {role === 'ADMIN' && (
+                <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
+                  ✏️
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ol>
     );
   };
@@ -792,86 +1016,131 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <span>155 UASU BAF • Daily Parade State & Duty Register</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            Parade State Document
+            {isPtDocument ? 'PT State Document' : 'Parade State Document'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Switch between Single-Day Parade State and Multi-Date Disposal Matrix with flight filtering
+            Switch between Single-Day {isPtDocument ? 'PT State' : 'Parade State'} and Multi-Date Disposal Matrix with flight filtering
           </p>
         </div>
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Quick Date Presets */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
-            <button
-              onClick={() => handleSetPreset('today')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                !isMultiDay ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => handleSetPreset('7days')}
-              className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              7 Days
-            </button>
-            <button
-              onClick={() => handleSetPreset('15days')}
-              className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              15 Days
-            </button>
-            <button
-              onClick={() => handleSetPreset('month')}
-              className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              Month
-            </button>
-          </div>
+          {isPtDocument ? (
+            /* PT STATE: SINGLE DATE + FLIGHT FILTER */
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
+                <span className="text-slate-500 font-semibold">Date:</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setToDate(e.target.value);
+                    setSelectedDate(e.target.value);
+                  }}
+                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                />
+              </div>
 
-          {/* From / To Date Filter */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
-            <span className="text-slate-500 font-semibold">From:</span>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setSelectedDate(e.target.value);
-              }}
-              className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-            />
-            <span className="text-slate-400 font-semibold">To:</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-            />
-          </div>
+              {/* Flight Selector */}
+              <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={selectedFlight}
+                  onChange={(e) => setSelectedFlight(e.target.value as any)}
+                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                >
+                  <option value="Overall">Overall ({airmen.length})</option>
+                  <option value="Avionics">Avionics</option>
+                  <option value="Mechanics">Mechanics</option>
+                  <option value="GCS">GCS</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Quick Date Presets */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                <button
+                  onClick={() => handleSetPreset('today')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    !isMultiDay ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => handleSetPreset('7days')}
+                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  7 Days
+                </button>
+                <button
+                  onClick={() => handleSetPreset('15days')}
+                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  15 Days
+                </button>
+                <button
+                  onClick={() => handleSetPreset('month')}
+                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  Month
+                </button>
+              </div>
 
-          {/* Flight Selector */}
-          <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={selectedFlight}
-              onChange={(e) => setSelectedFlight(e.target.value as any)}
-              className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-            >
-              <option value="Overall">Overall ({airmen.length})</option>
-              <option value="Avionics">Avionics</option>
-              <option value="Mechanics">Mechanics</option>
-              <option value="GCS">GCS</option>
-              <option value="Admin">Admin</option>
-            </select>
-          </div>
+              {/* From / To Date Filter */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
+                <span className="text-slate-500 font-semibold">From:</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setSelectedDate(e.target.value);
+                  }}
+                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                />
+                <span className="text-slate-400 font-semibold">To:</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                />
+              </div>
+
+              {/* Flight Selector */}
+              <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={selectedFlight}
+                  onChange={(e) => setSelectedFlight(e.target.value as any)}
+                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                >
+                  <option value="Overall">Overall ({airmen.length})</option>
+                  <option value="Avionics">Avionics</option>
+                  <option value="Mechanics">Mechanics</option>
+                  <option value="GCS">GCS</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Add Disposal Button (Admin Only) */}
           {role === 'ADMIN' && (
             <button
-              onClick={() => setShowAddDisposalModal(true)}
+              onClick={() => {
+                if (isPtDocument) {
+                  setDisposalScope('PT');
+                  setDisposalDateMode('SINGLE');
+                } else {
+                  setDisposalScope('ALL');
+                }
+                setShowAddDisposalModal(true);
+              }}
               className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
               title="Add or update personnel disposal (ESSN, CMH, BNS, Sick Report, etc.)"
             >
@@ -899,6 +1168,18 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <Printer className="w-4 h-4" />
             <span>Official Export / Print</span>
           </button>
+
+          {/* Import PDF / Duty Data Button (Admin) */}
+          {role === 'ADMIN' && onOpenImportModal && (
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
+              title="Import Duty Roster from PDF / Image using AI"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>Import PDF Data</span>
+            </button>
+          )}
 
           {/* Download Document Button (Word format) */}
           <button
@@ -978,7 +1259,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <th className="border border-slate-800 p-1.5" rowSpan={2}>Leave</th>
                     <th className="border border-slate-800 p-1.5" colSpan={3}>IDA CENTER Duty</th>
                     <th className="border border-slate-800 p-1.5" rowSpan={2}>Duty Off</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>On Parade</th>
+                    <th className="border border-slate-800 p-1.5" rowSpan={2}>{isPtDocument ? 'On PT' : 'On Parade'}</th>
                   </tr>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
                     <th className="border border-slate-800 p-1">Morning</th>
@@ -1087,7 +1368,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
               <div className="flex-1 text-center">
                 <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
-                  PARADE STATE : AIRMEN
+                  {isPtDocument ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-slate-900 mt-0.5 underline inline-block text-sm uppercase">
@@ -1189,12 +1470,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Total Out Parade
+                        {isPtDocument ? 'Total Out PT' : 'Total Out Parade'}
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        On Parade
+                        {isPtDocument ? 'On PT' : 'On Parade'}
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
@@ -1253,288 +1534,221 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               &nbsp;
             </div>
 
-            {/* 2ND TABLE / BOTTOM DISPOSAL SECTION (4-COLUMN STRUCTURED LAYOUT - NO EMPTY HEADINGS) */}
+            {/* 2ND TABLE / BOTTOM DISPOSAL SECTION */}
             <div
-              className="flex flex-wrap justify-between gap-4 mt-2 pt-1 text-[11px]"
+              className="mt-2 pt-1 text-[11px]"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
-              {/* COLUMN 1: ON PARADE (1 TO 15 PER VERTICAL COLUMN) */}
-              <div className="flex-1 min-w-[220px]">
-                <h3 className="font-bold underline text-slate-900 mb-1.5 uppercase tracking-wide">
-                  ON PARADE
-                </h3>
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
+                <div className="min-w-[240px] flex-shrink-0">
+                  <h3 className="font-bold underline text-slate-900 mb-1.5 uppercase tracking-wide">
+                    {isPtDocument ? 'ON PT' : 'ON PARADE'}
+                  </h3>
 
-                <div className="flex space-x-6">
-                  {onPtChunks.length > 0 ? (
-                    onPtChunks.map((chunk, colIdx) => (
-                      <ol key={colIdx} className="space-y-0.5 font-normal leading-tight">
-                        {chunk.map((item) => (
+                  {onPtList.length > 0 ? (
+                    <div className="flex items-start space-x-6">
+                      {/* Left side: 1 to 15 */}
+                      <ol className="space-y-0.5 font-normal leading-tight">
+                        {onPtList.slice(0, 15).map((item, idx) => (
                           <li key={item.airman.id} className="whitespace-nowrap">
-                            {item.globalIndex}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                            {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                           </li>
                         ))}
                       </ol>
-                    ))
+
+                      {/* Right side: 16+ */}
+                      {onPtList.length > 15 && (
+                        <ol className="space-y-0.5 font-normal leading-tight">
+                          {onPtList.slice(15, 30).map((item, idx) => (
+                            <li key={item.airman.id} className="whitespace-nowrap">
+                              {16 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+
+                      {/* Extra column if > 30 */}
+                      {onPtList.length > 30 && (
+                        <ol className="space-y-0.5 font-normal leading-tight">
+                          {onPtList.slice(30).map((item, idx) => (
+                            <li key={item.airman.id} className="whitespace-nowrap">
+                              {31 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
                   ) : (
-                    <span className="text-slate-400 font-normal">-</span>
+                    <div className="font-bold text-slate-900">Nil</div>
                   )}
                 </div>
-              </div>
 
-              {/* COLUMN 2: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT */}
-              <div className="w-48 flex flex-col space-y-3">
-                {leaveList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      LEAVE
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {leaveList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                {/* DISPOSALS (ONLY SHOWN IF NOT EMPTY / >0 AIRMEN, NO EMPTY HEADINGS) */}
+                <div className="flex-1 flex flex-wrap gap-5">
+                  {/* DISPOSAL COL A */}
+                  {(leaveList.length > 0 || dutyOnList.length > 0 || (!isPtDocument && dutyOffList.length > 0) || bakeBiteList.length > 0 || essnList.length > 0) && (
+                    <div className="w-48 flex flex-col space-y-3">
+                      {leaveList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            LEAVE
+                          </h3>
+                          {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
+                        </div>
+                      )}
 
-                {bakeBiteList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      BAKE & BITE
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {bakeBiteList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                      {dutyOnList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            DUTY ON
+                          </h3>
+                          {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
+                        </div>
+                      )}
 
-                {essnList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      ESSN
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {essnList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                      {!isPtDocument && dutyOffList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            DUTY OFF
+                          </h3>
+                          {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
+                        </div>
+                      )}
 
-                {cmhList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      CMH / BNS / BSH
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {cmhList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                      {bakeBiteList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            BAKE & BITE
+                          </h3>
+                          {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
+                        </div>
+                      )}
 
-                {sickReportList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      SICK REPORT
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {sickReportList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-              </div>
-
-              {/* COLUMN 3: ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
-              <div className="w-48 flex flex-col space-y-3">
-                {tdyList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      ATT/TDY/DETT
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {tdyList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {receptionList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      RECEPTION
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {receptionList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {airFdDutyList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      AIR FD DUTY
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {airFdDutyList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {adminOrderList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      ADMIN ORDER
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {adminOrderList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {classTrgList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      CLASS / TRG
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {classTrgList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {drillCatCList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      DRILL CAT-C
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {drillCatCList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-              </div>
-
-              {/* COLUMN 4: DUTY ON, DUTY OFF, G/H & GAMES, ABSENT, CUSTOM DISPOSALS */}
-              <div className="w-56 flex flex-col space-y-3">
-                {dutyOnList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      DUTY ON
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {dutyOnList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                          {item.note && <span className="text-[9px] text-slate-400 ml-1">({item.note})</span>}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {dutyOffList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      DUTY OFF
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {dutyOffList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                          {item.note && <span className="text-[9px] text-slate-400 ml-1">({item.note})</span>}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {gamesList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      G/H & GAMES
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {gamesList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {absentList.length > 0 && (
-                  <div>
-                    <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                      ABSENT
-                    </h3>
-                    <ol className="space-y-0.5 font-normal leading-tight">
-                      {absentList.map((item, i) => (
-                        <li key={i} className="truncate">
-                          {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {/* Additional Dynamic Custom Disposals */}
-                {Object.entries(customDisposalsMap).map(([catName, airmenList]) => {
-                  if (!airmenList || airmenList.length === 0) return null;
-                  return (
-                    <div key={catName}>
-                      <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                        {catName}
-                      </h3>
-                      <ol className="space-y-0.5 font-normal leading-tight">
-                        {airmenList.map((item, i) => (
-                          <li key={i} className="truncate">
-                            {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                            {item.note && <span className="text-[9px] text-slate-400 ml-1">({item.note})</span>}
-                          </li>
-                        ))}
-                      </ol>
+                      {essnList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            ESSN
+                          </h3>
+                          {renderDisposalAirmenList(essnList, 'ESSN', 'ESSN')}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  )}
+
+                  {/* DISPOSAL COL B */}
+                  {(cmhList.length > 0 || sickReportList.length > 0 || tdyList.length > 0 || receptionList.length > 0) && (
+                    <div className="w-48 flex flex-col space-y-3">
+                      {cmhList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            CMH / BNS / BSH
+                          </h3>
+                          {renderDisposalAirmenList(cmhList, 'CMH', 'CMH / Hospital')}
+                        </div>
+                      )}
+
+                      {sickReportList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            SICK REPORT
+                          </h3>
+                          {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
+                        </div>
+                      )}
+
+                      {tdyList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            ATT/TDY/DETT
+                          </h3>
+                          {renderDisposalAirmenList(tdyList, 'TDY', 'ATT / TDY / DETT')}
+                        </div>
+                      )}
+
+                      {receptionList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            RECEPTION
+                          </h3>
+                          {renderDisposalAirmenList(receptionList, 'RECEPTION', 'Reception')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* DISPOSAL COL C */}
+                  {(airFdDutyList.length > 0 || adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                    <div className="w-48 flex flex-col space-y-3">
+                      {airFdDutyList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            AIR FD DUTY
+                          </h3>
+                          {renderDisposalAirmenList(airFdDutyList, 'AIRFIELD_DUTY', 'Air Fd Duty')}
+                        </div>
+                      )}
+
+                      {adminOrderList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            ADMIN ORDER
+                          </h3>
+                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
+                        </div>
+                      )}
+
+                      {classTrgList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            CLASS / TRG
+                          </h3>
+                          {renderDisposalAirmenList(classTrgList, 'CLASS_TRG', 'Class / TRG')}
+                        </div>
+                      )}
+
+                      {drillCatCList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            DRILL CAT-C
+                          </h3>
+                          {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
+                        </div>
+                      )}
+
+                      {gamesList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            G/H & GAMES
+                          </h3>
+                          {renderDisposalAirmenList(gamesList, 'GAMES', 'G/H & Games')}
+                        </div>
+                      )}
+
+                      {absentList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            ABSENT
+                          </h3>
+                          {renderDisposalAirmenList(absentList, 'ABSENT', 'Absent')}
+                        </div>
+                      )}
+
+                      {/* Dynamic Custom Disposals / Others */}
+                      {Object.entries(customDisposalsMap).map(([catName, airmenList]) => {
+                        if (!airmenList || airmenList.length === 0) return null;
+                        return (
+                          <div key={catName}>
+                            <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                              {catName}
+                            </h3>
+                            {renderDisposalAirmenList(airmenList, 'OTHERS', catName)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1960,63 +2174,391 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   ))}
                 </div>
 
-                {/* Airman Select */}
-                <select
-                  value={disposalAirmanId}
-                  onChange={(e) => setDisposalAirmanId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 cursor-pointer"
-                  required
-                >
-                  <option value="" disabled className="text-slate-400">
-                    -- Select Personnel in {disposalFlight} Flight --
-                  </option>
-                  {airmen
-                    .filter((a) => a.flightName === disposalFlight)
-                    .map((a) => (
-                      <option key={a.id} value={a.id} className="bg-white dark:bg-slate-900">
-                        {a.rank} {a.name} ({a.trade})
-                      </option>
-                    ))}
-                </select>
-              </div>
+                {/* Multi-Select Airmen List */}
+                {(() => {
+                  const flightAirmen = airmen.filter((a) => a.flightName === disposalFlight);
 
-              {/* 4. Notes / Reason */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  4. Remarks / Reason (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. CMH Ward-4, Approved by OC, Order No..."
-                  value={disposalNotes}
-                  onChange={(e) => setDisposalNotes(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
-                />
+                  const getAirmanStatusLabel = (airmanId: string) => {
+                    const st = disposalPersonnelStatusMap[airmanId];
+                    if (!st) return { isOnParade: true, label: 'On Parade', dutyCode: 'ON_PARADE', notes: '', dutyName: 'On Parade' };
+
+                    const { statusCategory, dutyCode, notes, dutyName } = st;
+                    const codeUpper = (dutyCode || '').toUpperCase();
+                    const notesLower = (notes || '').toLowerCase();
+
+                    if (codeUpper === 'ON_PARADE' || statusCategory === 'PARADE') {
+                      return { isOnParade: true, label: 'On Parade', dutyCode: 'ON_PARADE', notes, dutyName: 'On Parade' };
+                    }
+                    if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
+                      return { isOnParade: false, label: 'Leave', dutyCode: 'LEAVE', notes, dutyName: 'Leave' };
+                    }
+                    if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
+                      return { isOnParade: false, label: 'TDY', dutyCode: 'TDY', notes, dutyName: 'TDY' };
+                    }
+                    if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
+                      return { isOnParade: false, label: 'Bake & Bite', dutyCode: 'BAKE_N_BITE', notes, dutyName: 'Bake & Bite' };
+                    }
+                    if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
+                      return { isOnParade: false, label: 'ESSN', dutyCode: 'ESSN', notes, dutyName: 'ESSN' };
+                    }
+                    if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
+                      return { isOnParade: false, label: 'CMH / Hospital', dutyCode: 'CMH', notes, dutyName: 'CMH / Hospital' };
+                    }
+                    if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick')) {
+                      return { isOnParade: false, label: 'Sick Report', dutyCode: 'SICK_REPORT', notes, dutyName: 'Sick Report' };
+                    }
+                    if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: "Drill Cat 'C'", dutyCode: 'DRILL_CAT_C', notes, dutyName: "Drill Cat 'C'" };
+                    }
+                    if (codeUpper === 'RECEPTION' || notesLower.includes('reception')) {
+                      return { isOnParade: false, label: 'Reception / KO', dutyCode: 'RECEPTION', notes, dutyName: 'Reception / KO' };
+                    }
+                    if (['ADMIN_ORDER', 'BOI'].includes(codeUpper) || notesLower.includes('admin order')) {
+                      return { isOnParade: false, label: 'Admin Order', dutyCode: 'ADMIN_ORDER', notes, dutyName: 'Admin Order' };
+                    }
+                    if (['CLASS_TRG', 'CLASS', 'TRG'].includes(codeUpper)) {
+                      return { isOnParade: false, label: 'Class / Trg', dutyCode: 'CLASS_TRG', notes, dutyName: 'Class / Trg' };
+                    }
+                    if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper)) {
+                      return { isOnParade: false, label: 'Airfield Duty', dutyCode: 'AIRFIELD_DUTY', notes, dutyName: 'Airfield Duty' };
+                    }
+                    if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper)) {
+                      return { isOnParade: false, label: 'G/H & Games', dutyCode: 'GAMES', notes, dutyName: 'G/H & Games' };
+                    }
+                    if (['ABSENT', 'AWL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: 'Absent', dutyCode: 'ABSENT', notes, dutyName: 'Absent' };
+                    }
+                    if (statusCategory === 'OFF' || codeUpper === 'DUTY_OFF') {
+                      return { isOnParade: false, label: dutyName || notes || 'Duty Off', dutyCode: 'DUTY_OFF', notes, dutyName: dutyName || 'Duty Off' };
+                    }
+                    if (statusCategory === 'DUTY' || ['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper)) {
+                      return { isOnParade: false, label: notes || dutyCode || 'On Duty', dutyCode: dutyCode || 'DUTY_ON', notes, dutyName: dutyName || 'On Duty' };
+                    }
+
+                    return { isOnParade: false, label: notes || dutyCode || 'Disposal', dutyCode: dutyCode || 'OTHERS', notes, dutyName: dutyName || 'Disposal' };
+                  };
+
+                  const availableOnParade = flightAirmen.filter((a) => getAirmanStatusLabel(a.id).isOnParade);
+
+                  const handleSelectAllFlightAvailable = () => {
+                    const availableIds = availableOnParade.map((a) => a.id);
+                    setSelectedDisposalAirmenIds((prev) => Array.from(new Set([...prev, ...availableIds])));
+                  };
+
+                  const handleDeselectFlight = () => {
+                    const flightIds = flightAirmen.map((a) => a.id);
+                    setSelectedDisposalAirmenIds((prev) => prev.filter((id) => !flightIds.includes(id)));
+                  };
+
+                  return (
+                    <div className="space-y-1.5">
+                      {/* Selection Toolbar */}
+                      <div className="flex items-center justify-between px-1 text-xs">
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">
+                          Available: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{availableOnParade.length}</strong> / {flightAirmen.length} in {disposalFlight}
+                          {selectedDisposalAirmenIds.length > 0 && (
+                            <span className="ml-2 font-bold text-purple-600 dark:text-purple-400">
+                              ({selectedDisposalAirmenIds.length} Selected)
+                            </span>
+                          )}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={handleSelectAllFlightAvailable}
+                            disabled={availableOnParade.length === 0}
+                            className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline disabled:opacity-40 cursor-pointer"
+                          >
+                            Select All Available
+                          </button>
+                          <span className="text-slate-300 dark:text-slate-700">|</span>
+                          <button
+                            type="button"
+                            onClick={handleDeselectFlight}
+                            className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Airmen List Scrollbox */}
+                      <div className="max-h-56 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                        {flightAirmen.length === 0 ? (
+                          <div className="py-4 text-center text-xs text-slate-400">
+                            No airmen registered in {disposalFlight} Flight
+                          </div>
+                        ) : (
+                          flightAirmen.map((a) => {
+                            const statusInfo = getAirmanStatusLabel(a.id);
+                            const { isOnParade, label: statusLabel } = statusInfo;
+                            const isChecked = selectedDisposalAirmenIds.includes(a.id);
+
+                            if (isOnParade) {
+                              return (
+                                <label
+                                  key={a.id}
+                                  className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none text-xs ${
+                                    isChecked
+                                      ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-400 text-purple-950 dark:text-purple-100 font-bold shadow-xs'
+                                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-purple-300 text-slate-800 dark:text-slate-200 font-medium'
+                                  }`}
+                                >
+                                  <div className="flex items-center space-x-2.5 min-w-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        if (isChecked) {
+                                          setSelectedDisposalAirmenIds((prev) => prev.filter((id) => id !== a.id));
+                                        } else {
+                                          setSelectedDisposalAirmenIds((prev) => [...prev, a.id]);
+                                        }
+                                      }}
+                                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="truncate">
+                                      <span className="font-bold text-slate-900 dark:text-white">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
+                                    </span>
+                                  </div>
+                                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
+                                    On Parade
+                                  </span>
+                                </label>
+                              );
+                            }
+
+                            // Airman with existing disposal / duty - with Edit / Change button
+                            return (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between p-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
+                              >
+                                <div className="flex items-center space-x-2.5 min-w-0">
+                                  <span className="truncate text-slate-700 dark:text-slate-300">
+                                    <span className="font-bold">{a.rank}</span> {a.name} ({a.trade})
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-1.5 shrink-0 ml-2">
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                    {statusLabel}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      openEditDisposal(a, statusInfo.dutyCode, statusInfo.dutyName, statusInfo.notes);
+                                    }}
+                                    className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors cursor-pointer flex items-center space-x-1"
+                                    title="Click to edit, change or remove disposal for this airman"
+                                  >
+                                    <span>✏️ Change</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAddDisposalModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={disposalLoading || !disposalAirmanId}
-                  className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
-                >
-                  {disposalLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  {selectedDisposalAirmenIds.length === 0 ? (
+                    'Select personnel above'
                   ) : (
-                    <Check className="w-4 h-4" />
+                    <span className="text-purple-600 dark:text-purple-400">
+                      {selectedDisposalAirmenIds.length} personnel selected
+                    </span>
                   )}
-                  <span>Add Disposal Now</span>
-                </button>
+                </span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDisposalModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={disposalLoading || selectedDisposalAirmenIds.length === 0}
+                    className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    {disposalLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    <span>
+                      {selectedDisposalAirmenIds.length > 1
+                        ? `Add Disposal (${selectedDisposalAirmenIds.length})`
+                        : selectedDisposalAirmenIds.length === 1
+                        ? 'Add Disposal (1 Airman)'
+                        : 'Select Airmen'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Change Disposal Modal */}
+      {editDisposalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn print:hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2">
+                  <span>✏️ Edit / Change Disposal</span>
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                  {editDisposalModal.airman.rank} {editDisposalModal.airman.name} • BD/{editDisposalModal.airman.bdNo} • {editDisposalModal.airman.trade} ({editDisposalModal.airman.flightName} Flt)
+                </p>
+              </div>
+              <button
+                onClick={() => setEditDisposalModal(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Current Status Info */}
+              <div className="bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl border border-purple-200 dark:border-purple-800 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] text-purple-700 dark:text-purple-300 font-semibold block">Current Assignment:</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-xs">
+                    {editDisposalModal.currentDutyName || editDisposalModal.currentDutyCode}
+                    {editDisposalModal.notes && <span className="text-slate-500 dark:text-slate-400 ml-1">({editDisposalModal.notes})</span>}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDeleteEditDisposal}
+                  disabled={editDisposalLoading}
+                  className="px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-lg border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
+                >
+                  Clear Disposal (Set On Parade)
+                </button>
+              </div>
+
+              {/* Date Range for Edit */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    From Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={editDisposalFromDate}
+                    onChange={(e) => setEditDisposalFromDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    To Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={editDisposalToDate}
+                    min={editDisposalFromDate}
+                    onChange={(e) => setEditDisposalToDate(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Change Category Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Change Disposal Category To:
+                </label>
+                <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
+                  {[
+                    { code: 'ON_PARADE', label: '✅ On Parade (Clear)' },
+                    { code: 'ESSN', label: 'ESSN (Essential)' },
+                    { code: 'CMH', label: 'CMH / Hospital' },
+                    { code: 'SICK_REPORT', label: 'Sick Report / ED' },
+                    { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
+                    { code: 'LEAVE', label: 'Leave' },
+                    { code: 'BAKE_N_BITE', label: 'Bake & Bite' },
+                    { code: 'RECEPTION', label: 'Reception / K/O' },
+                    { code: 'TDY', label: 'ATT / TDY / DETT' },
+                    { code: 'ADMIN_ORDER', label: 'Admin Order' },
+                    { code: 'CLASS_TRG', label: 'Class / Trg Ctrl' },
+                    { code: 'AIRFIELD_DUTY', label: 'Airfield Duty' },
+                    { code: 'GAMES', label: 'G/H & Games' },
+                    { code: 'ABSENT', label: 'Absent / AWL' },
+                    { code: 'OTHERS', label: '✨ Other Custom' },
+                  ].map((cat) => {
+                    const isSelected = editDisposalCategory === cat.code;
+                    return (
+                      <button
+                        key={cat.code}
+                        type="button"
+                        onClick={() => setEditDisposalCategory(cat.code)}
+                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${
+                          isSelected
+                            ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-100 shadow-xs'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Title Input if OTHERS */}
+                {editDisposalCategory === 'OTHERS' && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn">
+                    <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      Specify Custom Disposal Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
+                      value={editDisposalCustomTitle}
+                      onChange={(e) => setEditDisposalCustomTitle(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditDisposalModal(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditDisposal}
+                disabled={editDisposalLoading}
+                className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
+              >
+                {editDisposalLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>Save Changes</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2037,6 +2579,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           shift="Morning"
           flight={selectedFlight}
           airmen={airmen}
+          documentType={isPtDocument ? 'PT' : 'PARADE'}
           onClose={() => setIsInternalPrintOpen(false)}
         />
       )}

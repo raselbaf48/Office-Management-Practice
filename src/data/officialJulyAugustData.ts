@@ -946,3 +946,95 @@ export function generateOfficialMonthAssignments(year: number, month: number): D
 
   return assignments;
 }
+
+export function getOfficialParadeStateDocument(
+  year: number = 2026,
+  monthChoice: number | string = 'all',
+  airmenList?: any[]
+) {
+  const monthsToProcess: number[] = [];
+  if (monthChoice === 7 || monthChoice === '7' || monthChoice === '07' || monthChoice === 'july') {
+    monthsToProcess.push(7);
+  } else if (monthChoice === 8 || monthChoice === '8' || monthChoice === '08' || monthChoice === 'august') {
+    monthsToProcess.push(8);
+  } else {
+    monthsToProcess.push(7, 8);
+  }
+
+  const airmen = airmenList || [];
+  const findAirman = (id: string | null) => airmen.find((a: any) => a.id === id);
+
+  const dates: any[] = [];
+
+  monthsToProcess.forEach((m) => {
+    const isJuly = m === 7;
+    const rawList = isJuly ? JULY_RAW_DATA : AUGUST_RAW_DATA;
+    const monthStr = m < 10 ? `0${m}` : `${m}`;
+
+    rawList.forEach((dayData) => {
+      const day = dayData.day;
+      const dayStr = day < 10 ? `0${day}` : `${day}`;
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+      const dateObj = new Date(year, m - 1, day);
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = dayNames[dateObj.getDay()];
+
+      const dayAssignments: any[] = [];
+
+      const addItems = (names: string[] | undefined, dutyCode: string, dutyName: string, idaShift?: string) => {
+        if (!names) return;
+        names.forEach((name) => {
+          const airmanId = getAirmanIdByName(name);
+          const matchedAirman = airmanId ? findAirman(airmanId) : null;
+          dayAssignments.push({
+            rawText: name,
+            dutyCode,
+            dutyName,
+            idaShift: idaShift || null,
+            matchedAirmanId: matchedAirman ? matchedAirman.id : airmanId,
+            matchedAirmanName: matchedAirman ? matchedAirman.name : name,
+            matchedAirmanRank: matchedAirman ? matchedAirman.rank : '',
+            matchedAirmanTrade: matchedAirman ? matchedAirman.trade : '',
+            matchedAirmanFlight: matchedAirman ? matchedAirman.flightName : 'Avionics',
+            matchedAirmanBdNo: matchedAirman ? matchedAirman.bdNo : '',
+            confidence: 0.98,
+            isIgnored: false,
+          });
+        });
+      };
+
+      addItems(dayData.gd, 'GD', 'Base Security Duty');
+      addItems(dayData.btf, 'BTF', 'Base Taskforce Duty');
+      addItems(dayData.ntf, 'NTF', 'Najirpara Taskforce Duty');
+      addItems(dayData.airfield, 'AIRFIELD_DUTY', 'Airfield Duty');
+      addItems(dayData.halishahar, 'HALISHAHAR', 'Halishahar Duty');
+      addItems(dayData.bakeNBite, 'BAKE_N_BITE', 'Bake N Bite');
+      addItems(dayData.tdy, 'TDY', 'TDY / Attachment');
+      addItems(dayData.leave, 'LEAVE', 'Leave (CL/AL)');
+      addItems(dayData.idaMorning, 'IDAC', 'IDA Center Duty', 'Morning');
+      addItems(dayData.idaAfternoon, 'IDAC', 'IDA Center Duty', 'Afternoon');
+      addItems(dayData.idaNight, 'IDAC', 'IDA Center Duty', 'Night');
+
+      dates.push({
+        date: dateStr,
+        dayName,
+        assignments: dayAssignments,
+      });
+    });
+  });
+
+  return {
+    documentTitle: `PARADE STATE : AIRMEN AVI FLT (${monthsToProcess.includes(7) && monthsToProcess.includes(8) ? '01 Jul - 31 Aug' : monthsToProcess.includes(7) ? 'July' : 'August'} ${year})`,
+    detectedFlight: 'Avionics',
+    year,
+    month: monthsToProcess[0],
+    totalDates: dates.length,
+    dateRange: {
+      start: dates[0]?.date || `${year}-07-01`,
+      end: dates[dates.length - 1]?.date || `${year}-08-31`,
+    },
+    dates,
+  };
+}
+
