@@ -255,6 +255,15 @@ async function startServer() {
       return res.status(404).json({ error: 'Airman not found' });
     }
 
+    // Clean up any assignments for this deleted airman across all months
+    if (db.assignments) {
+      Object.keys(db.assignments).forEach((monthKey) => {
+        if (Array.isArray(db.assignments[monthKey])) {
+          db.assignments[monthKey] = db.assignments[monthKey].filter((ass) => ass.airmanId !== id);
+        }
+      });
+    }
+
     saveDatabase(db);
     res.json({ success: true, message: 'Airman removed' });
   });

@@ -33,6 +33,8 @@ export type SidebarTab =
   | 'overview'
   | 'nominal'
   | 'flights'
+  | 'parade-state'
+  | 'pt-state'
   | 'leave-register'
   | 'tdy-register'
   | 'register'

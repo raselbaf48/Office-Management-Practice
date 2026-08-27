@@ -1,11 +1,15 @@
 import { Airman, Rank } from '../types';
 
 export const RANK_SENIORITY: Record<Rank, number> = {
-  SWO: 1,
-  WO: 2,
-  Sgt: 3,
-  Cpl: 4,
-  LAC: 5,
+  MWO: 1,
+  SWO: 2,
+  WO: 3,
+  SGT: 4,
+  Sgt: 4,
+  CPL: 5,
+  Cpl: 5,
+  LAC: 6,
+  AC: 7,
 };
 
 /**

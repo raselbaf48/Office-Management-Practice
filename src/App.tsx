@@ -285,7 +285,8 @@ export default function App() {
     try {
       const res = await fetch(`/api/airmen/${airmanId}`, { method: 'DELETE' });
       if (res.ok) {
-        fetchAirmen();
+        await fetchAirmen();
+        window.dispatchEvent(new CustomEvent('baf_state_updated'));
       }
     } catch (err) {
       console.error('Error deleting airman:', err);
