@@ -17,10 +17,17 @@ import {
   ChevronUp,
   Info,
   Image as ImageIcon,
-  RotateCcw
+  RotateCcw,
+  History,
+  Search,
+  Trash2,
+  ShieldCheck,
+  Smartphone,
+  Laptop
 } from 'lucide-react';
 import { Logo155UASU } from './Logo155UASU';
 import { UserRole, ThemePreference } from '../types';
+import { getLoginHistory, clearLoginHistory, UserLoginLog } from '../utils/authSession';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -32,7 +39,7 @@ interface SettingsModalProps {
   onRosterUpdated?: () => void;
 }
 
-type SettingSection = 'appearance' | 'logo' | 'security' | 'database';
+type SettingSection = 'appearance' | 'logo' | 'security' | 'database' | 'history';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -58,6 +65,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [passcodeSuccess, setPasscodeSuccess] = useState('');
   const [isUpdatingPasscode, setIsUpdatingPasscode] = useState(false);
 
+  // Login History State
+  const [loginHistory, setLoginHistory] = useState<UserLoginLog[]>([]);
+  const [historySearch, setHistorySearch] = useState<string>('');
+
   // Database Backup State
   const [restoreStatus, setRestoreStatus] = useState<string>('');
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
@@ -72,6 +83,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setLogoSuccess('');
       setRestoreStatus('');
       setCustomLogo(localStorage.getItem('baf_custom_logo'));
+      setLoginHistory(getLoginHistory());
     }
   }, [isOpen]);
 
@@ -256,6 +268,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       subtitle: 'Configure 4-digit master access passcode and authorization',
       icon: <KeyRound className="w-5 h-5" />,
       badge: role === 'ADMIN' ? 'Admin Active' : 'Protected'
+    },
+    {
+      id: 'history',
+      title: 'User Login History',
+      subtitle: 'Audit log of all BD numbers accessing the system with timestamps',
+      icon: <History className="w-5 h-5" />,
+      badge: `${loginHistory.length} Logged`
     },
     {
       id: 'database',
@@ -607,7 +626,129 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     )}
 
-                    {/* 4. DATABASE BACKUP & RESTORE */}
+                    {/* 4. USER LOGIN HISTORY */}
+                    {item.id === 'history' && (
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                          <div className="relative flex-1">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={historySearch}
+                              onChange={(e) => setHistorySearch(e.target.value)}
+                              placeholder="Search by BD No, Rank or Name..."
+                              className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          <div className="flex items-center space-x-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setLoginHistory(getLoginHistory())}
+                              className="p-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 dark:border-slate-600 transition-colors flex items-center space-x-1 cursor-pointer"
+                              title="Refresh logs"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Refresh</span>
+                            </button>
+
+                            {role === 'ADMIN' && loginHistory.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm('Clear all user login history records?')) {
+                                    clearLoginHistory();
+                                    setLoginHistory([]);
+                                  }
+                                }}
+                                className="p-2 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 rounded-xl border border-red-200 dark:border-red-800 transition-colors flex items-center space-x-1 cursor-pointer"
+                                title="Clear History"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Clear Logs</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Logs list */}
+                        {(() => {
+                          const filtered = loginHistory.filter((log) => {
+                            if (!historySearch) return true;
+                            const q = historySearch.toLowerCase();
+                            return (
+                              log.bdNo.toLowerCase().includes(q) ||
+                              log.name.toLowerCase().includes(q) ||
+                              log.rank.toLowerCase().includes(q) ||
+                              log.flightName.toLowerCase().includes(q)
+                            );
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-800">
+                                <History className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                  No login history found
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  {historySearch ? 'No matching logs for your query.' : 'Logins will automatically appear here as users log in with their BD Number.'}
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead className="bg-slate-100 dark:bg-slate-800/80 sticky top-0 z-10 text-slate-600 dark:text-slate-300 font-bold">
+                                  <tr>
+                                    <th className="py-2.5 px-3">Airman / BD</th>
+                                    <th className="py-2.5 px-3">Flight</th>
+                                    <th className="py-2.5 px-3">Login Time</th>
+                                    <th className="py-2.5 px-3 text-right">Device</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900/60">
+                                  {filtered.map((log) => (
+                                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                      <td className="py-2.5 px-3">
+                                        <div className="font-black text-slate-900 dark:text-white">
+                                          {log.rank} {log.name}
+                                        </div>
+                                        <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                          {log.bdNo}
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-3">
+                                        <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10.5px] font-bold text-slate-700 dark:text-slate-300">
+                                          {log.flightName}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap">
+                                        {log.timeFormatted}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right">
+                                        <span className="inline-flex items-center space-x-1 text-[11px] text-slate-500">
+                                          {log.deviceInfo.includes('Mobile') ? (
+                                            <Smartphone className="w-3 h-3 text-sky-500" />
+                                          ) : (
+                                            <Laptop className="w-3 h-3 text-slate-400" />
+                                          )}
+                                          <span>{log.deviceInfo}</span>
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {/* 5. DATABASE BACKUP & RESTORE */}
                     {item.id === 'database' && (
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

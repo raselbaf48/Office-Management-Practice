@@ -39,6 +39,7 @@ export type SidebarTab =
   | 'pt-state'
   | 'leave-register'
   | 'tdy-register'
+  | 'ida-center'
   | 'register'
   | 'duty-roster'
   | 'duty-ratio'
@@ -204,6 +205,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Activity className={`w-4 h-4 shrink-0 ${activeTab === 'pt-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">PT State</span>}
                 </button>
+
+                {/* IDA Center Duty (Normal View Accessible) */}
+                {role !== 'ADMIN' && (
+                  <button
+                    onClick={() => handleSelectTab('ida-center')}
+                    className={`w-full flex items-center ${
+                      collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                    } rounded-xl text-xs font-bold transition-all duration-150 ${
+                      activeTab === 'ida-center'
+                        ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                        : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                    }`}
+                    title="IDA Center Duty (Standby & Shifts)"
+                  >
+                    <Shield className={`w-4 h-4 shrink-0 ${activeTab === 'ida-center' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                    {!collapsed && <span className="ml-3 truncate">IDA Center Duty</span>}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -344,6 +363,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {(collapsed || openSections.schedule) && (
                   <div className="mt-1 space-y-1">
+                    {/* IDA Center Duty (Added Above Monthly Duty Register) */}
+                    <button
+                      onClick={() => handleSelectTab('ida-center')}
+                      className={`w-full flex items-center ${
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                      } rounded-xl text-xs font-bold transition-all duration-150 ${
+                        activeTab === 'ida-center'
+                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                      }`}
+                      title="IDA Center Duty (Standby & Shifts)"
+                    >
+                      <Shield className={`w-4 h-4 shrink-0 ${activeTab === 'ida-center' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      {!collapsed && <span className="ml-3 truncate">IDA Center Duty</span>}
+                    </button>
+
                     {/* Monthly Duty Register */}
                     <button
                       onClick={() => handleSelectTab('register')}
@@ -444,45 +479,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Admin Login / Status Trigger in Sidebar (Only shown when Admin is logged in) */}
-        {role === 'ADMIN' && (
-          <div className="px-3 py-2 bg-[#052818] border-t border-[#0d4f31] shrink-0 space-y-1.5">
-            <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} bg-amber-500/10 border border-amber-500/30 rounded-xl p-2`}>
-              <div className="flex items-center space-x-2 truncate">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                {!collapsed && (
-                  <div className="truncate text-left">
-                    <div className="text-[11px] font-black text-amber-300 leading-tight">Admin SNCO</div>
-                    <div className="text-[9px] text-emerald-300/70 font-semibold">Full Edit Mode</div>
-                  </div>
-                )}
-              </div>
-              {onLogoutAdmin && !collapsed && (
-                <button
-                  type="button"
-                  onClick={onLogoutAdmin}
-                  className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-300 hover:text-white transition-colors cursor-pointer"
-                  title="Switch to Airman View"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Settings Button in Sidebar Bottom for Admin */}
-            {onOpenSettings && (
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className={`w-full flex items-center ${
-                  collapsed ? 'justify-center p-2' : 'justify-start px-3 py-2 space-x-2.5'
-                } rounded-xl text-emerald-100/90 hover:text-white hover:bg-[#0c4e2f] text-xs font-bold transition-all cursor-pointer`}
-                title="Settings (Theme, Password, History)"
-              >
-                <Settings className="w-4 h-4 text-emerald-300 shrink-0" />
-                {!collapsed && <span>Settings</span>}
-              </button>
-            )}
+        {/* Settings Button in Sidebar Bottom for Admin (Admin SNCO box removed as requested) */}
+        {role === 'ADMIN' && onOpenSettings && (
+          <div className="px-3 py-2 bg-[#052818] border-t border-[#0d4f31] shrink-0">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className={`w-full flex items-center ${
+                collapsed ? 'justify-center p-2' : 'justify-start px-3 py-2 space-x-2.5'
+              } rounded-xl text-emerald-100/90 hover:text-white hover:bg-[#0c4e2f] text-xs font-bold transition-all cursor-pointer`}
+              title="Settings (Theme, Password, History)"
+            >
+              <Settings className="w-4 h-4 text-emerald-300 shrink-0" />
+              {!collapsed && <span>Settings</span>}
+            </button>
           </div>
         )}
 

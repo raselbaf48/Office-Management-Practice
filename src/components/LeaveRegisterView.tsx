@@ -40,15 +40,15 @@ const isWeekendDay = (dateStr: string): boolean => {
 };
 
 /**
- * Military F-295 Weekend Prefix/Suffix Calculation:
- * When an airman goes on leave (e.g. 30 days, 15 days, 7 days):
- * - Middle Fridays & Saturdays during the leave span are counted towards their leave balance.
- * - ONLY contiguous Friday & Saturday at the very START (prefix) or very END (suffix) of the leave span
- *   are exempted / credited as free weekend duty pass (F-295).
+ * Military F-295 Weekend / Free Pass Calculation:
+ * When an airman goes on leave (e.g. 30 days, 15 days, 7 days, or Eid leave with custom F-295):
+ * - F-295 days (weekend pass or special free grant e.g. 2, 3, 7, 8 days) are 100% FREE LEAVE.
+ * - F-295 days NEVER deduct from the airman's leave balance.
  */
 export const calculateLeaveDaysWithF295 = (
   startStr: string,
-  endStr: string
+  endStr: string,
+  explicitF295Days?: number
 ): { totalCalendarDays: number; netLeaveDays: number; f295Days: number; dayEntries: Array<{ date: string; isF295: boolean }> } => {
   try {
     const [sY, sM, sD] = startStr.split('-').map(Number);
@@ -72,30 +72,33 @@ export const calculateLeaveDaysWithF295 = (
     }
 
     const n = dates.length;
-    // Find contiguous weekends at the start (Prefix F-295)
-    let startWeekendCount = 0;
-    while (startWeekendCount < n && isWeekendDay(dates[startWeekendCount])) {
-      startWeekendCount++;
-    }
 
-    // Find contiguous weekends at the end (Suffix F-295)
-    // CRITICAL BAF RULE: An airman NEVER receives F-295 twice on the same leave.
-    // They receive F-295 on EITHER the start side OR the end side, never both.
-    let endWeekendCount = 0;
-    if (startWeekendCount === 0) {
-      while (endWeekendCount < n && isWeekendDay(dates[n - 1 - endWeekendCount])) {
-        endWeekendCount++;
+    let f295Days = 0;
+    if (typeof explicitF295Days === 'number' && explicitF295Days > 0) {
+      f295Days = Math.min(n, explicitF295Days);
+    } else {
+      // Find contiguous weekends at the start (Prefix F-295)
+      let startWeekendCount = 0;
+      while (startWeekendCount < n && isWeekendDay(dates[startWeekendCount])) {
+        startWeekendCount++;
       }
+
+      // Find contiguous weekends at the end (Suffix F-295)
+      let endWeekendCount = 0;
+      if (startWeekendCount === 0) {
+        while (endWeekendCount < n && isWeekendDay(dates[n - 1 - endWeekendCount])) {
+          endWeekendCount++;
+        }
+      }
+      f295Days = startWeekendCount > 0 ? startWeekendCount : endWeekendCount;
     }
 
     const dayEntries = dates.map((dStr, idx) => {
-      const isStartF295 = idx < startWeekendCount;
-      const isEndF295 = startWeekendCount === 0 && idx >= n - endWeekendCount;
-      const isF295 = isStartF295 || isEndF295;
+      // Flag the last or first f295Days as free F-295
+      const isF295 = idx >= n - f295Days;
       return { date: dStr, isF295 };
     });
 
-    const f295Days = startWeekendCount > 0 ? startWeekendCount : endWeekendCount;
     const netLeaveDays = Math.max(0, n - f295Days);
 
     return {
@@ -295,13 +298,23 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           spans.push(currentSpan);
         }
 
-        // Process each contiguous span with Military F-295 prefix/suffix rule
+        // Process each contiguous span with Military F-295 free pass rule
         spans.forEach((span) => {
           const spanLength = span.length;
           const isSpanAnnual = spanLength > 7;
           const firstDate = span[0].date;
           const lastDate = span[span.length - 1].date;
-          const spanF295Calc = calculateLeaveDaysWithF295(firstDate, lastDate);
+
+          // Check if any assignment in the span specifies explicit F-295 free days
+          let explicitF295: number | undefined = undefined;
+          span.forEach((ass) => {
+            const match = (ass.notes || '').match(/f-295:\s*(\d+)/i);
+            if (match) {
+              explicitF295 = parseInt(match[1], 10);
+            }
+          });
+
+          const spanF295Calc = calculateLeaveDaysWithF295(firstDate, lastDate, explicitF295);
 
           span.forEach((ass) => {
             const notesLower = (ass.notes || '').toLowerCase();
@@ -320,7 +333,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
               type = spanLength > 7 ? 'Annual Leave' : 'Casual Leave';
             }
 
-            // Check if this date in the span falls into F-295 (prefix/suffix weekend)
+            // Check if this date in the span falls into F-295 (Free Pass)
             const dayEntry = spanF295Calc.dayEntries.find((de) => de.date === ass.date);
             const isF295 = !!dayEntry?.isF295;
 
@@ -386,6 +399,9 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
     setSavingLeave(true);
     try {
       const fullTypeName = leaveType === 'Casual' ? 'Casual Leave' : leaveType === 'Annual' ? 'Annual Leave' : 'Recreation Leave';
+      const f295Extra = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+      const notesWithF295 = f295Extra > 0 ? `${fullTypeName} (F-295: ${f295Extra} Free Days)` : fullTypeName;
+
       const res = await fetch('/api/roster/assign-range', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -394,17 +410,17 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           dutyCode: 'LEAVE',
           fromDate: leaveFromDate,
           toDate: leaveToDate,
-          notes: fullTypeName,
+          notes: notesWithF295,
         }),
       });
 
       const result = await res.json().catch(() => ({}));
       if (res.ok && result.success) {
         const found = airmen.find((a) => a.id === leaveAirmanId);
-        const { netLeaveDays, f295Days } = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate);
+        const { netLeaveDays, f295Days } = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate, f295Extra);
         setLeaveSuccessMsg(
           `✅ ${fullTypeName} granted to ${found?.rank} ${found?.name}: ${netLeaveDays} Net Leave day(s)${
-            f295Days > 0 ? ` + ${f295Days} day(s) credited to F-295 free weekend` : ''
+            f295Days > 0 ? ` + ${f295Days} day(s) credited as F-295 Free Leave` : ''
           }!`
         );
         window.dispatchEvent(new CustomEvent('baf_state_updated'));
@@ -451,7 +467,8 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   const totalF295 = leaveRecords.reduce((sum: number, r: LeaveRecord) => sum + r.f295Days, 0);
   const totalOnLeaveToday = leaveRecords.filter((r: LeaveRecord) => r.currentlyOnLeave).length;
 
-  const modalDaysCalc = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate);
+  const currentF295Days = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+  const modalDaysCalc = calculateLeaveDaysWithF295(leaveFromDate, leaveToDate, currentF295Days);
 
   const handlePrint = () => {
     window.print();
@@ -919,7 +936,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   ))}
                 </div>
 
-                {/* incl. F-295 Option */}
+                {/* F-295 Option */}
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center space-x-2 cursor-pointer select-none">
@@ -930,12 +947,12 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                         className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
                       />
                       <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                        incl. F-295 (Weekend Duty Pass)
+                        F-295
                       </span>
                     </label>
                     {includeF295 && (
                       <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                        +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added
+                        +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added (Free Leave)
                       </span>
                     )}
                   </div>
@@ -981,7 +998,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                           <input
                             type="number"
                             min="1"
-                            max="10"
+                            max="30"
                             value={f295CustomDays}
                             onChange={(e) => {
                               const val = Math.max(1, parseInt(e.target.value, 10) || 1);
@@ -1068,10 +1085,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   <span>Total Calendar Span: <strong>{modalDaysCalc.totalCalendarDays} Days</strong></span>
                   {modalDaysCalc.f295Days > 0 ? (
                     <span className="font-bold text-purple-700 dark:text-purple-300 bg-purple-100/80 dark:bg-purple-900/60 px-2 py-0.5 rounded-md">
-                      F-295 (Free Weekend): {modalDaysCalc.f295Days} Day(s)
+                      F-295 (Free Leave): {modalDaysCalc.f295Days} Day(s)
                     </span>
                   ) : (
-                    <span className="text-slate-500 dark:text-slate-400">No start/end weekend (F-295: 0)</span>
+                    <span className="text-slate-500 dark:text-slate-400">No F-295 free days (F-295: 0)</span>
                   )}
                 </div>
               </div>

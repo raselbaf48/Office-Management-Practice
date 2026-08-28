@@ -36,6 +36,15 @@ export interface RosterSectionData {
   items: RosterExportItem[];
 }
 
+const invisibleBorders = {
+  top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+};
+
 export async function exportDutyRosterDocx(
   unitHeader: string,
   dateRangeHeader: string,
@@ -685,16 +694,6 @@ export async function exportParadeStateSingleDocx(
     })
   );
 
-  // Borderless style for 2nd disposal table
-  const invisibleBorders = {
-    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-  };
-
   // Helper to build a disposal section only if it has personnel
   const buildDisposalSection = (title: string, list: { displayName: string }[], isFirst: boolean = false): Paragraph[] => {
     if (!list || list.length === 0) return [];
@@ -1164,7 +1163,9 @@ export async function exportParadeStateMultiDocx(
   unitHeader: string,
   dateRangeHeader: string,
   rows: MultiParadeDayItem[],
-  fileName: string = 'Multi_Day_Parade_State_155_UASU.docx'
+  fileName: string = 'Multi_Day_Parade_State_155_UASU.docx',
+  leftSig?: { rank: string; name: string; desig: string },
+  rightSig?: { rank: string; name: string; desig: string }
 ) {
   const docChildren: any[] = [
     new Paragraph({
@@ -1256,6 +1257,137 @@ export async function exportParadeStateMultiDocx(
   });
 
   docChildren.push(table);
+
+  // Spacer between table & signature row
+  docChildren.push(
+    new Paragraph({
+      spacing: { before: 240, after: 120 },
+      children: [],
+    })
+  );
+
+  const lSigName = leftSig?.name || 'MD NAHID HASAN KHAN';
+  const lSigRank = leftSig?.rank || 'SGT';
+  const lSigDesig = leftSig?.desig || 'Admin SNCO';
+
+  const rSigName = rightSig?.name || 'MD SHAHINUZZAMAN';
+  const rSigRank = rightSig?.rank || 'WO';
+  const rSigDesig = rightSig?.desig || 'WOIC Orderly Room';
+
+  const sigTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: invisibleBorders,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            borders: invisibleBorders,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 30 },
+                children: [
+                  new TextRun({
+                    text: lSigName.toUpperCase(),
+                    font: 'Arial',
+                    bold: true,
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 30 },
+                children: [
+                  new TextRun({
+                    text: lSigRank.toUpperCase(),
+                    font: 'Arial',
+                    bold: true,
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 20 },
+                children: [
+                  new TextRun({
+                    text: lSigDesig,
+                    font: 'Arial',
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                children: [
+                  new TextRun({
+                    text: '155 UASU BAF',
+                    font: 'Arial',
+                    size: 24,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            borders: invisibleBorders,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 30 },
+                children: [
+                  new TextRun({
+                    text: rSigName.toUpperCase(),
+                    font: 'Arial',
+                    bold: true,
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 30 },
+                children: [
+                  new TextRun({
+                    text: rSigRank.toUpperCase(),
+                    font: 'Arial',
+                    bold: true,
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 20 },
+                children: [
+                  new TextRun({
+                    text: rSigDesig,
+                    font: 'Arial',
+                    size: 24,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                children: [
+                  new TextRun({
+                    text: '155 UASU BAF',
+                    font: 'Arial',
+                    size: 24,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  docChildren.push(sigTable);
 
   const doc = new Document({
     styles: {

@@ -10,7 +10,6 @@ import {
 } from '../types';
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
 import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyFormatter';
-import { Logo155UASU } from './Logo155UASU';
 import {
   Calendar,
   Printer,
@@ -34,13 +33,20 @@ import {
   Download,
   FileDown,
   UserPlus,
-  Sparkles,
+  PenTool,
+  CheckSquare,
 } from 'lucide-react';
 import { DutyCellPopover } from './DutyCellPopover';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
 import { getIdacShiftsForDateAndFlight } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { PrintableParadeStateModal } from './PrintableParadeStateModal';
+import {
+  SignatureConfigModal,
+  getSavedPreparedBy,
+  getSavedAuthorizedBy,
+  SignatureDetails,
+} from './SignatureConfigModal';
 import {
   exportParadeStateSingleDocx,
   exportParadeStateMultiDocx,
@@ -66,7 +72,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   initialDocumentType = 'PARADE',
   onOpenPrintModal,
   onViewAirmanProfile,
-  onOpenImportModal,
 }) => {
   const isPtDocument = initialDocumentType === 'PT';
   const [fromDate, setFromDate] = useState<string>(selectedDate);
@@ -77,13 +82,14 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [multiDayStates, setMultiDayStates] = useState<Record<string, ParadeStateResponse>>({});
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Search and status filter for Nominal Status List
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PARADE' | 'DUTY' | 'LEAVE' | 'TDY' | 'BAKE_N_BITE'>('ALL');
-  const [showNominalSection, setShowNominalSection] = useState<boolean>(false);
-
   // Internal Print Modal state
   const [isInternalPrintOpen, setIsInternalPrintOpen] = useState<boolean>(false);
+
+  // Signature Config Modal state
+  const [showSignatureModal, setShowSignatureModal] = useState<boolean>(false);
+  const [signatureInitialTab, setSignatureInitialTab] = useState<'PREPARED_BY' | 'AUTHORIZED_BY'>('PREPARED_BY');
+  const [preparedBy, setPreparedBy] = useState<SignatureDetails>(getSavedPreparedBy);
+  const [authorizedBy, setAuthorizedBy] = useState<SignatureDetails>(getSavedAuthorizedBy);
 
   // Single Airman Row Quick Edit Popover
   const [activeEditCell, setActiveEditCell] = useState<{
@@ -129,15 +135,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [ratioRefreshTrigger, setRatioRefreshTrigger] = useState<number>(0);
   const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
 
-  // Editable Signature Details
-  const [leftSigName, setLeftSigName] = useState('MD NAHID HASAN KHAN');
-  const [leftSigRank, setLeftSigRank] = useState('SGT');
-  const [leftSigDesig, setLeftSigDesig] = useState('UWO');
-
-  const [rightSigName, setRightSigName] = useState('MD SHAHINUZZAMAN');
-  const [rightSigRank, setRightSigRank] = useState('WO');
-  const [rightSigDesig, setRightSigDesig] = useState('WOIC Orderly Room');
-
   // Keep fromDate/toDate in sync when parent selectedDate updates
   useEffect(() => {
     setFromDate(selectedDate);
@@ -145,6 +142,16 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     setDisposalFromDate(selectedDate);
     setDisposalToDate(selectedDate);
   }, [selectedDate]);
+
+  // Listen for signature updates
+  useEffect(() => {
+    const handleSigUpdated = () => {
+      setPreparedBy(getSavedPreparedBy());
+      setAuthorizedBy(getSavedAuthorizedBy());
+    };
+    window.addEventListener('baf_signatures_updated', handleSigUpdated);
+    return () => window.removeEventListener('baf_signatures_updated', handleSigUpdated);
+  }, []);
 
   // Fetch personnel status for disposal fromDate
   useEffect(() => {
@@ -350,6 +357,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             dutyCode: code,
             idaShift,
             proxyForFlight,
+            disposalScope: isPtDocument ? 'PT' : 'PARADE',
             notes,
           },
         }),
@@ -401,6 +409,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       const isCustom = disposalCategory === 'OTHERS';
       const effectiveDutyCode = isCustom ? 'OTHERS' : disposalCategory;
       const effectiveNotes = isCustom ? (disposalCustomTitle.trim() || 'Custom Disposal') : undefined;
+      const effectiveScope = isPtDocument ? 'PT' : (disposalScope === 'PT' ? 'PT' : 'PARADE');
 
       const promises = selectedDisposalAirmenIds.map((airmanId) =>
         fetch('/api/roster/assign-range', {
@@ -411,7 +420,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             dutyCode: effectiveDutyCode,
             fromDate: disposalFromDate,
             toDate: disposalToDate,
-            disposalScope: 'ALL',
+            disposalScope: effectiveScope,
             notes: effectiveNotes,
           }),
         }).then((r) => r.json().catch(() => ({})))
@@ -497,7 +506,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           dutyCode: effectiveDutyCode,
           fromDate: editDisposalFromDate,
           toDate: editDisposalToDate,
-          disposalScope: 'ALL',
+          disposalScope: isPtDocument ? 'PT' : 'PARADE',
           notes: effectiveNotes,
         }),
       });
@@ -652,9 +661,20 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           ? '155 UASU BAF'
           : `155 UASU BAF (${selectedFlight.toUpperCase()} FLT)`;
       const dateRangeHeader = `${formatDateShort(fromDate)} to ${formatDateShort(toDate)}`;
-      await exportParadeStateMultiDocx(unitHeader, dateRangeHeader, rows);
+      const p = getSavedPreparedBy();
+      const a = getSavedAuthorizedBy();
+      await exportParadeStateMultiDocx(
+        unitHeader,
+        dateRangeHeader,
+        rows,
+        `Multi_Day_Parade_State_${selectedFlight}_${formatDateShort(fromDate)}_to_${formatDateShort(toDate)}.docx`,
+        { name: p.name, rank: p.rank, desig: p.designation },
+        { name: a.name, rank: a.rank, desig: a.designation }
+      );
     } else {
       const stats = getFlightStats(selectedFlight);
+      const p = getSavedPreparedBy();
+      const a = getSavedAuthorizedBy();
       await exportParadeStateSingleDocx({
         dateStr: formatDateShort(fromDate),
         flight: selectedFlight,
@@ -677,6 +697,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         games: gamesList.map((i) => i.airman),
         absent: absentList.map((i) => i.airman),
         otherDisposals,
+        leftSig: { name: p.name, rank: p.rank, desig: p.designation },
+        rightSig: { name: a.name, rank: a.rank, desig: a.designation },
       });
     }
   };
@@ -958,25 +980,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     );
   };
 
-  // Filtered Nominal Status List (from Dashboard)
-  const rawPersonnelList = singleParadeData?.personnelStatusList || [];
-  const filteredPersonnel = rawPersonnelList.filter((item) => {
-    if (selectedFlight !== 'Overall' && item.airman.flightName !== selectedFlight) return false;
-
-    const matchesSearch =
-      item.airman.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.airman.bdNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.airman.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.airman.trade.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      item.statusCategory === statusFilter ||
-      (statusFilter === 'BAKE_N_BITE' && (item.dutyCode === 'BAKE_N_BITE' || item.statusCategory === 'BAKE_N_BITE'));
-
-    return matchesSearch && matchesStatus;
-  });
-
   return (
     <div className="space-y-6">
       {/* PRINT STYLES */}
@@ -1013,14 +1016,11 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         <div>
           <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-black uppercase tracking-wider">
             <Shield className="w-4 h-4" />
-            <span>155 UASU BAF • Daily Parade State & Duty Register</span>
+            <span>155 UASU BAF • {isPtDocument ? 'Daily PT State' : 'Daily Parade State'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            {isPtDocument ? 'PT State Document' : 'Parade State Document'}
+            {isPtDocument ? 'Daily PT State' : 'Parade State Document'}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Switch between Single-Day {isPtDocument ? 'PT State' : 'Parade State'} and Multi-Date Disposal Matrix with flight filtering
-          </p>
         </div>
 
         {/* Action Controls */}
@@ -1129,6 +1129,32 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             </>
           )}
 
+          {/* Prepared By Button */}
+          <button
+            onClick={() => {
+              setSignatureInitialTab('PREPARED_BY');
+              setShowSignatureModal(true);
+            }}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs shadow-xs border border-slate-300 dark:border-slate-700 transition-all cursor-pointer"
+            title="Configure Prepared by signature officer"
+          >
+            <PenTool className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Prepared by</span>
+          </button>
+
+          {/* Authorized By Button */}
+          <button
+            onClick={() => {
+              setSignatureInitialTab('AUTHORIZED_BY');
+              setShowSignatureModal(true);
+            }}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs shadow-xs border border-slate-300 dark:border-slate-700 transition-all cursor-pointer"
+            title="Configure Authorized By signature officer"
+          >
+            <CheckSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Authorized By</span>
+          </button>
+
           {/* Add Disposal Button (Admin Only) */}
           {role === 'ADMIN' && (
             <button
@@ -1169,18 +1195,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <span>Official Export / Print</span>
           </button>
 
-          {/* Import PDF / Duty Data Button (Admin) */}
-          {role === 'ADMIN' && onOpenImportModal && (
-            <button
-              onClick={onOpenImportModal}
-              className="flex items-center space-x-1.5 px-3.5 py-2 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
-              title="Import Duty Roster from PDF / Image using AI"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-              <span>Import PDF Data</span>
-            </button>
-          )}
-
           {/* Download Document Button (Word format) */}
           <button
             onClick={handleDownloadDocx}
@@ -1191,22 +1205,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <span>Download Document</span>
           </button>
         </div>
-      </div>
-
-      {/* ACTIVE FORMAT INDICATOR BANNER */}
-      <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-4 py-2 text-xs print:hidden">
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-bold text-emerald-900 dark:text-emerald-200">
-            Active Mode: {isMultiDay ? `Multi-Date Parade Matrix (${datesInRange.length} Days)` : `Single-Day Parade State (${formatDateShort(fromDate)})`}
-          </span>
-          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-            • Flight: <strong>{selectedFlight}</strong>
-          </span>
-        </div>
-        <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">
-          {isMultiDay ? 'Select same "From" & "To" date to switch to Single-Day' : 'Select a date range to view Multi-Date matrix'}
-        </span>
       </div>
 
       {/* OFFICIAL PARADE DOCUMENT SHEET (DISPLAYED ON SCREEN & IN PRINT) */}
@@ -1225,20 +1223,17 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           /* ========================================================================= */
           <div>
             {/* DOCUMENT TOP HEADER */}
-            <div className="relative mb-3 text-center flex items-center justify-between" style={{ fontFamily: 'Arial, sans-serif' }}>
-              <div className="w-16 h-16 flex items-center justify-center shrink-0">
-                <Logo155UASU className="w-14 h-16" />
-              </div>
-              <div className="flex-1 text-center">
+            <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
+              <div className="text-center">
                 <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
-                  PARADE STATE & DAILY DUTY REGISTER : AIRMEN
+                  {isPtDocument ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-slate-900 mt-0.5 underline inline-block text-sm uppercase">
                   155 UASU BAF {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLIGHT)` : ''}
                 </h2>
               </div>
-              <div className="w-28 text-right font-normal text-slate-900 pr-1 text-xs shrink-0">
+              <div className="text-right font-normal text-slate-900 pr-1 text-xs mt-1">
                 Period: {formatDateShort(fromDate)} To {formatDateShort(toDate)}
               </div>
             </div>
@@ -1355,6 +1350,35 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 </tbody>
               </table>
             </div>
+
+            {/* SPACER ROW: 0.6 INCH HEIGHT TO PROVIDE SIGNATURE HEADROOM */}
+            <div className="w-full" style={{ height: '0.6in' }} />
+
+            {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
+            <div
+              className="flex justify-between items-end pt-1 text-slate-900 text-xs"
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
+              {/* LEFT SIGNATURE BLOCK (Prepared By) */}
+              <div className="text-center font-bold min-w-[200px]">
+                <div className="border-t border-slate-900 pt-1.5">
+                  <div className="text-xs uppercase font-black">{preparedBy.name}</div>
+                  <div className="text-[11px] font-bold uppercase">{preparedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{preparedBy.designation}</div>
+                  <div className="text-[10px] font-normal">{preparedBy.unit || '155 UASU BAF'}</div>
+                </div>
+              </div>
+
+              {/* RIGHT SIGNATURE BLOCK (Authorized By) */}
+              <div className="text-center font-bold min-w-[200px]">
+                <div className="border-t border-slate-900 pt-1.5">
+                  <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
+                  <div className="text-[11px] font-bold uppercase">{authorizedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
+                  <div className="text-[10px] font-normal">{authorizedBy.unit || '155 UASU BAF'}</div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           /* ========================================================================= */
@@ -1362,11 +1386,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           /* ========================================================================= */
           <div>
             {/* TOP DOCUMENT HEADER */}
-            <div className="relative mb-3 text-center flex items-center justify-between" style={{ fontFamily: 'Arial, sans-serif' }}>
-              <div className="w-16 h-16 flex items-center justify-center shrink-0">
-                <Logo155UASU className="w-14 h-16" />
-              </div>
-              <div className="flex-1 text-center">
+            <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
+              <div className="text-center">
                 <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
                   {isPtDocument ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
@@ -1375,7 +1396,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   155 UASU BAF {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLT)` : ''}
                 </h2>
               </div>
-              <div className="w-28 text-right font-normal text-slate-900 pr-1 text-xs shrink-0">
+              <div className="text-right font-normal text-slate-900 pr-1 text-xs mt-1">
                 Date: {formatDateShort(fromDate)}
               </div>
             </div>
@@ -1760,201 +1781,26 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               className="flex justify-between items-end pt-1 text-slate-900 text-xs"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
-              {/* LEFT SIGNATURE BLOCK */}
+              {/* LEFT SIGNATURE BLOCK (Prepared By) */}
               <div className="text-center font-bold min-w-[200px]">
                 <div className="border-t border-slate-900 pt-1.5">
-                  <div className="text-xs uppercase font-black">{leftSigName}</div>
-                  <div className="text-[11px] font-bold uppercase">{leftSigRank}</div>
-                  <div className="text-[11px] font-normal">{leftSigDesig}</div>
-                  <div className="text-[10px] font-normal">155 UASU BAF</div>
+                  <div className="text-xs uppercase font-black">{preparedBy.name}</div>
+                  <div className="text-[11px] font-bold uppercase">{preparedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{preparedBy.designation}</div>
+                  <div className="text-[10px] font-normal">{preparedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
 
-              {/* RIGHT SIGNATURE BLOCK */}
+              {/* RIGHT SIGNATURE BLOCK (Authorized By) */}
               <div className="text-center font-bold min-w-[200px]">
                 <div className="border-t border-slate-900 pt-1.5">
-                  <div className="text-xs uppercase font-black">{rightSigName}</div>
-                  <div className="text-[11px] font-bold uppercase">{rightSigRank}</div>
-                  <div className="text-[11px] font-normal">{rightSigDesig}</div>
-                  <div className="text-[10px] font-normal">155 UASU BAF</div>
+                  <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
+                  <div className="text-[11px] font-bold uppercase">{authorizedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
+                  <div className="text-[10px] font-normal">{authorizedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* COLLAPSIBLE NOMINAL STATUS REGISTER */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden print:hidden">
-        {/* Header Toggle */}
-        <div
-          onClick={() => setShowNominalSection(!showNominalSection)}
-          className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        >
-          <div className="flex items-center space-x-2">
-            <Users className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-              Nominal Status List & Personnel Duty Assignment ({filteredPersonnel.length} Airmen)
-            </h3>
-            {selectedFlight !== 'Overall' && (
-              <span className="px-2 py-0.5 text-xs rounded bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 font-bold">
-                {selectedFlight} Flight
-              </span>
-            )}
-          </div>
-          <button className="p-1 rounded-lg text-slate-500">
-            {showNominalSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {showNominalSection && (
-          <div className="p-4 space-y-4">
-            {/* Search & Status Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search BD No, Name, Trade..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none w-56 focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="flex flex-wrap bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
-                {(['ALL', 'PARADE', 'DUTY', 'LEAVE', 'TDY', 'BAKE_N_BITE'] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                      statusFilter === st
-                        ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                    }`}
-                  >
-                    {st === 'BAKE_N_BITE' ? 'Bake N Bite' : st}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Table */}
-            {filteredPersonnel.length === 0 ? (
-              <div className="py-10 text-center text-slate-400">
-                <p className="text-xs font-semibold">No airmen match the selected criteria.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="py-3 px-4 w-12">Ser</th>
-                      <th className="py-3 px-4">BD No</th>
-                      <th className="py-3 px-4">Rank</th>
-                      <th className="py-3 px-4">Name</th>
-                      <th className="py-3 px-4">Trade</th>
-                      <th className="py-3 px-4">Flight</th>
-                      <th className="py-3 px-4">Current Status / Duty</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-                    {filteredPersonnel.map(({ airman, dutyCode, idaShift, statusCategory, notes }) => {
-                      const dutyType = DUTY_TYPE_MAP.get(dutyCode as any);
-
-                      return (
-                        <tr
-                          key={airman.id}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                        >
-                          <td className="py-2.5 px-4 font-mono font-medium text-slate-400">
-                            {airman.serNo}
-                          </td>
-                          <td className="py-2.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
-                            {airman.bdNo}
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <span className="font-extrabold px-2 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono border border-slate-300 dark:border-slate-700">
-                              {airman.rank}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <span
-                              onClick={() => onViewAirmanProfile && onViewAirmanProfile(airman)}
-                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer"
-                            >
-                              {airman.name}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">
-                            {airman.trade}
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              {airman.flightName}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <div className="flex items-center space-x-2">
-                              <span
-                                className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center space-x-1 ${
-                                  dutyType ? dutyType.badgeBg + ' ' + dutyType.badgeText : 'bg-slate-100 text-slate-800'
-                                }`}
-                              >
-                                <span>{dutyType ? dutyType.name : dutyCode}</span>
-                                {idaShift && idaShift !== 'None' && (
-                                  <span className="text-[10px] font-extrabold underline decoration-emerald-500 ml-1">
-                                    ({idaShift})
-                                  </span>
-                                )}
-                              </span>
-                              {notes && (
-                                <span className="text-[11px] text-slate-400 italic">
-                                  "{notes}"
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-4 text-right">
-                            <div className="flex items-center justify-end space-x-1.5">
-                              {role === 'ADMIN' && (
-                                <button
-                                  onClick={() =>
-                                    setActiveEditCell({
-                                      airman,
-                                      date: fromDate,
-                                      dutyCode: dutyCode as DutyCategoryCode,
-                                      idaShift: idaShift as IDAShift,
-                                      notes,
-                                    })
-                                  }
-                                  className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-all flex items-center space-x-1 shrink-0 cursor-pointer"
-                                  title={`Assign or edit duty for ${airman.rank} ${airman.name}`}
-                                >
-                                  <Edit3 className="w-3 h-3" />
-                                  <span>Assign</span>
-                                </button>
-                              )}
-                              {onViewAirmanProfile && (
-                                <button
-                                  onClick={() => onViewAirmanProfile(airman)}
-                                  className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center space-x-1 shrink-0 cursor-pointer"
-                                  title={`View profile for ${airman.rank} ${airman.name}`}
-                                >
-                                  <Eye className="w-3 h-3 text-slate-500" />
-                                  <span>Profile</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -2583,6 +2429,17 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           onClose={() => setIsInternalPrintOpen(false)}
         />
       )}
+
+      {/* Signature Configuration Modal (Prepared By / Authorized By) */}
+      <SignatureConfigModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        initialTab={signatureInitialTab}
+        onSignaturesUpdated={(prep, auth) => {
+          setPreparedBy(prep);
+          setAuthorizedBy(auth);
+        }}
+      />
     </div>
   );
 };

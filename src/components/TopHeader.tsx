@@ -1,22 +1,27 @@
 import React from 'react';
-import { Menu, KeyRound, ShieldCheck, LogOut } from 'lucide-react';
+import { Menu, KeyRound, ShieldCheck, LogOut, User } from 'lucide-react';
 import { SidebarTab } from './Sidebar';
 import { UserRole } from '../types';
+import { UserSession } from '../utils/authSession';
 
 interface TopHeaderProps {
   activeTab: SidebarTab;
   onOpenMobileSidebar: () => void;
   role?: UserRole;
+  userSession?: UserSession | null;
   onOpenAdminLogin?: () => void;
   onLogoutAdmin?: () => void;
+  onLogoutUser?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
   activeTab,
   onOpenMobileSidebar,
   role = 'AIRMAN',
+  userSession,
   onOpenAdminLogin,
   onLogoutAdmin,
+  onLogoutUser,
 }) => {
   // Breadcrumb / Title mapping
   const getTabTitle = (tab: SidebarTab) => {
@@ -35,6 +40,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         return { category: 'WORKFORCE', title: 'Leave Register' };
       case 'tdy-register':
         return { category: 'WORKFORCE', title: 'TDY Register' };
+      case 'ida-center':
+        return { category: 'SCHEDULE MANAGEMENT', title: 'IDA Center Duty' };
       case 'register':
         return { category: 'SCHEDULE MANAGEMENT', title: 'Monthly Duty Register' };
       case 'duty-roster':
@@ -77,13 +84,36 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
-        {/* Upper Right: Admin Login / Admin Status Option */}
-        <div className="flex items-center space-x-3">
-          <div className="hidden md:flex items-center space-x-2 text-xs font-semibold text-slate-500 dark:text-slate-400 mr-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>BAF ZH Operational</span>
-          </div>
+        {/* Upper Right: User Profile & Admin Option */}
+        <div className="flex items-center space-x-2.5">
+          {/* User Session Info Badge */}
+          {userSession && (
+            <div className="hidden sm:flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 px-2.5 py-1.5 rounded-xl">
+              <div className="w-6 h-6 rounded-lg bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                <User className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left text-xs leading-tight">
+                <div className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
+                  {userSession.rank} {userSession.name}
+                </div>
+                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  BD/{userSession.bdNo}
+                </div>
+              </div>
+              {onLogoutUser && (
+                <button
+                  type="button"
+                  onClick={onLogoutUser}
+                  className="p-1 text-slate-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                  title="Log out of User Session"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
 
+          {/* Admin Role Status / Login */}
           {role === 'ADMIN' ? (
             <div className="flex items-center space-x-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1.5 rounded-xl shadow-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -93,7 +123,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               {onLogoutAdmin && (
                 <button
                   onClick={onLogoutAdmin}
-                  className="ml-1 p-1 text-slate-400 hover:text-red-500 transition-colors"
+                  className="ml-1 p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                   title="Switch to Airman View"
                 >
                   <LogOut className="w-3.5 h-3.5" />

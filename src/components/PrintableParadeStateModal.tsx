@@ -3,7 +3,13 @@ import { FlightName, ParadeShift, Airman, ParadeStateResponse } from '../types';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyFormatter';
 import { Logo155UASU } from './Logo155UASU';
-import { X, Printer, Filter } from 'lucide-react';
+import { X, Printer, Filter, PenTool } from 'lucide-react';
+import {
+  getSavedPreparedBy,
+  getSavedAuthorizedBy,
+  savePreparedBy,
+  saveAuthorizedBy,
+} from './SignatureConfigModal';
 
 interface PrintableParadeStateModalProps {
   date: string;
@@ -29,19 +35,29 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const [multiDayStates, setMultiDayStates] = useState<Record<string, ParadeStateResponse>>({});
   const [loadingMultiDay, setLoadingMultiDay] = useState(false);
 
-  // Editable Signature Details (Defaults to UPPERCASE)
-  const [leftSigName, setLeftSigName] = useState('MD NAHID HASAN KHAN');
-  const [leftSigRank, setLeftSigRank] = useState('SGT');
-  const [leftSigDesig, setLeftSigDesig] = useState('UWO');
+  // Editable Signature Details (Synced with saved localStorage)
+  const initialPrep = getSavedPreparedBy();
+  const initialAuth = getSavedAuthorizedBy();
+  const [leftSigName, setLeftSigName] = useState(initialPrep.name || 'MD NAHID HASAN KHAN');
+  const [leftSigRank, setLeftSigRank] = useState(initialPrep.rank || 'SGT');
+  const [leftSigDesig, setLeftSigDesig] = useState(initialPrep.designation || 'Admin SNCO');
 
-  const [rightSigName, setRightSigName] = useState('MD SHAHINUZZAMAN');
-  const [rightSigRank, setRightSigRank] = useState('WO');
-  const [rightSigDesig, setRightSigDesig] = useState('WOIC Orderly Room');
+  const [rightSigName, setRightSigName] = useState(initialAuth.name || 'MD SHAHINUZZAMAN');
+  const [rightSigRank, setRightSigRank] = useState(initialAuth.rank || 'WO');
+  const [rightSigDesig, setRightSigDesig] = useState(initialAuth.designation || 'WOIC Orderly Room');
 
   // Keep fromDate/toDate and currentFlight updated when props change
   useEffect(() => {
     setFromDate(date);
     setToDate(date);
+    const p = getSavedPreparedBy();
+    const a = getSavedAuthorizedBy();
+    setLeftSigName(p.name);
+    setLeftSigRank(p.rank);
+    setLeftSigDesig(p.designation);
+    setRightSigName(a.name);
+    setRightSigRank(a.rank);
+    setRightSigDesig(a.designation);
   }, [date]);
 
   useEffect(() => {
@@ -551,69 +567,94 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           </div>
         </div>
 
-        {/* NON-PRINTABLE EDITABLE SIGNATURE DETAILS (ONLY FOR SINGLE DAY) */}
-        {!isMultiDay && (
-          <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2 print:hidden">
-            <div className="font-extrabold text-slate-700 uppercase tracking-wider flex items-center justify-between">
-              <span>✍️ Editable Signature Officers (Full Capital BOLD Name Format):</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-                <span className="font-bold text-emerald-800">Left Officer (Prepared By / UWO):</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <input
-                    type="text"
-                    value={leftSigName}
-                    onChange={(e) => setLeftSigName(e.target.value.toUpperCase())}
-                    className="p-1 border rounded text-[11px] font-bold uppercase"
-                    placeholder="NAME"
-                  />
-                  <input
-                    type="text"
-                    value={leftSigRank}
-                    onChange={(e) => setLeftSigRank(e.target.value.toUpperCase())}
-                    className="p-1 border rounded text-[11px] font-bold uppercase"
-                    placeholder="RANK"
-                  />
-                  <input
-                    type="text"
-                    value={leftSigDesig}
-                    onChange={(e) => setLeftSigDesig(e.target.value)}
-                    className="p-1 border rounded text-[11px] font-bold"
-                    placeholder="DESIGNATION"
-                  />
-                </div>
+        {/* NON-PRINTABLE EDITABLE SIGNATURE DETAILS (FOR BOTH SINGLE & MULTI DAY) */}
+        <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2 print:hidden">
+          <div className="font-extrabold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+            <span className="flex items-center space-x-1.5">
+              <PenTool className="w-3.5 h-3.5 text-emerald-700" />
+              <span>✍️ Editable Signature Officers (Auto-saved & Print Ready):</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
+              <span className="font-bold text-emerald-800">Left Officer (Prepared By):</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                <input
+                  type="text"
+                  value={leftSigName}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setLeftSigName(val);
+                    savePreparedBy({ name: val, rank: leftSigRank, designation: leftSigDesig, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold uppercase"
+                  placeholder="NAME (BLOCK)"
+                />
+                <input
+                  type="text"
+                  value={leftSigRank}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setLeftSigRank(val);
+                    savePreparedBy({ name: leftSigName, rank: val, designation: leftSigDesig, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold uppercase"
+                  placeholder="RANK"
+                />
+                <input
+                  type="text"
+                  value={leftSigDesig}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLeftSigDesig(val);
+                    savePreparedBy({ name: leftSigName, rank: leftSigRank, designation: val, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold"
+                  placeholder="DESIGNATION"
+                />
               </div>
+            </div>
 
-              <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-                <span className="font-bold text-emerald-800">Right Officer (Authorized / Orderly Room):</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <input
-                    type="text"
-                    value={rightSigName}
-                    onChange={(e) => setRightSigName(e.target.value.toUpperCase())}
-                    className="p-1 border rounded text-[11px] font-bold uppercase"
-                    placeholder="NAME"
-                  />
-                  <input
-                    type="text"
-                    value={rightSigRank}
-                    onChange={(e) => setRightSigRank(e.target.value.toUpperCase())}
-                    className="p-1 border rounded text-[11px] font-bold uppercase"
-                    placeholder="RANK"
-                  />
-                  <input
-                    type="text"
-                    value={rightSigDesig}
-                    onChange={(e) => setRightSigDesig(e.target.value)}
-                    className="p-1 border rounded text-[11px] font-bold"
-                    placeholder="DESIGNATION"
-                  />
-                </div>
+            <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
+              <span className="font-bold text-emerald-800">Right Officer (Authorized By):</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                <input
+                  type="text"
+                  value={rightSigName}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setRightSigName(val);
+                    saveAuthorizedBy({ name: val, rank: rightSigRank, designation: rightSigDesig, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold uppercase"
+                  placeholder="NAME (BLOCK)"
+                />
+                <input
+                  type="text"
+                  value={rightSigRank}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setRightSigRank(val);
+                    saveAuthorizedBy({ name: rightSigName, rank: val, designation: rightSigDesig, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold uppercase"
+                  placeholder="RANK"
+                />
+                <input
+                  type="text"
+                  value={rightSigDesig}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRightSigDesig(val);
+                    saveAuthorizedBy({ name: rightSigName, rank: rightSigRank, designation: val, unit: '155 UASU BAF' });
+                  }}
+                  className="p-1 border rounded text-[11px] font-bold"
+                  placeholder="DESIGNATION"
+                />
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* PRINTABLE PAGE CONTENT */}
         <div id="printable-area" className="w-full">
@@ -753,6 +794,37 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+
+                  {/* SPACER ROW: 0.6 INCH HEIGHT TO PROVIDE SIGNATURE HEADROOM */}
+                  <div className="w-full" style={{ height: '0.6in' }} />
+
+                  {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
+                  <table className="w-full border-none" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    <tbody>
+                      <tr>
+                        <td className="w-1/2 align-top text-left pl-2 border-none">
+                          <div className="space-y-0.5">
+                            <p className="font-bold text-black uppercase tracking-wide">
+                              {leftSigName}
+                            </p>
+                            <p className="font-bold text-black uppercase">{leftSigRank}</p>
+                            <p className="font-normal text-black">{leftSigDesig}</p>
+                            <p className="font-normal text-black">155 UASU BAF</p>
+                          </div>
+                        </td>
+                        <td className="w-1/2 align-top text-right pr-2 border-none">
+                          <div className="space-y-0.5 inline-block text-left">
+                            <p className="font-bold text-black uppercase tracking-wide">
+                              {rightSigName}
+                            </p>
+                            <p className="font-bold text-black uppercase">{rightSigRank}</p>
+                            <p className="font-normal text-black">{rightSigDesig}</p>
+                            <p className="font-normal text-black">155 UASU BAF</p>
+                          </div>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

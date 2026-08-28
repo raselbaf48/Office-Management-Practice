@@ -12,6 +12,7 @@ import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
 import { LeaveRegisterView } from './components/LeaveRegisterView';
 import { TdyRegisterView } from './components/TdyRegisterView';
+import { IdaCenterDutyView } from './components/IdaCenterDutyView';
 import { MonthlyDutyRegister } from './components/MonthlyDutyRegister';
 import { DutyRosterPeriodView } from './components/DutyRosterPeriodView';
 import { DutyRatioMatrixView } from './components/DutyRatioMatrixView';
@@ -23,10 +24,12 @@ import { PrintableParadeStateModal } from './components/PrintableParadeStateModa
 import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { PdfDutyImportModal } from './components/PdfDutyImportModal';
 import { SettingsModal } from './components/SettingsModal';
+import { UserLoginGate } from './components/UserLoginGate';
 import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
 import { INITIAL_AIRMEN } from './data/initialAirmen';
 import { Logo155UASU } from './components/Logo155UASU';
 import { Shield } from 'lucide-react';
+import { getCurrentUserSession, clearUserSession, UserSession } from './utils/authSession';
 
 
 export default function App() {
@@ -35,6 +38,7 @@ export default function App() {
     const saved = sessionStorage.getItem('baf_user_role');
     return saved === 'ADMIN' ? 'ADMIN' : 'AIRMAN';
   });
+  const [userSession, setUserSession] = useState<UserSession | null>(() => getCurrentUserSession());
   const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
 
@@ -423,6 +427,15 @@ export default function App() {
               role={role}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
+            />
+          )}
+
+          {activeTab === 'ida-center' && (
+            <IdaCenterDutyView
+              role={role}
+              airmen={airmen}
+              selectedDate={selectedDate}
+              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
             />
           )}
 
