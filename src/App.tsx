@@ -90,7 +90,17 @@ export default function App() {
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     sessionStorage.setItem('baf_user_role', newRole);
+    if (newRole !== 'ADMIN' && activeTab !== 'overview' && activeTab !== 'parade-state' && activeTab !== 'pt-state') {
+      setActiveTab('overview');
+    }
   };
+
+  // Restrict access for non-admin viewers: only Dashboard, Parade State, and PT State allowed
+  useEffect(() => {
+    if (role !== 'ADMIN' && activeTab !== 'overview' && activeTab !== 'parade-state' && activeTab !== 'pt-state') {
+      setActiveTab('overview');
+    }
+  }, [role, activeTab]);
 
   const handleManualDarkModeToggle = (dark: boolean) => {
     setThemePreference(dark ? 'dark' : 'light');
@@ -222,6 +232,7 @@ export default function App() {
     fetchConflicts();
     const handleGlobalUpdate = () => {
       fetchConflicts();
+      fetchAirmen();
     };
     window.addEventListener('baf_state_updated', handleGlobalUpdate);
     return () => {
@@ -336,6 +347,32 @@ export default function App() {
               setSelectedShift={setSelectedShift}
               selectedFlight={selectedFlight}
               setSelectedFlight={setSelectedFlight}
+              onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onOpenImportModal={() => setIsPdfImportModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'parade-state' && (
+            <ParadeStateFormattedView
+              role={role}
+              airmen={airmen}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              initialDocumentType="PARADE"
+              onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onOpenImportModal={() => setIsPdfImportModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'pt-state' && (
+            <ParadeStateFormattedView
+              role={role}
+              airmen={airmen}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              initialDocumentType="PT"
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
               onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}

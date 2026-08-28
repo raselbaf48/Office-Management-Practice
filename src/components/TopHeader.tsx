@@ -23,6 +23,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     switch (tab) {
       case 'overview':
         return { category: 'DASHBOARD', title: 'Dashboard & Strength Overview' };
+      case 'parade-state':
+        return { category: 'PARADE STATE', title: 'Daily Parade State (Official Format)' };
+      case 'pt-state':
+        return { category: 'PT STATE', title: 'Daily PT State (Physical Training Report)' };
       case 'nominal':
         return { category: 'ORG STRUCTURE', title: 'Nominal Roll (Seniority Order)' };
       case 'flights':
