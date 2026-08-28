@@ -197,7 +197,42 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
       return jsonResponse({ error: 'Passcode update failed' }, 400);
     }
 
-    // 10. Database Backup & Restore
+    // 10. Document & PDF Import Endpoints
+    if (pathname === '/api/import/analyze-duty-doc') {
+      const result = localDb.analyzeDutyDocument(body);
+      return jsonResponse(result);
+    }
+
+    if (pathname === '/api/import/load-official-roster') {
+      const { targetYear, monthChoice } = body || {};
+      const result = localDb.loadOfficialRoster(targetYear, monthChoice);
+      return jsonResponse(result);
+    }
+
+    if (pathname === '/api/import/apply-duty-data') {
+      const { assignments, sourceDoc } = body || {};
+      const result = localDb.applyDutyData(assignments, sourceDoc);
+      return jsonResponse({ success: true, ...result });
+    }
+
+    if (pathname === '/api/import/history') {
+      const history = localDb.getImportHistory();
+      return jsonResponse({ history });
+    }
+
+    if (pathname.startsWith('/api/import/history/')) {
+      const batchId = pathname.replace('/api/import/history/', '');
+      const ok = localDb.deleteImportHistory(batchId);
+      return jsonResponse({ success: ok });
+    }
+
+    if (pathname === '/api/import/revert-batch') {
+      const { batchId } = body || {};
+      const ok = localDb.deleteImportHistory(batchId);
+      return jsonResponse({ success: ok });
+    }
+
+    // 11. Database Backup & Restore
     if (pathname === '/api/database/export' || pathname === '/api/database/backup') {
       const exportJson = localDb.exportDatabase();
       return new Response(exportJson, {
@@ -214,7 +249,7 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
       return ok ? jsonResponse({ success: true, message: 'Database restored successfully' }) : jsonResponse({ error: 'Invalid restore payload' }, 400);
     }
 
-    // 11. SSE Realtime Event stub for static frontend
+    // 12. SSE Realtime Event stub for static frontend
     if (pathname === '/api/realtime/events') {
       return new Response('data: {"type":"CONNECTED"}\n\n', {
         headers: { 'Content-Type': 'text/event-stream' },
