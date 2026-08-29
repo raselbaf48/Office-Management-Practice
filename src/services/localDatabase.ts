@@ -281,32 +281,37 @@ export class LocalDatabaseEngine {
         });
       } else if (airmenData && airmenData.length > 0) {
         this.db.airmen = airmenData.map((row) => ({
-          id: row.id,
-          serNo: row.ser_no || 1,
-          code: row.code || '',
-          bdNo: row.bd_no || '',
-          rank: row.rank || 'LAC',
-          name: row.name || 'Airman',
-          trade: row.trade || '',
-          addressBlock: row.address_block || '',
-          mobileNo: row.mobile_no || '',
-          flightName: row.flight_name || 'Admin',
-          remarks: row.remarks || '',
+          id: String(row.id),
+          serNo: Number(row.ser_no ?? row.serNo ?? 1),
+          code: String(row.code ?? ''),
+          bdNo: String(row.bd_no ?? row.bdNo ?? ''),
+          rank: (row.rank || 'LAC') as any,
+          name: String(row.name ?? 'Airman'),
+          trade: String(row.trade ?? ''),
+          addressBlock: String(row.address_block ?? row.addressBlock ?? ''),
+          mobileNo: String(row.mobile_no ?? row.mobileNo ?? ''),
+          flightName: (row.flight_name ?? row.flightName ?? 'Admin') as FlightName,
+          remarks: String(row.remarks ?? ''),
           active: row.active !== false,
         }));
       } else if (airmenData && airmenData.length === 0) {
-        // Seed Supabase with initial airmen
+        // Seed Supabase with initial airmen (supports both snake_case and camelCase column definitions)
         const initialRows = this.db.airmen.map((a) => ({
           id: a.id,
           ser_no: a.serNo,
+          serNo: a.serNo,
           code: a.code,
           bd_no: a.bdNo,
+          bdNo: a.bdNo,
           rank: a.rank,
           name: a.name,
           trade: a.trade,
           address_block: a.addressBlock,
+          addressBlock: a.addressBlock,
           mobile_no: a.mobileNo,
+          mobileNo: a.mobileNo,
           flight_name: a.flightName,
+          flightName: a.flightName,
           remarks: a.remarks,
           active: a.active,
         }));
@@ -363,8 +368,8 @@ export class LocalDatabaseEngine {
         await asyncSupabase('SEED', 'admin_passcode', supabase.from('admin_passcode').insert({ passcode: this.db.adminPasscode }));
       }
 
-      // 4. Fetch Duty Ratio Matrix
-      const { data: ratioData, error: ratioErr } = await supabase.from('duty_ratio_matrix').select('*').eq('id', 'current_ratio').single();
+      // 4. Fetch Duty Ratio Matrix (safe query for both integer PK or text PK)
+      const { data: ratioRows, error: ratioErr } = await supabase.from('duty_ratio_matrix').select('*').limit(1);
       if (ratioErr && ratioErr.code !== 'PGRST116') {
         reportSyncError({
           operation: 'SELECT',
@@ -374,8 +379,11 @@ export class LocalDatabaseEngine {
           details: ratioErr.details,
           hint: ratioErr.hint,
         });
-      } else if (ratioData && ratioData.matrix_data) {
-        saveDutyMatrix(ratioData.matrix_data);
+      } else if (ratioRows && ratioRows.length > 0) {
+        const matrixData = ratioRows[0].matrix_data || ratioRows[0].matrixData;
+        if (matrixData) {
+          saveDutyMatrix(matrixData);
+        }
       }
 
       // 5. Fetch Activity History
@@ -534,14 +542,19 @@ export class LocalDatabaseEngine {
         supabase.from('airmen').insert({
           id: newAirman.id,
           ser_no: newAirman.serNo,
+          serNo: newAirman.serNo,
           code: newAirman.code,
           bd_no: newAirman.bdNo,
+          bdNo: newAirman.bdNo,
           rank: newAirman.rank,
           name: newAirman.name,
           trade: newAirman.trade,
           address_block: newAirman.addressBlock,
+          addressBlock: newAirman.addressBlock,
           mobile_no: newAirman.mobileNo,
+          mobileNo: newAirman.mobileNo,
           flight_name: newAirman.flightName,
+          flightName: newAirman.flightName,
           remarks: newAirman.remarks,
           active: newAirman.active,
         })
@@ -581,14 +594,19 @@ export class LocalDatabaseEngine {
       supabaseRows.push({
         id: newAirman.id,
         ser_no: newAirman.serNo,
+        serNo: newAirman.serNo,
         code: newAirman.code,
         bd_no: newAirman.bdNo,
+        bdNo: newAirman.bdNo,
         rank: newAirman.rank,
         name: newAirman.name,
         trade: newAirman.trade,
         address_block: newAirman.addressBlock,
+        addressBlock: newAirman.addressBlock,
         mobile_no: newAirman.mobileNo,
+        mobileNo: newAirman.mobileNo,
         flight_name: newAirman.flightName,
+        flightName: newAirman.flightName,
         remarks: newAirman.remarks,
         active: newAirman.active,
       });
@@ -636,14 +654,19 @@ export class LocalDatabaseEngine {
           .from('airmen')
           .update({
             ser_no: updated.serNo,
+            serNo: updated.serNo,
             code: updated.code,
             bd_no: updated.bdNo,
+            bdNo: updated.bdNo,
             rank: updated.rank,
             name: updated.name,
             trade: updated.trade,
             address_block: updated.addressBlock,
+            addressBlock: updated.addressBlock,
             mobile_no: updated.mobileNo,
+            mobileNo: updated.mobileNo,
             flight_name: updated.flightName,
+            flightName: updated.flightName,
             remarks: updated.remarks,
             active: updated.active,
           })
@@ -1556,16 +1579,35 @@ export class LocalDatabaseEngine {
     saveDutyMatrix(matrix);
     const supabase = getSupabase();
     if (supabase) {
-      asyncSupabase(
-        'UPSERT',
-        'duty_ratio_matrix',
-        supabase.from('duty_ratio_matrix').upsert({
-          id: 'current_ratio',
-          matrix_data: matrix,
-          updated_by: updatedBy,
-          updated_at: new Date().toISOString(),
+      Promise.resolve(supabase.from('duty_ratio_matrix').select('id').limit(1))
+        .then(({ data }) => {
+          if (data && data.length > 0 && data[0].id !== undefined) {
+            asyncSupabase(
+              'UPDATE',
+              'duty_ratio_matrix',
+              supabase
+                .from('duty_ratio_matrix')
+                .update({
+                  matrix_data: matrix,
+                  updated_by: updatedBy,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', data[0].id)
+            );
+          } else {
+            asyncSupabase(
+              'INSERT',
+              'duty_ratio_matrix',
+              supabase.from('duty_ratio_matrix').insert({
+                matrix_data: matrix,
+                updated_by: updatedBy,
+              })
+            );
+          }
         })
-      );
+        .catch((err: any) => {
+          console.error('Failed to persist duty ratio matrix to Supabase:', err);
+        });
     }
 
     this.recordActivity({
@@ -2079,14 +2121,19 @@ export class LocalDatabaseEngine {
     const payload = {
       id: testId,
       ser_no: 9999,
+      serNo: 9999,
       code: 'TEST-AIR',
       bd_no: `BD/${Date.now().toString().slice(-6)}`,
+      bdNo: `BD/${Date.now().toString().slice(-6)}`,
       rank: 'LAC',
       name: airmanData?.name || 'Diagnostic Sync Test Airman',
       trade: 'Avionic Tech',
       address_block: 'Test Block',
+      addressBlock: 'Test Block',
       mobile_no: '01700000000',
+      mobileNo: '01700000000',
       flight_name: 'Avionics',
+      flightName: 'Avionics',
       remarks: 'Automated Supabase Verification Test',
       active: true,
     };
