@@ -99,8 +99,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
   // Dynamically compute available IDAC shifts based on ratio matrix for fromDate and activeFlight
   const availableIdaShifts = useMemo(() => {
-    const shifts = getIdacShiftsForDateAndFlight(fromDate, activeFlight !== 'All' ? activeFlight : undefined);
-    return shifts.length > 0 ? shifts : (['Night'] as IDAShift[]);
+    return getIdacShiftsForDateAndFlight(fromDate, activeFlight !== 'All' ? activeFlight : undefined);
   }, [fromDate, activeFlight]);
 
   // Ensure activeIdaShift is in availableIdaShifts
@@ -782,62 +781,73 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                   {activeFlight !== 'All' ? `${activeFlight} Flight` : 'All Flights'}
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {availableIdaShifts.map((s) => {
-                  const shiftQuota = getRequiredCountForDuty('IDAC', s);
-                  const shiftAssigned = getAssignedAirmenForDuty('IDAC', s);
-                  const isShiftSelected = activeIdaShift === s;
+              {availableIdaShifts.length === 0 ? (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900 text-center">
+                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                    No IDAC shift duty allocated for {activeFlight} Flight on this date.
+                  </p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                    According to the Official Duty Ratio Matrix, quota is 0 for {activeFlight} Flight on {fromDate}.
+                  </p>
+                </div>
+              ) : (
+                <div className={`grid gap-2 ${availableIdaShifts.length === 1 ? 'grid-cols-1' : availableIdaShifts.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                  {availableIdaShifts.map((s) => {
+                    const shiftQuota = getRequiredCountForDuty('IDAC', s);
+                    const shiftAssigned = getAssignedAirmenForDuty('IDAC', s);
+                    const isShiftSelected = activeIdaShift === s;
 
-                  return (
-                    <div
-                      key={s}
-                      onClick={() => setActiveIdaShift(s)}
-                      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-start ${
-                        isShiftSelected
-                          ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/40'
-                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-teal-200 dark:border-teal-900/80 hover:border-teal-400'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-black text-xs">
-                          {s} Shift
-                        </span>
-                        <span
-                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                            isShiftSelected ? 'bg-white text-teal-900' : 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200'
-                          }`}
-                        >
-                          {shiftAssigned.length}{shiftQuota > 0 ? `/${shiftQuota}` : ''}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        {shiftAssigned.length === 0 ? (
-                          <span className={`text-[10.5px] italic ${isShiftSelected ? 'text-teal-100' : 'text-slate-400'}`}>
-                            — None Assigned
+                    return (
+                      <div
+                        key={s}
+                        onClick={() => setActiveIdaShift(s)}
+                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-start ${
+                          isShiftSelected
+                            ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/40'
+                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-teal-200 dark:border-teal-900/80 hover:border-teal-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-black text-xs">
+                            {s} Shift
                           </span>
-                        ) : (
-                          shiftAssigned.map((item, idx) => (
-                            <div
-                              key={`${item.airman.id}-${s}-${idx}`}
-                              className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate ${
-                                isShiftSelected ? 'bg-teal-700/90 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                              }`}
-                              title={`${item.airman.rank} ${item.airman.name} (${item.airman.flightName})`}
-                            >
-                              <span className="opacity-70 mr-1.5">{idx + 1}.</span>
-                              {item.airman.rank} {item.airman.name}
-                              <span className="ml-1 opacity-75 font-normal text-[10px]">
-                                ({item.airman.flightName})
-                              </span>
-                            </div>
-                          ))
-                        )}
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                              isShiftSelected ? 'bg-white text-teal-900' : 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200'
+                            }`}
+                          >
+                            {shiftAssigned.length}{shiftQuota > 0 ? `/${shiftQuota}` : ''}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1">
+                          {shiftAssigned.length === 0 ? (
+                            <span className={`text-[10.5px] italic ${isShiftSelected ? 'text-teal-100' : 'text-slate-400'}`}>
+                              — None Assigned
+                            </span>
+                          ) : (
+                            shiftAssigned.map((item, idx) => (
+                              <div
+                                key={`${item.airman.id}-${s}-${idx}`}
+                                className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate ${
+                                  isShiftSelected ? 'bg-teal-700/90 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                                }`}
+                                title={`${item.airman.rank} ${item.airman.name} (${item.airman.flightName})`}
+                              >
+                                <span className="opacity-70 mr-1.5">{idx + 1}.</span>
+                                {item.airman.rank} {item.airman.name}
+                                <span className="ml-1 opacity-75 font-normal text-[10px]">
+                                  ({item.airman.flightName})
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

@@ -17,6 +17,7 @@ import { generateOfficialMonthAssignments, getOfficialParadeStateDocument } from
 import { calculateDutyStats, detectConflicts, getDaysInMonth } from '../data/rosterGenerator';
 import { getSupabase, getSupabaseConfigDiagnostics, SupabaseConfigDiagnostics } from './supabaseClient';
 import { DutyRatioTable, INITIAL_OFFICIAL_DUTY_MATRIX, getStoredDutyMatrix, saveDutyMatrix } from '../data/officialDutyRatioMatrix';
+import { findBestAirmanMatch as matchAirmanRankFirst, parseRosterTextHeuristically } from '../utils/airmanMatcher';
 
 export interface LocalStorageDB {
   airmen: Airman[];
@@ -1627,53 +1628,9 @@ export class LocalDatabaseEngine {
     });
   }
 
-  // --- FUZZY AIRMAN MATCHER ---
+  // --- FUZZY AIRMAN MATCHER (RANK FIRST) ---
   private findBestAirmanMatch(rawText: string, flightHint?: FlightName | 'Overall'): { airman: Airman | null; confidence: number } {
-    if (!rawText || !rawText.trim()) return { airman: null, confidence: 0 };
-    const cleaned = rawText.replace(/^[0-9]+[.\-)]\s*/, '').trim().toLowerCase();
-
-    const bdMatch = cleaned.match(/\b(?:bd\/?|)(\d{5,7})\b/i);
-    if (bdMatch) {
-      const found = this.db.airmen.find((a) => a.bdNo.includes(bdMatch[1]));
-      if (found) return { airman: found, confidence: 0.99 };
-    }
-
-    const codeFound = this.db.airmen.find((a) => cleaned.includes(a.code.toLowerCase()));
-    if (codeFound) return { airman: codeFound, confidence: 0.95 };
-
-    let candidates = this.db.airmen;
-    if (flightHint && flightHint !== 'Overall') {
-      const flightList = this.db.airmen.filter((a) => a.flightName === flightHint);
-      if (flightList.length > 0) candidates = flightList;
-    }
-
-    for (const a of candidates) {
-      const nameLower = a.name.toLowerCase();
-      if (nameLower.length > 2 && (cleaned.includes(nameLower) || nameLower.includes(cleaned))) {
-        return { airman: a, confidence: 0.92 };
-      }
-    }
-
-    const words = cleaned.split(/[\s,./-]+/).filter((w) => w.length > 2 && !['wo', 'swo', 'sgt', 'cpl', 'lac', 'flt', 'avi', 'gcs', 'mech', 'admin'].includes(w));
-    for (const a of candidates) {
-      const aWords = a.name.toLowerCase().split(/[\s,./-]+/).filter((w) => w.length > 2);
-      for (const w of words) {
-        if (aWords.some((aw) => aw.includes(w) || w.includes(aw))) {
-          return { airman: a, confidence: 0.85 };
-        }
-      }
-    }
-
-    if (candidates !== this.db.airmen) {
-      for (const a of this.db.airmen) {
-        const nameLower = a.name.toLowerCase();
-        if (nameLower.length > 2 && (cleaned.includes(nameLower) || nameLower.includes(cleaned))) {
-          return { airman: a, confidence: 0.88 };
-        }
-      }
-    }
-
-    return { airman: null, confidence: 0 };
+    return matchAirmanRankFirst(rawText, this.db.airmen, flightHint);
   }
 
   private extractTextFromPdfBase64(base64Str: string): string {
@@ -1734,118 +1691,48 @@ export class LocalDatabaseEngine {
     }
 
     let extractedText = textSnippet || '';
-    let fileNameHints = '';
 
     for (const f of fileList) {
-      fileNameHints += ` ${f.name || ''}`;
-      if (f.base64 && f.base64.includes('application/pdf')) {
-        const pdfText = this.extractTextFromPdfBase64(f.base64);
-        if (pdfText) extractedText += `\n${pdfText}`;
+      if (f.base64) {
+        const isPdf = (f.mime && f.mime.includes('pdf')) || (f.name && f.name.toLowerCase().endsWith('.pdf'));
+        const isText = (f.mime && (f.mime.includes('text') || f.mime.includes('csv') || f.mime.includes('json'))) ||
+          (f.name && /\.(txt|csv|tsv|json)$/i.test(f.name));
+
+        if (isText) {
+          try {
+            const clean = f.base64.replace(/^data:[^;]+;base64,/, '');
+            const decoded = atob(clean);
+            extractedText += `\n${decoded}`;
+          } catch {
+            // Ignore decode error
+          }
+        } else if (isPdf) {
+          const pdfText = this.extractTextFromPdfBase64(f.base64);
+          if (pdfText) extractedText += `\n${pdfText}`;
+        }
       }
     }
 
-    const parsedDatesMap = new Map<string, { date: string; day: string; assignments: any[] }>();
-    let detectedDocTitle = 'PARADE STATE / DUTY ROSTER : BAF 155 UASU';
-    let detectedFlight: FlightName | 'Overall' = targetFlight;
-
-    const isAugRange = fileNameHints.toLowerCase().includes('21-30') || fileNameHints.toLowerCase().includes('aug') || extractedText.toLowerCase().includes('21 aug') || extractedText.toLowerCase().includes('30 aug');
-    const isJulRange = fileNameHints.toLowerCase().includes('jul') || extractedText.toLowerCase().includes('jul');
-
-    const officialDoc = getOfficialParadeStateDocument(targetYear, isJulRange && !isAugRange ? 'jul' : isAugRange && !isJulRange ? 'aug' : 'all', this.db.airmen);
-    detectedDocTitle = officialDoc.documentTitle;
-    detectedFlight = 'Avionics';
-
-    let candidateDates = officialDoc.dates || [];
-    if (fileNameHints.toLowerCase().includes('21-30') || fileNameHints.toLowerCase().includes('21 to 30')) {
-      candidateDates = candidateDates.filter((d: any) => {
-        const day = parseInt(d.date.slice(8), 10);
-        return d.date.includes('-08-') && day >= 21 && day <= 30;
-      });
+    if (!extractedText.trim()) {
+      throw new Error('No readable text could be extracted from the uploaded file(s). Please paste table text directly in the "Paste Text / OCR" tab.');
     }
 
-    for (const dEntry of candidateDates) {
-      parsedDatesMap.set(dEntry.date, dEntry);
+    // Run heuristic parser strictly on the user's extracted content
+    const parsedResult = parseRosterTextHeuristically(
+      extractedText,
+      targetYear,
+      targetFlight,
+      this.db.airmen
+    );
+
+    if (!parsedResult.dates || parsedResult.dates.length === 0) {
+      throw new Error('Could not identify any duty dates or airman assignments from the provided input. Please verify that your file or text contains dates (e.g. 01 Aug) and duty columns.');
     }
-
-    const allDatesList = Array.from(parsedDatesMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-
-    let totalAssignmentsCount = 0;
-    let matchedCount = 0;
-    let unmatchedCount = 0;
-
-    const enrichedDates = allDatesList.map((dateEntry) => {
-      const rawAssignments = Array.isArray(dateEntry.assignments) ? dateEntry.assignments : [];
-      const validAssignments = rawAssignments.filter(
-        (asn: any) => asn && asn.dutyCode && asn.dutyCode !== 'ON_PARADE' && asn.dutyCode !== 'DUTY_OFF'
-      );
-
-      const enrichedAssignments = validAssignments.map((asn: any) => {
-        totalAssignmentsCount++;
-        let airman = this.db.airmen.find((a) => a.id === asn.matchedAirmanId);
-        let confidence = asn.confidence || 0.9;
-
-        if (!airman) {
-          const match = this.findBestAirmanMatch(asn.rawText || asn.matchedAirmanName || '', detectedFlight);
-          if (match.airman) {
-            airman = match.airman;
-            confidence = match.confidence;
-          }
-        }
-
-        if (airman) {
-          matchedCount++;
-          return {
-            rawText: asn.rawText || `${airman.rank} ${airman.name}`,
-            dutyCode: asn.dutyCode as DutyCategoryCode,
-            dutyName: asn.dutyName || DUTY_TYPES.find((d) => d.code === asn.dutyCode)?.name || asn.dutyCode,
-            idaShift: (asn.idaShift || null) as IDAShift | null,
-            matchedAirmanId: airman.id,
-            matchedAirmanName: airman.name,
-            matchedAirmanRank: airman.rank,
-            matchedAirmanTrade: airman.trade,
-            matchedAirmanFlight: airman.flightName,
-            matchedAirmanBdNo: airman.bdNo,
-            confidence,
-            isIgnored: false,
-          };
-        } else {
-          unmatchedCount++;
-          return {
-            rawText: asn.rawText || 'Unknown Airman',
-            dutyCode: asn.dutyCode as DutyCategoryCode,
-            dutyName: asn.dutyName || asn.dutyCode,
-            idaShift: (asn.idaShift || null) as IDAShift | null,
-            matchedAirmanId: null,
-            matchedAirmanName: asn.rawText,
-            confidence: 0,
-            isIgnored: false,
-          };
-        }
-      });
-
-      return {
-        date: dateEntry.date,
-        dayName: dateEntry.day || (dateEntry as any).dayName || '',
-        assignments: enrichedAssignments,
-      };
-    });
 
     return {
-      documentTitle: detectedDocTitle,
-      detectedFlight: 'Avionics',
-      year: targetYear,
-      month: isAugRange ? 8 : 7,
-      totalDates: enrichedDates.length,
+      ...parsedResult,
       totalPages: Math.max(fileList.length, 1),
       totalFiles: fileList.length,
-      dateRange: {
-        start: enrichedDates[0]?.date || `${targetYear}-08-21`,
-        end: enrichedDates[enrichedDates.length - 1]?.date || `${targetYear}-08-30`,
-      },
-      dates: enrichedDates,
-      totalAssignmentsCount,
-      matchedCount,
-      unmatchedCount,
     };
   }
 

@@ -286,25 +286,9 @@ export function getIdacShiftsForDateAndFlight(dateStr: string, flight?: FlightNa
   if (anQuota > 0) availableShifts.push('Afternoon');
   if (ntQuota > 0) availableShifts.push('Night');
 
-  // If a specific flight is chosen and it has positive IDAC quota for some shifts, return only those shifts!
-  if (availableShifts.length > 0) {
-    return availableShifts;
-  }
-
-  // If the specific flight has 0 IDAC quota configured for this day, check if other flights have quotas
-  if (isSpecificFlight) {
-    let anyMor = 0, anyAn = 0, anyNt = 0;
-    (['Mechanics', 'Avionics', 'GCS', 'Admin'] as FlightName[]).forEach((f) => {
-      if (morTable?.data[f]) anyMor += morTable.data[f][dayIndex] || 0;
-      if (anTable?.data[f]) anyAn += anTable.data[f][dayIndex] || 0;
-      if (ntTable?.data[f]) anyNt += ntTable.data[f][dayIndex] || 0;
-    });
-    if (anyMor > 0) availableShifts.push('Morning');
-    if (anyAn > 0) availableShifts.push('Afternoon');
-    if (anyNt > 0) availableShifts.push('Night');
-  }
-
-  if (availableShifts.length === 0) {
+  // If a specific flight is chosen, return ONLY the shifts that have quota for this flight!
+  // If no flight is specified (Overall / All) and all quotas are 0, return all 3 standard shifts
+  if (!isSpecificFlight && availableShifts.length === 0) {
     return ['Morning', 'Afternoon', 'Night'];
   }
 

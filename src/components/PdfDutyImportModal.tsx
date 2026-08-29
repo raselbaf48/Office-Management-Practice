@@ -18,10 +18,8 @@ import {
   Trash2,
   Search,
   SlidersHorizontal,
-  FileSpreadsheet,
   CheckSquare,
   Square,
-  Zap,
   Info,
   History,
   RotateCcw
@@ -247,35 +245,6 @@ export const PdfDutyImportModal: React.FC<PdfDutyImportModalProps> = ({
     } catch (err: any) {
       console.error('Error analyzing document:', err);
       setAnalysisError(err.message || 'Error analyzing document');
-      setStep('upload');
-    }
-  };
-
-  // Direct load official 155 UASU Parade State dataset (Full 01 Jul - 31 Aug coverage)
-  const handleLoadOfficialDemo = async () => {
-    setStep('analyzing');
-    setAnalysisError(null);
-    setAnalysisProgressMsg('Loading full official 155 UASU Parade State & Duty Roster (Jul - Aug)...');
-
-    try {
-      const response = await fetch('/api/import/load-official-roster', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetYear,
-          monthChoice: 'all',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load official roster data');
-      }
-
-      const result: DocumentAnalysisResult = await response.json();
-      setAnalysisResult(result);
-      setStep('review');
-    } catch (err: any) {
-      setAnalysisError(err.message || 'Failed to load official roster');
       setStep('upload');
     }
   };
@@ -824,34 +793,6 @@ Security GD: 509301 Cpl Rashed, 509999 LAC Jahid
                       ))}
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Quick Official Roster Demo Box */}
-              {activeInputTab !== 'history' && (
-                <div className="p-4 rounded-xl bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800/80 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-emerald-600 text-white rounded-lg">
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white">
-                        Official 155 UASU Parade State Roster (01 Jul - 31 Aug)
-                      </h4>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                        Instantly load the verified multi-page dataset (Security GD, BTF, NTF, IDA Center, TDY, Leaves)
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleLoadOfficialDemo}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-colors flex items-center space-x-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Load Verified Roster (Jul-Aug)</span>
-                  </button>
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Airman, FlightName, IDAShift } from '../types';
 import { X, Calendar, Clock, User, Check, RefreshCw, Sparkles, Shield } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
-import { getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
+import { getFlightDutyQuotaForDate, getIdacShiftsForDateAndFlight } from '../data/officialDutyRatioMatrix';
 
 interface IdacDutyAssignModalProps {
   isOpen: boolean;
@@ -20,14 +20,25 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
   onAssignSuccess,
 }) => {
   const [date, setDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
-  const [shift, setShift] = useState<IDAShift>('Night');
   const [selectedFlight, setSelectedFlight] = useState<FlightName>('Avionics');
+
+  const availableShifts = React.useMemo(() => {
+    return getIdacShiftsForDateAndFlight(date, selectedFlight);
+  }, [date, selectedFlight]);
+
+  const [shift, setShift] = useState<IDAShift>('Night');
   const [selectedAirmanId, setSelectedAirmanId] = useState<string>('');
   const [notes, setNotes] = useState<string>('IDA Center Standby / Surveillance Monitor');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isAutoScheduling, setIsAutoScheduling] = useState<boolean>(false);
   const [autoScheduleDays, setAutoScheduleDays] = useState<number>(7);
   const [statusMessage, setStatusMessage] = useState<string>('');
+
+  React.useEffect(() => {
+    if (availableShifts.length > 0 && !availableShifts.includes(shift)) {
+      setShift(availableShifts[0]);
+    }
+  }, [availableShifts, shift]);
 
   // Filter airmen by flight
   const flightAirmen = sortAirmenBySeniority(airmen.filter((a) => a.flightName === selectedFlight));
@@ -231,9 +242,14 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
                   onChange={(e) => setShift(e.target.value as IDAShift)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option value="Morning">Morning (07:30 - 14:30)</option>
-                  <option value="Afternoon">Afternoon (14:30 - 21:00)</option>
-                  <option value="Night">Night (21:00 - 07:30)</option>
+                  {(availableShifts.length > 0 ? availableShifts : (['Morning', 'Afternoon', 'Night'] as IDAShift[])).map((s) => {
+                    const timeLabel = s === 'Morning' ? '07:30 - 14:30' : s === 'Afternoon' ? '14:30 - 21:00' : '21:00 - 07:30';
+                    return (
+                      <option key={s} value={s}>
+                        {s} ({timeLabel})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>

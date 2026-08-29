@@ -1627,10 +1627,56 @@ function getYesterdayDateStr(dateStr: string): string {
     return aiClient;
   }
 
-  // Fuzzy matcher to find the best matching airman for a given extracted text snippet
+  // Detect rank from text helper
+  function detectRankFromText(rawText: string): string | null {
+    if (!rawText || typeof rawText !== 'string') return null;
+    const lower = rawText.toLowerCase().replace(/[\.]/g, '');
+    if (/\b(?:mwo|master\s*warrant\s*officer|m\s*w\s*o)\b/i.test(lower)) return 'MWO';
+    if (/\b(?:swo|senior\s*warrant\s*officer|s\s*w\s*o)\b/i.test(lower)) return 'SWO';
+    if (/\b(?:flt\s*sgt|f\/sgt|flight\s*sergeant|fs)\b/i.test(lower)) return 'Flt Sgt';
+    if (/\b(?:wo|warrant\s*officer|w\s*o)\b/i.test(lower)) return 'WO';
+    if (/\b(?:sgt|sergeant)\b/i.test(lower)) return 'Sgt';
+    if (/\b(?:cpl|corporal)\b/i.test(lower)) return 'Cpl';
+    if (/\b(?:lac|leading\s*aircraftman|l\s*a\s*c)\b/i.test(lower)) return 'LAC';
+    if (/\b(?:ac|aircraftman|a\s*c)\b/i.test(lower)) return 'AC';
+    return null;
+  }
+
+  function cleanAirmanNameFromText(rawText: string): string {
+    if (!rawText || typeof rawText !== 'string') return '';
+    return rawText
+      .replace(/^[0-9]+[.\-)]\s*/, '')
+      .replace(/\b(?:bd\/?|)(\d{5,7})\b/gi, '')
+      .replace(/\b(?:mwo|swo|flt\s*sgt|f\/sgt|wo|sgt|cpl|lac|ac)\b/gi, '')
+      .replace(/\b(?:master\s*warrant\s*officer|senior\s*warrant\s*officer|flight\s*sergeant|warrant\s*officer|sergeant|corporal|leading\s*aircraftman|aircraftman)\b/gi, '')
+      .replace(/\b(?:avi|mech|gcs|admin)\s*(?:flt|flight)?\b/gi, '')
+      .replace(/\((?:Morning|Afternoon|Night|CL|AL|Leave|Off|GD|BTF|NTF|IDAC|TDY|Bakery|CMH|Airport)\)/gi, '')
+      .replace(/^(?:Sy Duty|TF Duty|BTF|NTF|GD|IDAC|Leave|TDY)\s*[-:]\s*/gi, '')
+      .replace(/[^a-zA-Z\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeRank(rank: string): string {
+    const r = rank.toUpperCase().replace(/[\.\s]/g, '');
+    if (r === 'MWO' || r === 'MASTERWARRA') return 'MWO';
+    if (r === 'SWO' || r === 'SENIORWARRA') return 'SWO';
+    if (r === 'FLTSGT' || r === 'FS' || r === 'FLIGHTSERG') return 'FLT SGT';
+    if (r === 'WO' || r === 'WARRANTOFF') return 'WO';
+    if (r === 'SGT' || r === 'SERGEANT') return 'SGT';
+    if (r === 'CPL' || r === 'CORPORAL') return 'CPL';
+    if (r === 'LAC' || r === 'LEADINGAIR') return 'LAC';
+    if (r === 'AC' || r === 'AIRCRAFTMA') return 'AC';
+    return r;
+  }
+
+  // Fuzzy matcher to find the best matching airman for a given extracted text snippet (RANK FIRST)
   function findBestAirmanMatch(rawText: string, flightHint?: FlightName | 'Overall'): { airman: Airman | null; confidence: number } {
-    if (!rawText || !rawText.trim()) return { airman: null, confidence: 0 };
-    const cleaned = rawText.replace(/^[0-9]+[.\-)]\s*/, '').trim().toLowerCase();
+    if (!rawText || !rawText.trim() || !Array.isArray(db.airmen) || db.airmen.length === 0) {
+      return { airman: null, confidence: 0 };
+    }
+    const rawTrimmed = rawText.trim();
+    const cleaned = rawTrimmed.replace(/^[0-9]+[.\-)]\s*/, '').trim().toLowerCase();
 
     // 1. Direct BD No check
     const bdMatch = cleaned.match(/\b(?:bd\/?|)(\d{5,7})\b/i);
@@ -1643,38 +1689,88 @@ function getYesterdayDateStr(dateStr: string): string {
     const codeFound = db.airmen.find((a) => cleaned.includes(a.code.toLowerCase()));
     if (codeFound) return { airman: codeFound, confidence: 0.95 };
 
-    // 3. Match by rank + name
-    let candidates = db.airmen;
-    if (flightHint && flightHint !== 'Overall') {
-      const flightList = db.airmen.filter((a) => a.flightName === flightHint);
-      if (flightList.length > 0) candidates = flightList;
-    }
+    // 3. Match by rank FIRST, then name
+    const detectedRank = detectRankFromText(rawTrimmed);
+    const cleanName = cleanAirmanNameFromText(rawTrimmed).toLowerCase();
 
-    // Check full name exact substring
-    for (const a of candidates) {
-      const nameLower = a.name.toLowerCase();
-      if (nameLower.length > 2 && (cleaned.includes(nameLower) || nameLower.includes(cleaned))) {
-        return { airman: a, confidence: 0.92 };
-      }
-    }
+    if (detectedRank) {
+      const normDetectedRank = normalizeRank(detectedRank);
+      const rankCandidates = db.airmen.filter((a) => normalizeRank(a.rank) === normDetectedRank);
 
-    // Check rank + individual name words (e.g. "WO A. Baten" -> "a. baten" / "baten")
-    const words = cleaned.split(/[\s,./-]+/).filter((w) => w.length > 2 && !['wo', 'swo', 'sgt', 'cpl', 'lac', 'flt', 'avi', 'gcs', 'mech', 'admin'].includes(w));
-    for (const a of candidates) {
-      const aWords = a.name.toLowerCase().split(/[\s,./-]+/).filter((w) => w.length > 2);
-      for (const w of words) {
-        if (aWords.some((aw) => aw.includes(w) || w.includes(aw))) {
-          return { airman: a, confidence: 0.85 };
+      if (rankCandidates.length > 0) {
+        let searchPool = rankCandidates;
+        if (flightHint && flightHint !== 'Overall') {
+          const flightRank = rankCandidates.filter((a) => a.flightName === flightHint);
+          if (flightRank.length > 0) {
+            searchPool = [...flightRank, ...rankCandidates.filter((a) => a.flightName !== flightHint)];
+          }
+        }
+
+        // Exact name match in rank
+        for (const a of searchPool) {
+          const aName = a.name.toLowerCase();
+          if (cleanName && cleanName === aName) {
+            return { airman: a, confidence: 0.96 };
+          }
+        }
+
+        // Substring match in rank
+        for (const a of searchPool) {
+          const aName = a.name.toLowerCase();
+          if (cleanName.length >= 3 && (aName.includes(cleanName) || cleanName.includes(aName))) {
+            return { airman: a, confidence: 0.94 };
+          }
+        }
+
+        // Token match in rank
+        const queryWords = cleanName.split(/\s+/).filter((w) => w.length >= 3);
+        let bestRankMatch: Airman | null = null;
+        let highestScore = 0;
+
+        for (const a of searchPool) {
+          const aWords = a.name.toLowerCase().split(/[\s,./-]+/).filter((w) => w.length >= 3);
+          let score = 0;
+          for (const qw of queryWords) {
+            for (const aw of aWords) {
+              if (qw === aw) score += 2;
+              else if (aw.includes(qw) || qw.includes(aw)) score += 1;
+            }
+          }
+          if (score > highestScore) {
+            highestScore = score;
+            bestRankMatch = a;
+          }
+        }
+
+        if (bestRankMatch && highestScore > 0) {
+          return { airman: bestRankMatch, confidence: 0.90 };
         }
       }
     }
 
-    // Search across all airmen if flight-scoped didn't match
-    if (candidates !== db.airmen) {
-      for (const a of db.airmen) {
-        const nameLower = a.name.toLowerCase();
-        if (nameLower.length > 2 && (cleaned.includes(nameLower) || nameLower.includes(cleaned))) {
-          return { airman: a, confidence: 0.88 };
+    // 4. Fallback: match without rank constraint
+    let candidatePool = db.airmen;
+    if (flightHint && flightHint !== 'Overall') {
+      const flightList = db.airmen.filter((a) => a.flightName === flightHint);
+      if (flightList.length > 0) {
+        candidatePool = [...flightList, ...db.airmen.filter((a) => a.flightName !== flightHint)];
+      }
+    }
+
+    const searchName = (cleanName || cleaned).toLowerCase();
+    for (const a of candidatePool) {
+      const nameLower = a.name.toLowerCase();
+      if (searchName.length >= 3 && (nameLower.includes(searchName) || searchName.includes(nameLower))) {
+        return { airman: a, confidence: 0.88 };
+      }
+    }
+
+    const words = searchName.split(/[\s,./-]+/).filter((w) => w.length >= 3);
+    for (const a of candidatePool) {
+      const aWords = a.name.toLowerCase().split(/[\s,./-]+/).filter((w) => w.length >= 3);
+      for (const w of words) {
+        if (aWords.some((aw) => aw.includes(w) || w.includes(aw))) {
+          return { airman: a, confidence: 0.82 };
         }
       }
     }
@@ -2267,14 +2363,10 @@ Extract EVERY SINGLE DATE ROW and all duty columns (GD, BTF, NTF, Airfield, Hali
         }
       }
 
-      // If still zero assignments found, fallback to verified official dataset
       if (parsedDatesMap.size === 0) {
-        const officialDoc = getOfficialParadeStateDocument(targetYear, 'all', db.airmen);
-        detectedDocTitle = officialDoc.documentTitle;
-        detectedFlight = normalizeFlightName(officialDoc.detectedFlight);
-        for (const dEntry of officialDoc.dates) {
-          parsedDatesMap.set(dEntry.date, dEntry);
-        }
+        return res.status(400).json({
+          error: 'No duty dates or personnel assignments could be recognized in the provided document or text. Please check the document format or paste table text directly in the Paste Text / OCR tab.',
+        });
       }
 
       const allDatesList = Array.from(parsedDatesMap.values()).sort((a, b) => a.date.localeCompare(b.date));
