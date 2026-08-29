@@ -357,7 +357,7 @@ export default function App() {
       />
 
       {/* Right Content Wrapper */}
-      <div className={`flex flex-col min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+      <div className={`flex flex-col min-h-screen transition-all duration-300 print:min-h-0 print:pl-0 print:p-0 print:bg-white ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* Top Header Bar */}
         <TopHeader
           activeTab={activeTab}
@@ -371,7 +371,7 @@ export default function App() {
 
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
+        <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto ${isPrintModalOpen ? 'print:hidden' : ''}`}>
           {activeTab === 'overview' && (
             <DashboardParadeState
               role={role}
@@ -512,7 +512,7 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-200 dark:border-slate-800/80 py-5 bg-white dark:bg-slate-900 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto">
+        <footer className="border-t border-slate-200 dark:border-slate-800/80 py-5 bg-white dark:bg-slate-900 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto print:hidden">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center space-x-2.5">
               <Logo155UASU className="w-5 h-6" />

@@ -60,7 +60,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const { category, title } = getTabTitle(activeTab);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 transition-colors">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 transition-colors print:hidden">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Mobile Menu Button + Breadcrumb */}
         <div className="flex items-center space-x-3">

@@ -97,29 +97,29 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   };
 
   useEffect(() => {
+    const originalTitle = document.title;
+    document.title = getPdfTitle();
+
     const handleBeforePrint = () => {
       document.title = getPdfTitle();
     };
     const handleAfterPrint = () => {
-      document.title = 'BAF 155 UASU Duty Management System';
+      // keep current title while modal is open
     };
 
     window.addEventListener('beforeprint', handleBeforePrint);
     window.addEventListener('afterprint', handleAfterPrint);
 
     return () => {
+      document.title = originalTitle;
       window.removeEventListener('beforeprint', handleBeforePrint);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
   }, [fromDate, documentType]);
 
   const handlePrint = () => {
-    const prevTitle = document.title;
     document.title = getPdfTitle();
     window.print();
-    setTimeout(() => {
-      document.title = prevTitle;
-    }, 1500);
   };
 
   // Calculate list of dates in range
@@ -196,8 +196,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
   const formatAirmanName = (name: string) => {
     if (!name) return '';
-    return name
+    // Strip trailing numbers (e.g. 2608..., 2026..., BD numbers attached to names), timestamps, or (2608...)
+    const cleaned = name
+      .replace(/\s*\(?\b\d{4,}\b\)?\s*$/gi, '')
+      .replace(/\s*[-_]\s*\d+\s*$/gi, '')
+      .trim();
+    return cleaned
       .split(' ')
+      .filter(Boolean)
       .map(capitalize)
       .join(' ');
   };
@@ -450,30 +456,60 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const overallStats = getFlightStats('Overall');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible printable-modal-overlay">
       {/* PRINT CSS STYLES FOR EXACT A4 LANDSCAPE */}
       <style>{`
         @media print {
           @page {
             size: A4 landscape;
-            margin: 8mm;
+            margin: 8mm 12mm;
           }
-          body {
-            background: white !important;
-            color: black !important;
+          html, body {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             font-family: Arial, sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .printable-modal-overlay {
+            position: static !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            display: block !important;
+            overflow: visible !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .printable-modal-card {
+            background: #ffffff !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            border-radius: 0 !important;
           }
           #printable-area {
             font-family: Arial, sans-serif !important;
             font-size: 11px !important;
             padding: 0 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             width: 100% !important;
-            background: white !important;
+            max-width: 100% !important;
+            background: #ffffff !important;
             box-shadow: none !important;
             border: none !important;
+            box-sizing: border-box !important;
           }
           .print\\:hidden {
             display: none !important;
@@ -481,7 +517,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
         }
       `}</style>
 
-      <div className="bg-white text-slate-900 border border-slate-300 rounded-xl shadow-lg max-w-7xl w-full p-4 sm:p-6 my-4 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:m-0 print:rounded-none">
+      <div className="bg-white text-slate-900 border border-slate-300 rounded-xl shadow-lg max-w-7xl w-full p-4 sm:p-6 my-4 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:m-0 print:rounded-none printable-modal-card">
         
         {/* NON-PRINTABLE TOOLBAR: ONLY PRINT DOCUMENT / SAVE PDF + ESSENTIAL DATE/FLIGHT SELECTOR */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-200 print:hidden">
@@ -735,118 +771,148 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
               </div>
 
               {/* 1ST TABLE: SUMMARY MATRIX TABLE */}
-              <div className="overflow-x-auto my-3">
+              <div className="overflow-x-auto my-2">
                 <table
                   className="w-full text-center align-middle border-collapse border border-black"
-                  style={{ fontFamily: 'Arial, sans-serif', fontSize: '11px', border: '1px solid black' }}
+                  style={{
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '10px',
+                    border: '1px solid black',
+                    tableLayout: 'fixed',
+                    width: '100%',
+                  }}
                 >
+                  <colgroup>
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '3.8%' }} />
+                    <col style={{ width: '3.8%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '4.2%' }} />
+                    <col style={{ width: '5.5%' }} />
+                    <col style={{ width: '5.5%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4%' }} />
+                    <col style={{ width: '4.9%' }} />
+                  </colgroup>
                   <thead>
-                    <tr style={{ height: '1in' }} className="border border-black bg-white">
-                      <th className="border border-black p-1 align-middle text-center font-bold" style={{ minWidth: '95px' }}>
+                    <tr style={{ height: '78px' }} className="border border-black bg-white">
+                      <th className="border border-black p-0.5 align-middle text-center font-bold text-[10px]">
                         Unit
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Total str
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Det/ Tdy
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Eff str
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Leave
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           ESSN
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           CMH
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Sick Report
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Recep- tion
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Drill Cat-C
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Guard Duty
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Bake & Bite
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Flood Cell
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Admin Order
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Deten- tion
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Class/ Trg
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Air Fd Duty
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center font-bold">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center font-bold">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center font-bold">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center font-bold">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {documentType === 'PT' ? 'On PT' : 'On Parade'}
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Games
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Absent
                         </div>
                       </th>
-                      <th className="border border-black p-0.5 align-bottom text-center min-w-[30px]">
-                        <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
+                      <th className="border border-black p-0 align-bottom text-center">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Rmk
                         </div>
                       </th>
@@ -858,31 +924,31 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       const unitLabel = '155 UASU BAF';
 
                       return (
-                        <tr className="text-black border border-black bg-white">
-                          <td className="border border-black p-1 text-center font-bold whitespace-nowrap">
+                        <tr className="text-black border border-black bg-white text-[10px]">
+                          <td className="border border-black p-0.5 text-center font-bold whitespace-nowrap">
                             {unitLabel}
                           </td>
-                          <td className="border border-black p-1">{stats.totalStr}</td>
-                          <td className="border border-black p-1">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.effStr}</td>
-                          <td className="border border-black p-1">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.floodCellCount > 0 ? stats.floodCellCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.adminCommCount > 0 ? stats.adminCommCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.detentionCount > 0 ? stats.detentionCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
-                          <td className="border border-black p-1 font-bold">{stats.totalOutPt}</td>
-                          <td className="border border-black p-1 font-bold">{stats.onPtParadeCount}</td>
-                          <td className="border border-black p-1">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
-                          <td className="border border-black p-1">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
-                          <td className="border border-black p-1 text-center">-</td>
+                          <td className="border border-black p-0.5">{stats.totalStr}</td>
+                          <td className="border border-black p-0.5">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.effStr}</td>
+                          <td className="border border-black p-0.5">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.floodCellCount > 0 ? stats.floodCellCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.adminCommCount > 0 ? stats.adminCommCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.detentionCount > 0 ? stats.detentionCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
+                          <td className="border border-black p-0.5 font-bold">{stats.totalOutPt}</td>
+                          <td className="border border-black p-0.5 font-bold">{stats.onPtParadeCount}</td>
+                          <td className="border border-black p-0.5">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
+                          <td className="border border-black p-0.5">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center">-</td>
                         </tr>
                       );
                     })()}
@@ -893,80 +959,81 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
               {/* SPACING BETWEEN 1ST & 2ND TABLE: FONT SIZE 1 (MINIMAL GAP) */}
               <div style={{ fontSize: '1px', lineHeight: '1px', height: '2px' }} className="w-full select-none" />
 
-              {/* 2ND TABLE: 5-COLUMN DISPOSAL BREAKDOWN (ALL BORDERS INVISIBLE) */}
-              <div className="overflow-x-auto mt-1">
+              {/* 2ND TABLE: 4-COLUMN DISPOSAL BREAKDOWN (ALL BORDERS INVISIBLE) */}
+              <div className="overflow-x-auto mt-2">
                 <table
                   className="w-full text-left align-top border-collapse"
                   style={{
                     fontFamily: 'Arial, sans-serif',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     border: 'none',
                     borderSpacing: '0',
                     tableLayout: 'fixed',
+                    width: '100%',
                   }}
                 >
                   <colgroup>
-                    <col style={{ width: '3.5in' }} />
-                    <col style={{ width: '2.3in' }} />
-                    <col style={{ width: '2.3in' }} />
-                    <col style={{ width: '2.4in' }} />
+                    <col style={{ width: '36%' }} />
+                    <col style={{ width: '21%' }} />
+                    <col style={{ width: '21%' }} />
+                    <col style={{ width: '22%' }} />
                   </colgroup>
                   <tbody>
                     <tr>
-                      {/* 1st Column: 3.5 inch -> ON PARADE / ON PT (1 to 15 left, 16+ right, Nil if empty) */}
+                      {/* 1st Column: 36% -> ON PARADE / ON PT (1 to 15 left, 16+ right, Nil if empty) */}
                       <td
                         style={{
-                          width: '3.5in',
+                          width: '36%',
                           verticalAlign: 'top',
                           border: 'none',
-                          paddingRight: '0.15in',
+                          paddingRight: '12px',
                         }}
                       >
-                        <div className="font-bold underline uppercase mb-1.5">
+                        <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                           {documentType === 'PT' ? 'ON PT' : 'ON PARADE'}
                         </div>
                         {onPtList.length > 0 ? (
-                          <div className="flex items-start space-x-4">
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                          <div className="flex items-start space-x-3 w-full">
+                            <ol className="space-y-0.5 font-normal leading-tight w-1/2 overflow-hidden text-[11px]">
                               {onPtList.slice(0, 15).map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
                             {onPtList.length > 15 && (
-                              <ol className="space-y-0.5 font-normal leading-tight">
+                              <ol className="space-y-0.5 font-normal leading-tight w-1/2 overflow-hidden text-[11px]">
                                 {onPtList.slice(15).map((item, idx) => (
-                                  <li key={idx} className="whitespace-nowrap">
-                                    {16 + idx}. {item.airman.rank} {item.airman.name}
+                                  <li key={idx} className="whitespace-nowrap truncate">
+                                    {16 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                   </li>
                                 ))}
                               </ol>
                             )}
                           </div>
                         ) : (
-                          <div className="font-bold text-black">Nil</div>
+                          <div className="font-bold text-black text-[11px]">Nil</div>
                         )}
                       </td>
 
-                      {/* 2nd Column: 2.3 inch -> LEAVE, BAKE & BITE, CMH, SICK REPORT */}
+                      {/* 2nd Column: 21% -> LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT */}
                       <td
                         style={{
-                          width: '2.3in',
+                          width: '21%',
                           verticalAlign: 'top',
                           border: 'none',
-                          paddingRight: '0.15in',
+                          paddingRight: '12px',
                         }}
                       >
                         {leaveList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               LEAVE
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {leaveList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -974,14 +1041,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {bakeBiteList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               BAKE & BITE
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {bakeBiteList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -989,14 +1056,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {essnList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               ESSN
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {essnList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1004,14 +1071,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {cmhList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               BNS/BSH/CMH
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {cmhList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1019,14 +1086,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {sickReportList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               SICK REPORT
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {sickReportList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1034,24 +1101,24 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
                       </td>
 
-                      {/* 3rd Column: 2.3 inch -> ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
+                      {/* 3rd Column: 21% -> ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
                       <td
                         style={{
-                          width: '2.3in',
+                          width: '21%',
                           verticalAlign: 'top',
                           border: 'none',
-                          paddingRight: '0.15in',
+                          paddingRight: '12px',
                         }}
                       >
                         {tdyList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               ATT/TDY/DETT
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {tdyList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1059,14 +1126,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {receptionList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               RECEPTION
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {receptionList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1074,14 +1141,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {airFdDutyList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               AIR FD DUTY
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {airFdDutyList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1089,14 +1156,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {adminOrderList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               ADMIN ORDER
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {adminOrderList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1104,14 +1171,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {classTrgList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               CLASS/TRG
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {classTrgList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1119,14 +1186,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {drillCatCList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               DRILL CAT-C
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {drillCatCList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1134,14 +1201,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {otherDisposals.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               {otherDisposals[0].title}
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {otherDisposals[0].airmen.map((a, aIdx) => (
-                                <li key={aIdx} className="whitespace-nowrap">
-                                  {aIdx + 1}. {a.rank} {a.name}
+                                <li key={aIdx} className="whitespace-nowrap truncate">
+                                  {aIdx + 1}. {a.rank} {formatAirmanName(a.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1149,25 +1216,25 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
                       </td>
 
-                      {/* 4th Column: 2.4 inch -> DUTY ON, DUTY OFF, GAMES, ABSENT */}
+                      {/* 4th Column: 22% -> DUTY ON, DUTY OFF, GAMES, ABSENT */}
                       <td
                         style={{
-                          width: '2.4in',
+                          width: '22%',
                           verticalAlign: 'top',
                           border: 'none',
                         }}
                       >
                         {dutyOnList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               DUTY ON
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOnList.map((item, idx) => {
                                 const noteText = item.note || 'GD';
                                 return (
-                                  <li key={idx} className="whitespace-nowrap">
-                                    {idx + 1}. {item.airman.rank} {item.airman.name} - {noteText}
+                                  <li key={idx} className="whitespace-nowrap truncate">
+                                    {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)} - {noteText}
                                   </li>
                                 );
                               })}
@@ -1176,20 +1243,21 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {documentType !== 'PT' && dutyOffList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               DUTY OFF
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOffList.map((item, idx) => {
                                 let dNote = item.note || 'GD Off';
                                 if (dNote.toLowerCase().includes('imported')) dNote = 'GD Off';
-                                if (!dNote.toLowerCase().endsWith('off')) {
+                                dNote = dNote.replace(/\s*\(?\b\d{4,}\b\)?/gi, '').replace(/\s*\(dt\s*\d*\)/gi, '(dt)').trim();
+                                if (!dNote.toLowerCase().endsWith('off') && !dNote.toLowerCase().includes('off')) {
                                   dNote = `${dNote} Off`;
                                 }
                                 return (
-                                  <li key={idx} className="whitespace-nowrap">
-                                    {idx + 1}. {item.airman.rank} {item.airman.name} - {dNote}
+                                  <li key={idx} className="whitespace-nowrap truncate">
+                                    {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)} - {dNote}
                                   </li>
                                 );
                               })}
@@ -1198,14 +1266,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {gamesList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               GAMES
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {gamesList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1213,14 +1281,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
 
                         {absentList.length > 0 && (
-                          <div className="mb-4">
-                            <div className="font-bold underline uppercase mb-1.5">
+                          <div className="mb-3.5">
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                               ABSENT
                             </div>
-                            <ol className="space-y-0.5 font-normal leading-tight">
+                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {absentList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap">
-                                  {idx + 1}. {item.airman.rank} {item.airman.name}
+                                <li key={idx} className="whitespace-nowrap truncate">
+                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                 </li>
                               ))}
                             </ol>
@@ -1229,14 +1297,14 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                         {otherDisposals.length > 1 &&
                           otherDisposals.slice(1).map((cat, cIdx) => (
-                            <div key={cIdx} className="mb-4">
-                              <div className="font-bold underline uppercase mb-1.5">
+                            <div key={cIdx} className="mb-3.5">
+                              <div className="font-bold underline uppercase mb-1.5 text-[11px]">
                                 {cat.title}
                               </div>
-                              <ol className="space-y-0.5 font-normal leading-tight">
+                              <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                                 {cat.airmen.map((a, aIdx) => (
-                                  <li key={aIdx} className="whitespace-nowrap">
-                                    {aIdx + 1}. {a.rank} {a.name}
+                                  <li key={aIdx} className="whitespace-nowrap truncate">
+                                    {aIdx + 1}. {a.rank} {formatAirmanName(a.name)}
                                   </li>
                                 ))}
                               </ol>
@@ -1245,25 +1313,25 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       </td>
                     </tr>
 
-                    {/* SPACER ROW BETWEEN 1ST & 2ND ROWS: HEIGHT 0.2 INCH (approx 19px) */}
+                    {/* SPACER ROW BETWEEN 1ST & 2ND ROWS */}
                     {!isMultiDay && (
-                      <tr style={{ height: '0.2in', maxHeight: '0.2in' }}>
-                        <td colSpan={4} style={{ height: '0.2in', border: 'none', padding: 0 }} />
+                      <tr style={{ height: '14px' }}>
+                        <td colSpan={4} style={{ height: '14px', border: 'none', padding: 0 }} />
                       </tr>
                     )}
 
-                    {/* 2nd Row: 1st Column (Sgt Nahid), Last column (WO Shahin) */}
+                    {/* 2nd Row: Signatures */}
                     {!isMultiDay && (
                       <tr>
                         <td
                           style={{
-                            width: '3.5in',
+                            width: '36%',
                             verticalAlign: 'top',
                             border: 'none',
-                            paddingTop: '10px',
+                            paddingTop: '16px',
                           }}
                         >
-                          <div className="space-y-0.5">
+                          <div className="space-y-0.5 text-left text-[11px]">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {leftSigName}
                             </p>
@@ -1272,17 +1340,17 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             <p className="font-normal text-black">155 UASU BAF</p>
                           </div>
                         </td>
-                        <td style={{ width: '2.3in', border: 'none', paddingTop: '10px' }} />
-                        <td style={{ width: '2.3in', border: 'none', paddingTop: '10px' }} />
+                        <td style={{ width: '21%', border: 'none', paddingTop: '16px' }} />
+                        <td style={{ width: '21%', border: 'none', paddingTop: '16px' }} />
                         <td
                           style={{
-                            width: '2.4in',
+                            width: '22%',
                             verticalAlign: 'top',
                             border: 'none',
-                            paddingTop: '10px',
+                            paddingTop: '16px',
                           }}
                         >
-                          <div className="space-y-0.5 text-left">
+                          <div className="space-y-0.5 text-left text-[11px]">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {rightSigName}
                             </p>
