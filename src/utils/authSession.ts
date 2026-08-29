@@ -1,4 +1,4 @@
-import { Airman } from '../types';
+import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
 import { getSupabase } from '../services/supabaseClient';
 
 export interface UserLoginLog {
@@ -20,10 +20,12 @@ export interface UserSession {
   flightName: string;
   trade: string;
   loginTimestamp: string;
+  assignedRole?: UserLoginRole;
 }
 
 const SESSION_KEY = 'baf_user_session';
 const HISTORY_KEY = 'baf_user_login_history';
+const DETAILED_USERS_KEY = 'baf_detailed_user_logins';
 
 // In-memory cache of login history
 let cachedLoginHistory: UserLoginLog[] = [];
@@ -62,17 +64,298 @@ export const getCurrentUserSession = (): UserSession | null => {
 };
 
 /**
+ * Get all detailed/authorized login users
+ */
+export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogin[] => {
+  try {
+    const raw = localStorage.getItem(DETAILED_USERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as DetailedUserLogin[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse detailed user logins:', e);
+  }
+
+  // If none configured yet, populate with nominal roll airmen (default 474455 as primary active)
+  if (nominalAirmen.length > 0) {
+    const defaults: DetailedUserLogin[] = nominalAirmen.map((a) => {
+      const cleanBd = a.bdNo.replace(/^BD\/?/i, '').trim();
+      const isPrimary = cleanBd === '474455';
+      return {
+        id: `user-login-${cleanBd}`,
+        airmanId: a.id,
+        bdNo: cleanBd,
+        rank: a.rank,
+        name: a.name,
+        flightName: a.flightName,
+        trade: a.trade,
+        role: isPrimary ? 'ADMIN' : 'USER',
+        status: 'ACTIVE',
+        detailOrder: isPrimary ? 'DO-155/ADMIN/01' : 'DO-155/GEN/2026',
+        detailedAt: new Date().toISOString(),
+        detailedBy: '155 UASU Admin',
+        remarks: isPrimary ? 'Primary System Admin User (BD/474455 LAC Rasel)' : 'Nominal Roll Detailed User',
+      };
+    });
+
+    try {
+      localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(defaults));
+    } catch {}
+    return defaults;
+  }
+
+  // Fallback single primary user
+  const primaryFallback: DetailedUserLogin[] = [
+    {
+      id: 'user-login-474455',
+      bdNo: '474455',
+      rank: 'LAC',
+      name: 'Rasel',
+      flightName: 'Avionics',
+      trade: 'E&I Fitt',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      detailOrder: 'DO-155/ADMIN/01',
+      detailedAt: new Date().toISOString(),
+      detailedBy: '155 UASU Unit HQ',
+      remarks: 'Primary Admin User ID (LAC Rasel)',
+    },
+  ];
+  return primaryFallback;
+};
+
+/**
+ * Save detailed user logins
+ */
+export const saveDetailedUsers = (users: DetailedUserLogin[]): void => {
+  try {
+    localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(users));
+    window.dispatchEvent(new CustomEvent('baf_detailed_users_changed', { detail: users }));
+  } catch (e) {
+    console.error('Failed to save detailed user logins:', e);
+  }
+};
+
+/**
+ * Detail an individual airman for user login
+ */
+export const detailAirmanForLogin = (
+  airman: Airman,
+  role: UserLoginRole = 'USER',
+  status: UserLoginStatus = 'ACTIVE',
+  detailOrder: string = '',
+  remarks: string = ''
+): DetailedUserLogin => {
+  const current = getDetailedUsers();
+  const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
+
+  const existingIndex = current.findIndex(
+    (u) => u.bdNo.toLowerCase() === cleanBd.toLowerCase() || (u.airmanId && u.airmanId === airman.id)
+  );
+
+  const newEntry: DetailedUserLogin = {
+    id: existingIndex >= 0 ? current[existingIndex].id : `user-login-${cleanBd}-${Date.now()}`,
+    airmanId: airman.id,
+    bdNo: cleanBd,
+    rank: airman.rank,
+    name: airman.name,
+    flightName: airman.flightName,
+    trade: airman.trade,
+    role,
+    status,
+    detailOrder: detailOrder.trim() || `DO-155/DTL/${cleanBd}`,
+    detailedAt: new Date().toISOString(),
+    detailedBy: '155 UASU Admin',
+    remarks: remarks.trim() || `Detailed from Nominal Roll (${airman.rank} ${airman.name})`,
+    lastLoginAt: existingIndex >= 0 ? current[existingIndex].lastLoginAt : undefined,
+  };
+
+  if (existingIndex >= 0) {
+    current[existingIndex] = newEntry;
+  } else {
+    current.unshift(newEntry);
+  }
+
+  saveDetailedUsers(current);
+  return newEntry;
+};
+
+/**
+ * Batch detail all airmen from nominal roll
+ */
+export const batchDetailAllAirmen = (airmen: Airman[]): DetailedUserLogin[] => {
+  const current = getDetailedUsers();
+  const updatedList: DetailedUserLogin[] = [...current];
+
+  airmen.forEach((airman) => {
+    const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
+    const idx = updatedList.findIndex((u) => u.bdNo.toLowerCase() === cleanBd.toLowerCase());
+    const isPrimary = cleanBd === '474455';
+
+    const entry: DetailedUserLogin = {
+      id: idx >= 0 ? updatedList[idx].id : `user-login-${cleanBd}`,
+      airmanId: airman.id,
+      bdNo: cleanBd,
+      rank: airman.rank,
+      name: airman.name,
+      flightName: airman.flightName,
+      trade: airman.trade,
+      role: idx >= 0 ? updatedList[idx].role : (isPrimary ? 'ADMIN' : 'USER'),
+      status: idx >= 0 ? updatedList[idx].status : 'ACTIVE',
+      detailOrder: idx >= 0 && updatedList[idx].detailOrder ? updatedList[idx].detailOrder : `DO-155/NR/${cleanBd}`,
+      detailedAt: idx >= 0 ? updatedList[idx].detailedAt : new Date().toISOString(),
+      detailedBy: '155 UASU HQ Batch Detail',
+      remarks: idx >= 0 && updatedList[idx].remarks ? updatedList[idx].remarks : `Detailed from Nominal Roll (${airman.flightName} Flight)`,
+      lastLoginAt: idx >= 0 ? updatedList[idx].lastLoginAt : undefined,
+    };
+
+    if (idx >= 0) {
+      updatedList[idx] = entry;
+    } else {
+      updatedList.push(entry);
+    }
+  });
+
+  saveDetailedUsers(updatedList);
+  return updatedList;
+};
+
+/**
+ * Remove or Revoke login access for a BD number
+ */
+export const removeDetailedUser = (bdNo: string): void => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const filtered = current.filter((u) => u.bdNo.toLowerCase() !== clean);
+  saveDetailedUsers(filtered);
+};
+
+/**
+ * Toggle active / suspended / disabled status
+ */
+export const toggleUserLoginStatus = (bdNo: string, newStatus: UserLoginStatus): DetailedUserLogin | null => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const idx = current.findIndex((u) => u.bdNo.toLowerCase() === clean);
+  if (idx === -1) return null;
+
+  current[idx].status = newStatus;
+  saveDetailedUsers(current);
+  return current[idx];
+};
+
+/**
+ * Validate User Login Attempt
+ */
+export const validateUserLogin = (
+  bdInput: string,
+  nominalAirmen: Airman[]
+): { success: boolean; airman?: Airman; detailedUser?: DetailedUserLogin; message: string } => {
+  const cleanInput = bdInput.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
+  if (!cleanInput) {
+    return { success: false, message: 'Please enter your BD Number to continue.' };
+  }
+
+  // 1. Check detailed users register first
+  const detailedList = getDetailedUsers(nominalAirmen);
+  const matchedDetail = detailedList.find((u) => u.bdNo.toLowerCase() === cleanInput);
+
+  if (matchedDetail) {
+    if (matchedDetail.status === 'DISABLED') {
+      return {
+        success: false,
+        message: `Login Access for BD/${matchedDetail.bdNo} (${matchedDetail.rank} ${matchedDetail.name}) is DISABLED by Unit Administrator.`,
+      };
+    }
+    if (matchedDetail.status === 'SUSPENDED') {
+      return {
+        success: false,
+        message: `Login Access for BD/${matchedDetail.bdNo} is temporarily SUSPENDED. Please contact 155 UASU Admin.`,
+      };
+    }
+
+    // Find corresponding airman or construct one
+    let airman = nominalAirmen.find(
+      (a) => a.bdNo.trim().replace(/^BD\/?/i, '').toLowerCase() === cleanInput || a.id === matchedDetail.airmanId
+    );
+
+    if (!airman) {
+      airman = {
+        id: matchedDetail.airmanId || `airman-${matchedDetail.bdNo}`,
+        serNo: 99,
+        code: `${matchedDetail.rank}-${matchedDetail.name.slice(0, 3).toUpperCase()}`,
+        bdNo: `BD/${matchedDetail.bdNo}`,
+        rank: matchedDetail.rank as any,
+        name: matchedDetail.name,
+        trade: matchedDetail.trade || 'General',
+        addressBlock: '155 UASU',
+        mobileNo: '',
+        flightName: (matchedDetail.flightName as any) || 'Admin',
+        remarks: matchedDetail.remarks || '',
+        active: true,
+      };
+    }
+
+    // Update lastLoginAt
+    matchedDetail.lastLoginAt = new Date().toISOString();
+    saveDetailedUsers(detailedList);
+
+    return {
+      success: true,
+      airman,
+      detailedUser: matchedDetail,
+      message: `Access granted for ${matchedDetail.rank} ${matchedDetail.name}`,
+    };
+  }
+
+  // 2. If not explicitly in detailed list, check nominal roll
+  const matchedAirman = nominalAirmen.find((a) => {
+    const airmanBd = a.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
+    return airmanBd === cleanInput;
+  });
+
+  if (matchedAirman) {
+    // Auto-detail this airman and allow login
+    const isPrimary = cleanInput === '474455';
+    const newDetail = detailAirmanForLogin(
+      matchedAirman,
+      isPrimary ? 'ADMIN' : 'USER',
+      'ACTIVE',
+      `DO-155/AUTO/${matchedAirman.bdNo}`,
+      'Automatic Detail on Nominal Match'
+    );
+
+    return {
+      success: true,
+      airman: matchedAirman,
+      detailedUser: newDetail,
+      message: `Welcome, ${matchedAirman.rank} ${matchedAirman.name}`,
+    };
+  }
+
+  return {
+    success: false,
+    message: `BD/${cleanInput.toUpperCase()} is not detailed or registered in 155 UASU Nominal Roll. Access restricted to authorized unit personnel.`,
+  };
+};
+
+/**
  * Record a user login and save session
  */
-export const setUserSession = (airman: Airman): UserSession => {
+export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'USER'): UserSession => {
+  const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
   const session: UserSession = {
     airmanId: airman.id,
-    bdNo: airman.bdNo.replace(/^BD\/?/i, '').trim(),
+    bdNo: cleanBd,
     rank: airman.rank,
     name: airman.name,
     flightName: airman.flightName,
     trade: airman.trade,
     loginTimestamp: new Date().toISOString(),
+    assignedRole: cleanBd === '474455' ? 'ADMIN' : assignedRole,
   };
 
   try {
@@ -248,4 +531,5 @@ export const clearLoginHistory = async (): Promise<void> => {
 if (typeof window !== 'undefined') {
   fetchLoginHistoryFromSupabase().catch(() => {});
 }
+
 

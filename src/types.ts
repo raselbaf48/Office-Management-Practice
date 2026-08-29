@@ -238,3 +238,24 @@ export interface ImportHistoryBatch {
   }>;
 }
 
+export type UserLoginRole = 'USER' | 'ADMIN' | 'DUTY_NCO' | 'FLIGHT_IC';
+export type UserLoginStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
+
+export interface DetailedUserLogin {
+  id: string;
+  airmanId?: string;
+  bdNo: string;
+  rank: string;
+  name: string;
+  flightName: FlightName | string;
+  trade: string;
+  role: UserLoginRole;
+  status: UserLoginStatus;
+  detailOrder?: string;
+  detailedAt: string;
+  detailedBy: string;
+  remarks?: string;
+  lastLoginAt?: string;
+}
+
+

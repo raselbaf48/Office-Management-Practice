@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
-import { Shield, Lock, ArrowRight, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
-import { setUserSession } from '../utils/authSession';
+import { Shield, Lock, ArrowRight, AlertCircle, CheckCircle2, KeyRound, Sparkles, UserCheck } from 'lucide-react';
+import { setUserSession, validateUserLogin } from '../utils/authSession';
 
 interface UserLoginGateProps {
   airmen: Airman[];
@@ -10,16 +10,14 @@ interface UserLoginGateProps {
 }
 
 export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenticated }) => {
-  const [bdInput, setBdInput] = useState<string>('');
+  const [bdInput, setBdInput] = useState<string>('474455');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const performLogin = (inputBd: string) => {
     setErrorMsg('');
-
-    const cleanInput = bdInput.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '');
+    const cleanInput = inputBd.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '');
     if (!cleanInput) {
       setErrorMsg('Please enter your BD Number to continue.');
       return;
@@ -27,23 +25,26 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
 
     setIsLoading(true);
 
-    // Look for matching airman in nominal roll
-    const matched = airmen.find((a) => {
-      const airmanBd = a.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '');
-      return airmanBd.toLowerCase() === cleanInput.toLowerCase();
-    });
+    const validation = validateUserLogin(cleanInput, airmen);
 
-    if (matched) {
-      setSuccessAirman(matched);
-      setUserSession(matched);
+    if (validation.success && validation.airman) {
+      const airman = validation.airman;
+      setSuccessAirman(airman);
+      const role = validation.detailedUser?.role || (cleanInput === '474455' ? 'ADMIN' : 'USER');
+      setUserSession(airman, role);
       setTimeout(() => {
         setIsLoading(false);
         onAuthenticated();
-      }, 600);
+      }, 500);
     } else {
       setIsLoading(false);
-      setErrorMsg(`BD/${cleanInput} is not found in the 155 UASU Nominal Roll. Access is strictly restricted to unit personnel.`);
+      setErrorMsg(validation.message || `BD/${cleanInput} is not authorized for login access.`);
     }
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    performLogin(bdInput);
   };
 
   return (
@@ -73,19 +74,49 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
         </div>
 
         {/* Info card */}
-        <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-3.5 text-left text-xs space-y-1">
-          <div className="flex items-center space-x-2 font-bold text-slate-200">
-            <Lock className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Restricted Military Portal</span>
+        <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-3.5 text-left text-xs space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 font-bold text-slate-200">
+              <Lock className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Restricted Military Portal</span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/50">
+              1st Login: 474455
+            </span>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Please enter your registered <strong>BD Number</strong> as User ID to verify authorization and log in.
+            Enter your detailed <strong>BD Number</strong> to verify unit authorization and enter the system.
           </p>
+        </div>
+
+        {/* Primary 1-Click Quick Access Chip */}
+        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3 text-left flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-emerald-400">1st Login User ID</div>
+              <div className="text-xs font-black text-white">BD/474455 • LAC Rasel</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setBdInput('474455');
+              performLogin('474455');
+            }}
+            disabled={isLoading || !!successAirman}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center space-x-1 shrink-0"
+          >
+            <span>Quick Login</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="p-3.5 bg-red-950/60 border border-red-800/80 rounded-2xl flex items-start space-x-2.5 text-left text-xs text-red-200">
+          <div className="p-3.5 bg-red-950/60 border border-red-800/80 rounded-2xl flex items-start space-x-2.5 text-left text-xs text-red-200 animate-fadeIn">
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
@@ -93,7 +124,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
 
         {/* Success Alert */}
         {successAirman && (
-          <div className="p-3.5 bg-emerald-950/60 border border-emerald-800/80 rounded-2xl flex items-center space-x-2.5 text-left text-xs text-emerald-200">
+          <div className="p-3.5 bg-emerald-950/60 border border-emerald-800/80 rounded-2xl flex items-center space-x-2.5 text-left text-xs text-emerald-200 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
               Welcome, <strong>{successAirman.rank} {successAirman.name}</strong> ({successAirman.flightName} Flight)!
@@ -119,12 +150,12 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
                   setBdInput(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
-                placeholder="e.g. 512345"
-                className="w-full bg-slate-800/80 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-white placeholder-slate-500 outline-none transition-all"
+                placeholder="474455"
+                className="w-full bg-slate-800/80 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-12 pr-4 py-3 text-sm font-mono font-bold text-white placeholder-slate-500 outline-none transition-all"
               />
             </div>
             <p className="text-[10.5px] text-slate-500">
-              Enter any BD number registered in the 155 UASU Nominal Roll.
+              Enter any BD number detailed or registered in 155 UASU Nominal Roll.
             </p>
           </div>
 
@@ -147,7 +178,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
         {/* Security Notice */}
         <div className="pt-2 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-center space-x-1.5">
           <KeyRound className="w-3 h-3 text-slate-400" />
-          <span>All logins are monitored & logged in Unit Access History</span>
+          <span>All logins are detailed & monitored in Unit Security Logs</span>
         </div>
       </div>
     </div>

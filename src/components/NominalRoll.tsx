@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Airman, FlightName, Rank, UserRole } from '../types';
-import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload, KeyRound, UserCheck } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { exportNominalRollDocx } from '../utils/docxExport';
 import { BulkImportAirmenModal } from './BulkImportAirmenModal';
+import { UserLoginDetailModal } from './UserLoginDetailModal';
 
 interface NominalRollProps {
   airmen: Airman[];
@@ -32,6 +33,8 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isLoginDetailOpen, setIsLoginDetailOpen] = useState(false);
+  const [selectedAirmanForDetail, setSelectedAirmanForDetail] = useState<Airman | null>(null);
 
   const [airmanToDelete, setAirmanToDelete] = useState<Airman | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -129,6 +132,18 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
 
           {role === 'ADMIN' ? (
             <>
+              <button
+                onClick={() => {
+                  setSelectedAirmanForDetail(null);
+                  setIsLoginDetailOpen(true);
+                }}
+                className="flex items-center space-x-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-black text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
+                title="Manage User Login Access & Detail Nominal Roll Airmen"
+              >
+                <KeyRound className="w-4 h-4 text-emerald-400" />
+                <span>User Login Access</span>
+              </button>
+
               <button
                 onClick={handleSync}
                 disabled={syncing}
@@ -302,6 +317,17 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                       {role === 'ADMIN' && (
                         <>
                           <button
+                            onClick={() => {
+                              setSelectedAirmanForDetail(airman);
+                              setIsLoginDetailOpen(true);
+                            }}
+                            className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg text-slate-500 hover:text-emerald-500 transition-colors"
+                            title="Detail / Manage Login Access for this Airman"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+
+                          <button
                             onClick={() => onEditAirman(airman)}
                             className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
                             title="Edit Airman Details"
@@ -406,6 +432,21 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         onClose={() => setIsBulkImportOpen(false)}
         existingAirmen={airmen}
         onImportComplete={() => {
+          onRefresh();
+          window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        }}
+      />
+
+      {/* User Login Detail & Access Management Modal */}
+      <UserLoginDetailModal
+        isOpen={isLoginDetailOpen}
+        onClose={() => {
+          setIsLoginDetailOpen(false);
+          setSelectedAirmanForDetail(null);
+        }}
+        nominalAirmen={airmen}
+        selectedAirmanForDetail={selectedAirmanForDetail}
+        onUserDetailed={() => {
           onRefresh();
           window.dispatchEvent(new CustomEvent('baf_state_updated'));
         }}

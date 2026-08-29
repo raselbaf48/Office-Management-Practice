@@ -153,7 +153,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {dayName}, {selectedDate} • Unit Strength: {data?.summary.totalStrength || 48} Airmen
+            {dayName}, {selectedDate} • Unit Strength: {data?.summary?.totalStrength || 48} Airmen
           </p>
         </div>
 
@@ -258,7 +258,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           </div>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-2xl font-black text-slate-900 dark:text-slate-100">
-              {data?.personnelStatusList?.length || data?.summary.totalStrength || 0}
+              {data?.personnelStatusList?.length || data?.summary?.totalStrength || 0}
             </span>
             <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 flex items-center space-x-0.5">
               <span>View</span>
@@ -486,7 +486,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           onRefreshParadeData={fetchParadeData}
-          airmen={airmen || data?.personnelStatusList.map((p) => p.airman) || []}
+          airmen={airmen || data?.personnelStatusList?.map((p) => p.airman) || []}
         />
       )}
 
@@ -702,7 +702,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
       {/* Entry History & Undo Modal */}
       {showHistoryModal && (
         <EntryHistoryModal
-          airmen={data?.personnelStatusList.map((p) => p.airman) || []}
+          airmen={data?.personnelStatusList?.map((p) => p.airman) || []}
           onClose={() => setShowHistoryModal(false)}
           onRefreshData={() => {
             fetchParadeData();

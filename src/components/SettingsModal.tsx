@@ -26,8 +26,8 @@ import {
   Laptop
 } from 'lucide-react';
 import { Logo155UASU } from './Logo155UASU';
-import { UserRole, ThemePreference } from '../types';
-import { getLoginHistory, clearLoginHistory, UserLoginLog } from '../utils/authSession';
+import { UserRole, ThemePreference, DetailedUserLogin, UserLoginStatus } from '../types';
+import { getLoginHistory, clearLoginHistory, UserLoginLog, getDetailedUsers, toggleUserLoginStatus, saveDetailedUsers } from '../utils/authSession';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ interface SettingsModalProps {
   onRosterUpdated?: () => void;
 }
 
-type SettingSection = 'appearance' | 'logo' | 'security' | 'database' | 'history';
+type SettingSection = 'appearance' | 'logo' | 'users' | 'security' | 'database' | 'history';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -69,6 +69,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [loginHistory, setLoginHistory] = useState<UserLoginLog[]>([]);
   const [historySearch, setHistorySearch] = useState<string>('');
 
+  // Detailed Users State
+  const [detailedUsersList, setDetailedUsersList] = useState<DetailedUserLogin[]>([]);
+  const [userSearch, setUserSearch] = useState<string>('');
+
   // Database Backup State
   const [restoreStatus, setRestoreStatus] = useState<string>('');
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
@@ -84,6 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setRestoreStatus('');
       setCustomLogo(localStorage.getItem('baf_custom_logo'));
       setLoginHistory(getLoginHistory());
+      setDetailedUsersList(getDetailedUsers());
     }
   }, [isOpen]);
 
@@ -261,6 +266,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       subtitle: 'Upload custom squadron crest or restore official BAF logo',
       icon: <ImageIcon className="w-5 h-5" />,
       badge: customLogo ? 'Custom' : 'Default'
+    },
+    {
+      id: 'users',
+      title: 'User Login Access & Details',
+      subtitle: 'Manage authorized BD numbers, access status (Active/Suspended), and 1st Login ID (474455)',
+      icon: <ShieldCheck className="w-5 h-5" />,
+      badge: `${detailedUsersList.length} Users`
     },
     {
       id: 'security',
@@ -506,6 +518,130 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               )}
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* USER LOGIN ACCESS & DETAILS */}
+                    {item.id === 'users' && (
+                      <div className="space-y-4">
+                        {/* Primary Admin Notice */}
+                        <div className="p-3.5 bg-linear-to-r from-emerald-900/30 via-slate-900/50 to-teal-900/30 rounded-2xl border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                              <ShieldCheck className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-emerald-400">1st Default Login: BD/474455</div>
+                              <div className="text-[11px] text-slate-300 font-semibold">LAC Rasel (Avionics Flight) • Master Admin Account</div>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Primary Active
+                          </span>
+                        </div>
+
+                        {/* Search & Stats Bar */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={userSearch}
+                              onChange={(e) => setUserSearch(e.target.value)}
+                              placeholder="Search detailed BD No, rank, name, flight..."
+                              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-slate-900 dark:text-white"
+                            />
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[11px] font-bold text-slate-500">
+                              {detailedUsersList.filter(u => u.status === 'ACTIVE').length} Active / {detailedUsersList.length} Total
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setDetailedUsersList(getDetailedUsers())}
+                              className="p-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors flex items-center space-x-1 cursor-pointer"
+                              title="Refresh list"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Detailed Users Table */}
+                        <div className="max-h-64 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-100 dark:bg-slate-800/80 sticky top-0 z-10 text-slate-600 dark:text-slate-300 font-bold">
+                              <tr>
+                                <th className="py-2 px-3">BD / User ID</th>
+                                <th className="py-2 px-3">Airman</th>
+                                <th className="py-2 px-3">Flight</th>
+                                <th className="py-2 px-3">Role</th>
+                                <th className="py-2 px-3 text-center">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900/60">
+                              {detailedUsersList
+                                .filter((u) => {
+                                  if (!userSearch) return true;
+                                  const q = userSearch.toLowerCase();
+                                  return (
+                                    u.bdNo.toLowerCase().includes(q) ||
+                                    u.name.toLowerCase().includes(q) ||
+                                    u.rank.toLowerCase().includes(q) ||
+                                    (u.flightName && u.flightName.toLowerCase().includes(q))
+                                  );
+                                })
+                                .map((u) => (
+                                  <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                    <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                                      BD/{u.bdNo}
+                                      {u.bdNo === '474455' && (
+                                        <span className="ml-1.5 px-1 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold">
+                                          1st Login
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 font-bold text-slate-800 dark:text-slate-200">
+                                      {u.rank} {u.name}
+                                    </td>
+                                    <td className="py-2 px-3 text-slate-500">
+                                      {u.flightName}
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
+                                        u.role === 'ADMIN'
+                                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                      }`}>
+                                        {u.role}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const next: UserLoginStatus = u.status === 'ACTIVE' ? 'SUSPENDED' : u.status === 'SUSPENDED' ? 'DISABLED' : 'ACTIVE';
+                                          toggleUserLoginStatus(u.bdNo, next);
+                                          setDetailedUsersList(getDetailedUsers());
+                                        }}
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-black cursor-pointer ${
+                                          u.status === 'ACTIVE'
+                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                            : u.status === 'SUSPENDED'
+                                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                        }`}
+                                        title="Click to toggle status"
+                                      >
+                                        {u.status}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     )}
