@@ -1,10 +1,11 @@
 {
+  "framework": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon.ico|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
