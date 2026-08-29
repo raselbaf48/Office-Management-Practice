@@ -52,8 +52,11 @@ class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState>
               !
             </div>
             <h2 className="text-xl font-bold tracking-wide">155 UASU BAF Application</h2>
-            <p className="text-sm text-slate-400">
-              {this.state.error?.message || 'An unexpected error occurred during rendering. You can reload the application or reset local cache.'}
+            <div className="text-left bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs font-mono text-rose-300 max-h-36 overflow-y-auto break-all">
+              {this.state.error?.stack || this.state.error?.message || 'Unknown render exception'}
+            </div>
+            <p className="text-xs text-slate-400">
+              You can reload the application or reset local cache to restore standard operations.
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <button
