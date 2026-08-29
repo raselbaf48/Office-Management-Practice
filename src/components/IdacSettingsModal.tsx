@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Edit2, Check, AlertTriangle, Phone, CheckCircle2, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Plus, Trash2, Edit2, Check, AlertTriangle, Phone, CheckCircle2, RotateCcw, UserPlus, Users, Search, MessageSquare } from 'lucide-react';
 import {
   IdacResponsibility,
   IdacEmergencyContact,
@@ -8,13 +8,15 @@ import {
   getIdacEmergencyContacts,
   saveIdacEmergencyContacts,
 } from '../data/idacSettings';
+import { Airman } from '../types';
 
 interface IdacSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  airmen?: Airman[];
 }
 
-export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, onClose }) => {
+export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, onClose, airmen = [] }) => {
   const [activeTab, setActiveTab] = useState<'RESPONSIBILITIES' | 'CONTACTS'>('RESPONSIBILITIES');
 
   // Responsibilities state
@@ -32,6 +34,10 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [editContactData, setEditContactData] = useState<Partial<IdacEmergencyContact>>({});
 
+  // Nominal Roll Selector state
+  const [nominalSearch, setNominalSearch] = useState<string>('');
+  const [showNominalPicker, setShowNominalPicker] = useState<boolean>(false);
+
   const [toastMsg, setToastMsg] = useState<string>('');
 
   useEffect(() => {
@@ -42,6 +48,8 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
       setEditingRespId(null);
       setEditingContactId(null);
       setToastMsg('');
+      setNominalSearch('');
+      setShowNominalPicker(false);
     }
   }, [isOpen]);
 
@@ -107,6 +115,22 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
     showToast('Emergency contact added.');
   };
 
+  const handleSelectAirmanFromNominal = (airman: Airman) => {
+    const phone = airman.mobileNo?.trim() || '';
+    const newContact: IdacEmergencyContact = {
+      id: Date.now().toString(),
+      name: `${airman.rank} ${airman.name}`,
+      rankDesignation: `${airman.rank} (${airman.flightName} Flt)`,
+      phone: phone || '01XXXXXXXXX',
+      whatsappPhone: phone || '01XXXXXXXXX',
+    };
+    const updated = [...contacts, newContact];
+    setContacts(updated);
+    saveIdacEmergencyContacts(updated);
+    setShowNominalPicker(false);
+    showToast(`Added ${airman.rank} ${airman.name} to Emergency Contacts.`);
+  };
+
   const handleDeleteContact = (id: string) => {
     const updated = contacts.filter((c) => c.id !== id);
     setContacts(updated);
@@ -132,6 +156,21 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
     setEditingContactId(null);
     showToast('Emergency contact updated.');
   };
+
+  // Filtered Nominal Roll airmen
+  const filteredNominalAirmen = useMemo(() => {
+    if (!airmen || airmen.length === 0) return [];
+    if (!nominalSearch.trim()) return airmen;
+    const q = nominalSearch.toLowerCase();
+    return airmen.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        a.rank.toLowerCase().includes(q) ||
+        a.bdNo.toLowerCase().includes(q) ||
+        a.flightName.toLowerCase().includes(q) ||
+        (a.mobileNo && a.mobileNo.includes(q))
+    );
+  }, [airmen, nominalSearch]);
 
   if (!isOpen) return null;
 
@@ -160,37 +199,36 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
         <div className="px-6 pt-4 border-b border-slate-200 dark:border-slate-800 flex items-center space-x-3 text-xs font-bold">
           <button
             onClick={() => setActiveTab('RESPONSIBILITIES')}
-            className={`pb-3 flex items-center space-x-2 border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
               activeTab === 'RESPONSIBILITIES'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
             }`}
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Duty Responsibilities ({responsibilities.length})</span>
+            Duty Responsibilities ({responsibilities.length})
           </button>
           <button
             onClick={() => setActiveTab('CONTACTS')}
-            className={`pb-3 flex items-center space-x-2 border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
               activeTab === 'CONTACTS'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
             }`}
           >
-            <Phone className="w-4 h-4" />
-            <span>Emergency Contacts ({contacts.length})</span>
+            Emergency Contacts ({contacts.length})
           </button>
         </div>
 
-        {/* Toast Alert */}
+        {/* Toast Banner */}
         {toastMsg && (
-          <div className="mx-6 mt-3 p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-xl text-center">
-            {toastMsg}
+          <div className="mx-6 mt-3 px-3 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{toastMsg}</span>
           </div>
         )}
 
-        {/* Content Area */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-6">
+        {/* Content Body */}
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
           {activeTab === 'RESPONSIBILITIES' ? (
             <div className="space-y-4">
               {/* Add form */}
@@ -218,7 +256,7 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                     No duty responsibilities configured.
                   </div>
                 ) : (
-                  responsibilities.map((r, idx) => (
+                  responsibilities.map((r) => (
                     <div
                       key={r.id}
                       className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl flex items-start justify-between gap-3 text-xs"
@@ -282,10 +320,79 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Add contact form */}
+              {/* Nominal Roll Pick Option */}
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                    <span>Add from Nominal Roll</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowNominalPicker(!showNominalPicker)}
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>{showNominalPicker ? 'Hide List' : 'Browse Nominal Roll'}</span>
+                  </button>
+                </div>
+
+                {showNominalPicker && (
+                  <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-900/50 animate-fadeIn">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={nominalSearch}
+                        onChange={(e) => setNominalSearch(e.target.value)}
+                        placeholder="Search airman by name, rank, BD no, or phone..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                      {filteredNominalAirmen.length === 0 ? (
+                        <div className="text-center py-4 text-xs text-slate-400">
+                          No matching airmen found in Nominal Roll.
+                        </div>
+                      ) : (
+                        filteredNominalAirmen.slice(0, 30).map((a) => (
+                          <div
+                            key={a.id}
+                            className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-xs hover:border-emerald-400 transition-colors"
+                          >
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-1.5">
+                                <span>{a.rank} {a.name}</span>
+                                <span className="text-[10px] font-normal px-1.5 py-0.2 bg-slate-100 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300">
+                                  {a.flightName}
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                                {a.mobileNo ? `📞 ${a.mobileNo}` : 'No phone registered'}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSelectAirmanFromNominal(a)}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center space-x-1 cursor-pointer shrink-0 shadow-2xs"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add</span>
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Add contact form */}
               <form onSubmit={handleAddContact} className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-3">
                 <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Add New Emergency Contact
+                  Or Add Custom Contact
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <input
@@ -313,7 +420,7 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                     type="text"
                     value={newContactWhatsapp}
                     onChange={(e) => setNewContactWhatsapp(e.target.value)}
-                    placeholder="WhatsApp Number (if different)"
+                    placeholder="Chat / Direct Number (if different)"
                     className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-semibold text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -328,8 +435,12 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                 </div>
               </form>
 
-              {/* Contacts list */}
+              {/* Contacts list with Add/Remove */}
               <div className="space-y-2.5">
+                <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Current Emergency Contacts ({contacts.length})
+                </div>
+
                 {contacts.length === 0 ? (
                   <div className="text-center py-8 text-xs text-slate-400">
                     No emergency contacts configured.
@@ -386,8 +497,8 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                                 </span>
                               )}
                             </div>
-                            <div className="font-mono text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
-                              📞 {c.phone}
+                            <div className="font-mono text-slate-500 dark:text-slate-400 font-semibold mt-0.5 flex items-center space-x-2">
+                              <span>📞 {c.phone}</span>
                             </div>
                           </div>
                           <div className="flex items-center space-x-1">
@@ -406,7 +517,7 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                               type="button"
                               onClick={() => handleDeleteContact(c.id)}
                               className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 cursor-pointer"
-                              title="Delete"
+                              title="Remove Contact"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -434,3 +545,4 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
     </div>
   );
 };
+

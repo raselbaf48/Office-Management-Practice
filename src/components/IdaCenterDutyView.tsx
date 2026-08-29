@@ -25,7 +25,7 @@ import {
   IdacEmergencyContact,
 } from '../data/idacSettings';
 import { IdacSettingsModal } from './IdacSettingsModal';
-import { IdacDutyAssignModal } from './IdacDutyAssignModal';
+import { AssignDutyModal } from './AssignDutyModal';
 import { getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
 import { exportIdacRosterDocx, IdacRosterRow } from '../utils/docxExport';
 
@@ -67,6 +67,11 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
   // Responsibilities & Emergency Contacts
   const [responsibilities, setResponsibilities] = useState<IdacResponsibility[]>(getIdacResponsibilities);
   const [emergencyContacts, setEmergencyContacts] = useState<IdacEmergencyContact[]>(getIdacEmergencyContacts);
+
+  const fetchSettings = () => {
+    setResponsibilities(getIdacResponsibilities());
+    setEmergencyContacts(getIdacEmergencyContacts());
+  };
 
   // IDAC Duty Roster Period Filter States
   const getDutyWeekRange = (refDateStr: string, offsetWeeks: number = 0) => {
@@ -572,11 +577,10 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                       href={getWhatsAppLink(currentlyOnDutyItem.airman)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all flex items-center space-x-2 cursor-pointer shadow-lg shadow-emerald-950/40"
-                      title="Direct WhatsApp Message to On-Duty Personnel"
+                      className="w-10 h-10 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                      title="Direct Chat"
                     >
-                      <MessageCircle className="w-4 h-4 fill-slate-950" />
-                      <span>Message WhatsApp</span>
+                      <MessageCircle className="w-5 h-5 fill-slate-950 text-slate-950" />
                     </a>
                   </div>
                 </div>
@@ -635,11 +639,10 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                       href={getWhatsAppLink(nextActiveShift.airman)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all flex items-center space-x-2 cursor-pointer shadow-lg shadow-emerald-950/40"
-                      title="Direct WhatsApp Message"
+                      className="w-10 h-10 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                      title="Direct Chat"
                     >
-                      <MessageCircle className="w-4 h-4 fill-slate-950" />
-                      <span>Message WhatsApp</span>
+                      <MessageCircle className="w-5 h-5 fill-slate-950 text-slate-950" />
                     </a>
                   </div>
                 </div>
@@ -683,7 +686,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                     <th className="py-3 px-6">SHIFT</th>
                     <th className="py-3 px-6">DUTY PERSONNEL / FLIGHT</th>
                     <th className="py-3 px-6">HOURS</th>
-                    <th className="py-3 px-6 text-right">WHATSAPP</th>
+                    <th className="py-3 px-6 text-right">CONTACT</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -764,11 +767,10 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                               href={getWhatsAppLink(item.airman)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all border border-emerald-200 dark:border-emerald-800 cursor-pointer"
-                              title="Chat on WhatsApp"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-2xs cursor-pointer"
+                              title="Direct Chat"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
-                              <span>WhatsApp</span>
+                              <MessageCircle className="w-4 h-4" />
                             </a>
                           ) : (
                             <span className="text-slate-400 text-[11px] italic">-</span>
@@ -973,16 +975,21 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
       {/* IDAC Settings Modal */}
       <IdacSettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          fetchSettings();
+        }}
+        airmen={airmen}
       />
 
-      {/* IDAC Duty Assign & Ratio Auto-Schedule Modal */}
-      <IdacDutyAssignModal
+      {/* IDAC Duty Assign Modal (Synchronized with Dashboard Assignment System) */}
+      <AssignDutyModal
         isOpen={isAssignOpen}
         onClose={() => setIsAssignOpen(false)}
         airmen={airmen}
         selectedDate={selectedDate}
-        onAssignSuccess={() => {
+        onlyIdac={true}
+        onDutyAssigned={() => {
           fetchIdaSchedule();
           fetchRosterAssignments();
         }}

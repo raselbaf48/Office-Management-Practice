@@ -39,6 +39,8 @@ interface AssignDutyModalProps {
   onRefreshParadeData?: () => void;
   airmen: Airman[];
   initialFlight?: FlightName | 'All';
+  initialDutyCode?: DutyCategoryCode;
+  onlyIdac?: boolean;
   onSuccess?: () => void;
 }
 
@@ -50,6 +52,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   onRefreshParadeData,
   airmen,
   initialFlight = 'All',
+  initialDutyCode,
+  onlyIdac = false,
   onSuccess,
 }) => {
   // Date Mode: Single Date vs Multi-Date Range
@@ -58,7 +62,9 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const [toDate, setToDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
 
   // Active duty & flight filters
-  const [activeDutyCode, setActiveDutyCode] = useState<DutyCategoryCode>('GD');
+  const [activeDutyCode, setActiveDutyCode] = useState<DutyCategoryCode>(
+    onlyIdac ? 'IDAC' : (initialDutyCode || 'GD')
+  );
   const [activeFlight, setActiveFlight] = useState<FlightName | 'All'>(initialFlight);
   const [activeIdaShift, setActiveIdaShift] = useState<IDAShift>('Morning');
   const [activeLeaveType, setActiveLeaveType] = useState<'Casual' | 'Annual' | 'Recreation'>('Casual');
@@ -76,13 +82,20 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const [processingAirmanId, setProcessingAirmanId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string>('');
 
-  // Update dates when selectedDate prop changes
+  // Update dates & duty code when isOpen changes
   useEffect(() => {
-    if (isOpen && selectedDate) {
-      setFromDate(selectedDate);
-      setToDate(selectedDate);
+    if (isOpen) {
+      if (selectedDate) {
+        setFromDate(selectedDate);
+        setToDate(selectedDate);
+      }
+      if (onlyIdac) {
+        setActiveDutyCode('IDAC');
+      } else if (initialDutyCode) {
+        setActiveDutyCode(initialDutyCode);
+      }
     }
-  }, [isOpen, selectedDate]);
+  }, [isOpen, selectedDate, onlyIdac, initialDutyCode]);
 
   // Dynamically compute available IDAC shifts based on ratio matrix for fromDate and activeFlight
   const availableIdaShifts = useMemo(() => {
@@ -96,13 +109,6 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       setActiveIdaShift(availableIdaShifts[0]);
     }
   }, [availableIdaShifts, activeIdaShift]);
-
-  // IDAC duty does not use 'All' flight (only individual 4 flights)
-  useEffect(() => {
-    if ((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && activeFlight === 'All') {
-      setActiveFlight('Avionics');
-    }
-  }, [activeDutyCode, activeFlight]);
 
   // Map of airman ID to Airman object for fast lookup
   const airmanMap = useMemo(() => {
@@ -541,20 +547,26 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3 shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-md">
+            <div className={`p-2 rounded-xl text-white shadow-md ${onlyIdac ? 'bg-teal-600' : 'bg-emerald-600'}`}>
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
-                  Direct Duty Assignment
+                  {onlyIdac ? 'IDA Center Duty Assignment' : 'Direct Duty Assignment'}
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${
+                  onlyIdac 
+                    ? 'bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                    : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                }`}>
                   Instant Auto-Save
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Click any airman to assign directly. Previous duty is automatically replaced.
+                {onlyIdac
+                  ? 'Click IDAC shift and airman below to assign directly. Synchronized with Dashboard & Matrix.'
+                  : 'Click any airman to assign directly. Previous duty is automatically replaced.'}
               </p>
             </div>
           </div>
@@ -642,187 +654,192 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Compact Duty Category Grid */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  1. Choose Duty
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  (Click duty, then click airman below to assign)
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setFilterByRatio(!filterByRatio)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center space-x-1 cursor-pointer"
-                >
-                  {filterByRatio ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                  <span>{filterByRatio ? 'Ratio Duties' : 'Show All'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowRatioModal(true)}
-                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center space-x-1 cursor-pointer"
-                  title="Configure Official Ratios"
-                >
-                  <Sliders className="w-3 h-3" />
-                  <span>Ratios</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Duty Category Cards with Detailed Airmen List - Compact, balanced height & width */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-              {(() => {
-                const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
-                const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code) > 0);
-                const dutiesToRender = filterByRatio && ratioFiltered.length > 0 ? ratioFiltered : allDuties;
-
-                return dutiesToRender.map((dt) => {
-                  const isSelected = activeDutyCode === dt.code;
-                  const reqQuota = getRequiredCountForDuty(dt.code);
-                  const assignedList = getAssignedAirmenForDuty(dt.code);
-
-                  return (
-                    <div
-                      key={dt.code}
-                      onClick={() => setActiveDutyCode(dt.code)}
-                      className={`p-2 rounded-xl border text-left transition-all relative flex flex-col justify-start cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/30'
-                          : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 hover:border-emerald-400 hover:shadow-xs'
-                      }`}
-                    >
-                      {/* Header: Duty Name & Ratio Badge (e.g. 3/3) */}
-                      <div className="flex items-center justify-between gap-1 border-b border-slate-100 dark:border-slate-700/60 pb-1.5 mb-1.5">
-                        <span className={`text-[11px] font-black truncate leading-tight ${isSelected ? 'text-emerald-950 dark:text-emerald-100' : 'text-slate-900 dark:text-slate-100'}`}>
-                          {dt.name}
-                        </span>
-                        <div className="shrink-0">
-                          {reqQuota > 0 ? (
-                            <span
-                              className={`text-[9.5px] font-black px-1.5 py-0.2 rounded-full ${
-                                assignedList.length === reqQuota
-                                  ? 'bg-emerald-600 text-white shadow-2xs'
-                                  : assignedList.length > reqQuota
-                                  ? 'bg-rose-600 text-white'
-                                  : assignedList.length > 0
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                              }`}
-                            >
-                              {assignedList.length}/{reqQuota}
-                            </span>
-                          ) : (
-                            <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                              {assignedList.length}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Detailed Airmen List - Compact without extra X button */}
-                      <div className="space-y-1">
-                        {assignedList.length === 0 ? (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 italic py-0.5">
-                            — None
-                          </p>
-                        ) : (
-                          assignedList.map((item, idx) => (
-                            <div
-                              key={`${item.airman.id}-${item.assignment.dutyCode}-${item.assignment.idaShift || ''}-${idx}`}
-                              className="text-[10.5px] leading-tight font-semibold text-slate-800 dark:text-slate-200 truncate bg-slate-50/80 dark:bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-700/50"
-                              title={`${item.airman.rank} ${item.airman.name}`}
-                            >
-                              <span className="text-slate-400 dark:text-slate-500 font-bold mr-1">{idx + 1}.</span>
-                              {item.airman.rank} {item.airman.name}
-                              {(item.assignment.dutyCode === 'IDAC' || item.assignment.dutyCode === 'IDA') && item.assignment.idaShift && (
-                                <span className="ml-1 text-[9.5px] text-teal-600 dark:text-teal-400 font-bold">
-                                  ({item.assignment.idaShift[0]})
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-
-            {/* IDAC Dynamic Shift Picker (Shows detailed airmen for each shift) */}
-            {(activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && (
-              <div className="p-2.5 bg-teal-50/70 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-800 space-y-1.5 animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-black text-teal-950 dark:text-teal-100 flex items-center space-x-1.5">
-                    <Clock className="w-3.5 h-3.5 text-teal-600" />
-                    <span>Select IDAC Shift (Auto-filtered by Duty Ratio):</span>
-                  </label>
-                  <span className="text-xs text-teal-700 dark:text-teal-300 font-bold">
-                    {activeFlight !== 'All' ? `${activeFlight} Flight` : 'All Flights'}
+          {/* 2. Duty Category or IDAC Shift Selection */}
+          {!onlyIdac && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    1. Choose Duty
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    (Click duty, then click airman below to assign)
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {availableIdaShifts.map((s) => {
-                    const shiftQuota = getRequiredCountForDuty('IDAC', s);
-                    const shiftAssigned = getAssignedAirmenForDuty('IDAC', s);
-                    const isShiftSelected = activeIdaShift === s;
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setFilterByRatio(!filterByRatio)}
+                    className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center space-x-1 cursor-pointer"
+                  >
+                    {filterByRatio ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    <span>{filterByRatio ? 'Ratio Duties' : 'Show All'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRatioModal(true)}
+                    className="px-2 py-0.5 text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center space-x-1 cursor-pointer"
+                    title="Configure Official Ratios"
+                  >
+                    <Sliders className="w-3 h-3" />
+                    <span>Ratios</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Duty Category Cards with Detailed Airmen List */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                {(() => {
+                  const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
+                  const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code) > 0);
+                  const dutiesToRender = filterByRatio && ratioFiltered.length > 0 ? ratioFiltered : allDuties;
+
+                  return dutiesToRender.map((dt) => {
+                    const isSelected = activeDutyCode === dt.code;
+                    const reqQuota = getRequiredCountForDuty(dt.code);
+                    const assignedList = getAssignedAirmenForDuty(dt.code);
 
                     return (
                       <div
-                        key={s}
-                        onClick={() => setActiveIdaShift(s)}
-                        className={`p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-start ${
-                          isShiftSelected
-                            ? 'bg-teal-600 text-white border-teal-700 shadow-sm ring-2 ring-teal-400/40'
-                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-teal-200 dark:border-teal-900/80 hover:border-teal-400'
+                        key={dt.code}
+                        onClick={() => setActiveDutyCode(dt.code)}
+                        className={`p-2 rounded-xl border text-left transition-all relative flex flex-col justify-start cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/30'
+                            : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 hover:border-emerald-400 hover:shadow-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-black text-xs">
-                            {s} Shift
+                        {/* Header: Duty Name & Ratio Badge (e.g. 3/3) */}
+                        <div className="flex items-center justify-between gap-1 border-b border-slate-100 dark:border-slate-700/60 pb-1.5 mb-1.5">
+                          <span className={`text-[11px] font-black truncate leading-tight ${isSelected ? 'text-emerald-950 dark:text-emerald-100' : 'text-slate-900 dark:text-slate-100'}`}>
+                            {dt.name}
                           </span>
-                          <span
-                            className={`text-[9.5px] font-black px-1.5 py-0.2 rounded-full ${
-                              isShiftSelected ? 'bg-white text-teal-900' : 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200'
-                            }`}
-                          >
-                            {shiftAssigned.length}{shiftQuota > 0 ? `/${shiftQuota}` : ''}
-                          </span>
+                          <div className="shrink-0">
+                            {reqQuota > 0 ? (
+                              <span
+                                className={`text-[9.5px] font-black px-1.5 py-0.2 rounded-full ${
+                                  assignedList.length === reqQuota
+                                    ? 'bg-emerald-600 text-white shadow-2xs'
+                                    : assignedList.length > reqQuota
+                                    ? 'bg-rose-600 text-white'
+                                    : assignedList.length > 0
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                }`}
+                              >
+                                {assignedList.length}/{reqQuota}
+                              </span>
+                            ) : (
+                              <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                {assignedList.length}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="space-y-0.5">
-                          {shiftAssigned.length === 0 ? (
-                            <span className={`text-[10px] italic ${isShiftSelected ? 'text-teal-100' : 'text-slate-400'}`}>
+                        {/* Detailed Airmen List */}
+                        <div className="space-y-1">
+                          {assignedList.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 italic py-0.5">
                               — None
-                            </span>
+                            </p>
                           ) : (
-                            shiftAssigned.map((item, idx) => (
+                            assignedList.map((item, idx) => (
                               <div
-                                key={`${item.airman.id}-${s}-${idx}`}
-                                className={`text-[10.5px] px-1.5 py-0.5 rounded font-bold truncate ${
-                                  isShiftSelected ? 'bg-teal-700/80 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                                }`}
+                                key={`${item.airman.id}-${item.assignment.dutyCode}-${item.assignment.idaShift || ''}-${idx}`}
+                                className="text-[10.5px] leading-tight font-semibold text-slate-800 dark:text-slate-200 truncate bg-slate-50/80 dark:bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-700/50"
                                 title={`${item.airman.rank} ${item.airman.name}`}
                               >
-                                <span className="opacity-70 mr-1">{idx + 1}.</span>
+                                <span className="text-slate-400 dark:text-slate-500 font-bold mr-1">{idx + 1}.</span>
                                 {item.airman.rank} {item.airman.name}
+                                {(item.assignment.dutyCode === 'IDAC' || item.assignment.dutyCode === 'IDA') && item.assignment.idaShift && (
+                                  <span className="ml-1 text-[9.5px] text-teal-600 dark:text-teal-400 font-bold">
+                                    ({item.assignment.idaShift[0]})
+                                  </span>
+                                )}
                               </div>
                             ))
                           )}
                         </div>
                       </div>
                     );
-                  })}
-                </div>
+                  });
+                })()}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* IDAC Dynamic Shift Picker (Shows detailed airmen for each shift) */}
+          {(onlyIdac || activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && (
+            <div className="p-3 bg-teal-50/80 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-800 space-y-2 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-teal-950 dark:text-teal-100 flex items-center space-x-1.5">
+                  <Clock className="w-4 h-4 text-teal-600" />
+                  <span>{onlyIdac ? '1. Select IDAC Shift Slot:' : 'Select IDAC Shift (Auto-filtered by Duty Ratio):'}</span>
+                </label>
+                <span className="text-xs text-teal-700 dark:text-teal-300 font-bold">
+                  {activeFlight !== 'All' ? `${activeFlight} Flight` : 'All Flights'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {availableIdaShifts.map((s) => {
+                  const shiftQuota = getRequiredCountForDuty('IDAC', s);
+                  const shiftAssigned = getAssignedAirmenForDuty('IDAC', s);
+                  const isShiftSelected = activeIdaShift === s;
+
+                  return (
+                    <div
+                      key={s}
+                      onClick={() => setActiveIdaShift(s)}
+                      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-start ${
+                        isShiftSelected
+                          ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/40'
+                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-teal-200 dark:border-teal-900/80 hover:border-teal-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-black text-xs">
+                          {s} Shift
+                        </span>
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                            isShiftSelected ? 'bg-white text-teal-900' : 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200'
+                          }`}
+                        >
+                          {shiftAssigned.length}{shiftQuota > 0 ? `/${shiftQuota}` : ''}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        {shiftAssigned.length === 0 ? (
+                          <span className={`text-[10.5px] italic ${isShiftSelected ? 'text-teal-100' : 'text-slate-400'}`}>
+                            — None Assigned
+                          </span>
+                        ) : (
+                          shiftAssigned.map((item, idx) => (
+                            <div
+                              key={`${item.airman.id}-${s}-${idx}`}
+                              className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate ${
+                                isShiftSelected ? 'bg-teal-700/90 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                              }`}
+                              title={`${item.airman.rank} ${item.airman.name} (${item.airman.flightName})`}
+                            >
+                              <span className="opacity-70 mr-1.5">{idx + 1}.</span>
+                              {item.airman.rank} {item.airman.name}
+                              <span className="ml-1 opacity-75 font-normal text-[10px]">
+                                ({item.airman.flightName})
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* 3. Flight Filter & Candidate Controls */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
@@ -831,16 +848,13 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">
                 2. Flight:
               </span>
-              {((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA')
-                ? (['Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[])
-                : (['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[])
-              ).map((flt) => (
+              {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((flt) => (
                 <button
                   key={flt}
                   type="button"
                   onClick={() => setActiveFlight(flt)}
                   className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                    (activeFlight === flt || (activeFlight === 'All' && (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && flt === 'Avionics'))
+                    activeFlight === flt
                       ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-xs'
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
                   }`}

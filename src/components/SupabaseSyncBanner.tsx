@@ -20,7 +20,7 @@ import {
 } from '../services/localDatabase';
 
 export const SupabaseSyncBanner: React.FC = () => {
-  const [syncState, setSyncState] = useState<SupabaseSyncStatusState>(getSupabaseSyncState());
+  const [syncState, setSyncState] = useState<SupabaseSyncStatusState>(getSupabaseSyncState);
   const [isExpanded, setIsExpanded] = useState(false);
   const [testRunning, setTestRunning] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -33,23 +33,27 @@ export const SupabaseSyncBanner: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    const handleUpdate = (e: any) => {
-      if (e.detail) {
+    const handleSyncUpdate = (e: any) => {
+      if (e?.detail && typeof e.detail === 'object' && 'activeErrors' in e.detail) {
         setSyncState(e.detail);
       } else {
         setSyncState(getSupabaseSyncState());
       }
     };
 
-    window.addEventListener('supabase_sync_update', handleUpdate);
-    window.addEventListener('baf_state_updated', handleUpdate);
+    const handleGlobalUpdate = () => {
+      setSyncState(getSupabaseSyncState());
+    };
+
+    window.addEventListener('supabase_sync_update', handleSyncUpdate);
+    window.addEventListener('baf_state_updated', handleGlobalUpdate);
 
     // Initial check
     setSyncState(getSupabaseSyncState());
 
     return () => {
-      window.removeEventListener('supabase_sync_update', handleUpdate);
-      window.removeEventListener('baf_state_updated', handleUpdate);
+      window.removeEventListener('supabase_sync_update', handleSyncUpdate);
+      window.removeEventListener('baf_state_updated', handleGlobalUpdate);
     };
   }, []);
 
@@ -89,7 +93,16 @@ export const SupabaseSyncBanner: React.FC = () => {
     setSyncState(getSupabaseSyncState());
   };
 
-  const { isConfigured, status, lastSyncTime, activeErrors, diagnostics } = syncState;
+  const isConfigured = syncState?.isConfigured ?? false;
+  const status = syncState?.status ?? 'unconfigured';
+  const lastSyncTime = syncState?.lastSyncTime ?? null;
+  const activeErrors = Array.isArray(syncState?.activeErrors) ? syncState.activeErrors : [];
+  const diagnostics = syncState?.diagnostics ?? {
+    hasUrl: false,
+    hasKey: false,
+    clientInitialized: false,
+    isConfigured: false,
+  };
 
   // Render when there are active errors OR unconfigured state OR user runs test
   const hasErrors = activeErrors.length > 0;
