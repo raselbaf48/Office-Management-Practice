@@ -46,22 +46,28 @@ export interface SupabaseSyncStatusState {
   lastSuccessMessage: string | null;
   activeErrors: SupabaseSyncErrorEvent[];
   diagnostics: SupabaseConfigDiagnostics;
+  d1Active: boolean;
+  d1LastSyncTime: string | null;
 }
 
 let globalSyncErrors: SupabaseSyncErrorEvent[] = [];
 let lastSyncStatus: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured' = 'idle';
 let lastSyncTime: string | null = null;
 let lastSuccessMessage: string | null = null;
+let d1Connected: boolean = false;
+let d1LastSyncTime: string | null = null;
 
 export const getSupabaseSyncState = (): SupabaseSyncStatusState => {
   const diagnostics = getSupabaseConfigDiagnostics();
   return {
-    isConfigured: diagnostics.isConfigured,
-    status: !diagnostics.isConfigured ? 'unconfigured' : (globalSyncErrors.length > 0 ? 'error' : lastSyncStatus),
-    lastSyncTime,
-    lastSuccessMessage,
+    isConfigured: diagnostics.isConfigured || d1Connected,
+    status: d1Connected ? 'connected' : (!diagnostics.isConfigured ? 'unconfigured' : (globalSyncErrors.length > 0 ? 'error' : lastSyncStatus)),
+    lastSyncTime: d1LastSyncTime || lastSyncTime,
+    lastSuccessMessage: d1Connected ? 'Cloudflare D1 Database Active' : lastSuccessMessage,
     activeErrors: [...globalSyncErrors],
     diagnostics,
+    d1Active: d1Connected,
+    d1LastSyncTime,
   };
 };
 
@@ -330,12 +336,94 @@ function getYesterdayDateStr(dateStr: string): string {
 export class LocalDatabaseEngine {
   private db: LocalStorageDB;
   private isSupabaseSyncing: boolean = false;
+  private isD1Syncing: boolean = false;
 
   constructor() {
     this.db = this.loadInitialLocalState();
     if (typeof window !== 'undefined') {
-      // Async sync from Supabase
+      // Async sync from Cloudflare D1 first, then Supabase
+      this.syncFromD1();
       this.syncFromSupabase();
+    }
+  }
+
+  /**
+   * Synchronize database with Cloudflare D1 SQL storage
+   */
+  public async syncFromD1(): Promise<boolean> {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined' || this.isD1Syncing) return false;
+    this.isD1Syncing = true;
+    try {
+      const res = await fetch('/api/d1-sync', { cache: 'no-store' });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json && json.isConfigured && json.data) {
+        d1Connected = true;
+        let hasUpdates = false;
+        if (json.data.airmen && Array.isArray(json.data.airmen) && json.data.airmen.length > 0) {
+          this.db.airmen = json.data.airmen;
+          hasUpdates = true;
+        }
+        if (json.data.assignments && typeof json.data.assignments === 'object') {
+          this.db.assignments = { ...this.db.assignments, ...json.data.assignments };
+          hasUpdates = true;
+        }
+        if (json.data.adminPasscode) {
+          this.db.adminPasscode = String(json.data.adminPasscode);
+          hasUpdates = true;
+        }
+        if (json.data.activityHistory && Array.isArray(json.data.activityHistory)) {
+          this.db.activityHistory = json.data.activityHistory;
+          hasUpdates = true;
+        }
+        if (hasUpdates) {
+          this.saveToStorage(this.db, false, false);
+          window.dispatchEvent(new CustomEvent('baf_state_updated', { detail: { source: 'd1Sync' } }));
+        } else if (!json.data.airmen) {
+          // Initial seed D1 with initial airmen and assignments
+          this.saveToD1(this.db);
+        }
+        d1LastSyncTime = new Date().toLocaleTimeString();
+        broadcastSyncState();
+        return true;
+      }
+    } catch {
+      // Non-Cloudflare Pages or offline environment
+    } finally {
+      this.isD1Syncing = false;
+    }
+    return false;
+  }
+
+  /**
+   * Push changes to Cloudflare D1
+   */
+  private async saveToD1(dbToSave: LocalStorageDB): Promise<void> {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+    try {
+      const res = await fetch('/api/d1-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch: [
+            { key: 'airmen', value: dbToSave.airmen },
+            { key: 'assignments', value: dbToSave.assignments },
+            { key: 'adminPasscode', value: dbToSave.adminPasscode },
+            { key: 'activityHistory', value: dbToSave.activityHistory },
+            { key: 'lastUpdated', value: dbToSave.lastUpdated },
+          ],
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          d1Connected = true;
+          d1LastSyncTime = new Date().toLocaleTimeString();
+          broadcastSyncState();
+        }
+      }
+    } catch {
+      // Non-critical fallback
     }
   }
 
@@ -620,7 +708,7 @@ export class LocalDatabaseEngine {
     }
   }
 
-  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true) {
+  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToD1: boolean = true) {
     try {
       dbToSave.lastUpdated = new Date().toISOString();
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -628,6 +716,10 @@ export class LocalDatabaseEngine {
       }
     } catch (err) {
       console.error('Failed to save to localStorage:', err);
+    }
+
+    if (pushToD1) {
+      this.saveToD1(dbToSave);
     }
 
     if (notify && typeof window !== 'undefined') {

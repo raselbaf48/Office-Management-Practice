@@ -23,11 +23,16 @@ import {
   Trash2,
   ShieldCheck,
   Smartphone,
-  Laptop
+  Laptop,
+  Globe,
+  ExternalLink,
+  Save
 } from 'lucide-react';
 import { Logo155UASU } from './Logo155UASU';
 import { UserRole, ThemePreference, DetailedUserLogin, UserLoginStatus } from '../types';
 import { getLoginHistory, clearLoginHistory, UserLoginLog, getDetailedUsers, toggleUserLoginStatus, saveDetailedUsers } from '../utils/authSession';
+import { resolveSupabaseCredentials, saveCustomSupabaseCredentials, clearCustomSupabaseCredentials, isSupabaseConfigured } from '../services/supabaseClient';
+import { localDb } from '../services/localDatabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -76,6 +81,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Database Backup State
   const [restoreStatus, setRestoreStatus] = useState<string>('');
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
+  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
+  const [supabaseKey, setSupabaseKey] = useState<string>('');
+  const [supabaseSaveMsg, setSupabaseSaveMsg] = useState<string>('');
+  const [isSavingSupabase, setIsSavingSupabase] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -86,6 +95,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setConfirmPasscode('');
       setLogoSuccess('');
       setRestoreStatus('');
+      setSupabaseSaveMsg('');
+      const creds = resolveSupabaseCredentials();
+      setSupabaseUrl(creds.url || '');
+      setSupabaseKey(creds.key || '');
       setCustomLogo(localStorage.getItem('baf_custom_logo'));
       setLoginHistory(getLoginHistory());
       setDetailedUsersList(getDetailedUsers());
@@ -242,6 +255,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSaveSupabase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSupabase(true);
+    setSupabaseSaveMsg('');
+
+    const cleanUrl = supabaseUrl.trim();
+    const cleanKey = supabaseKey.trim();
+
+    if (!cleanUrl || !cleanKey) {
+      alert('Please provide both Supabase Project URL and Anon API Key.');
+      setIsSavingSupabase(false);
+      return;
+    }
+
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      alert('Supabase Project URL must start with https:// or http://');
+      setIsSavingSupabase(false);
+      return;
+    }
+
+    saveCustomSupabaseCredentials(cleanUrl, cleanKey);
+    try {
+      await localDb.syncFromSupabase();
+      setSupabaseSaveMsg('✅ Supabase connected and synced successfully!');
+      if (onRosterUpdated) onRosterUpdated();
+    } catch {
+      setSupabaseSaveMsg('✅ Credentials saved to browser storage.');
+    } finally {
+      setIsSavingSupabase(false);
+    }
+  };
+
+  const handleClearSupabase = () => {
+    if (window.confirm('Disconnect custom Supabase credentials and return to local storage mode?')) {
+      clearCustomSupabaseCredentials();
+      setSupabaseUrl('');
+      setSupabaseKey('');
+      setSupabaseSaveMsg('Supabase disconnected. Operating in local storage mode.');
+    }
   };
 
   if (!isOpen) return null;
@@ -887,6 +941,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* 5. DATABASE BACKUP & RESTORE */}
                     {item.id === 'database' && (
                       <div className="space-y-4">
+                        {/* Supabase Cloud Connection Settings */}
+                        <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                            <div>
+                              <div className="flex items-center space-x-2 text-sm font-bold text-slate-900 dark:text-white">
+                                <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                <span>Supabase Cloud Database (Multi-Device Sync)</span>
+                              </div>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                Connect Supabase for real-time persistence across all phones and computers.
+                              </p>
+                            </div>
+
+                            <a
+                              href="https://supabase.com/dashboard"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold flex items-center gap-1 shrink-0"
+                            >
+                              <span>Supabase Dashboard</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+
+                          {supabaseSaveMsg && (
+                            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center space-x-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              <span>{supabaseSaveMsg}</span>
+                            </div>
+                          )}
+
+                          <form onSubmit={handleSaveSupabase} className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                  <Globe className="w-3 h-3 text-sky-500" />
+                                  <span>Supabase Project URL:</span>
+                                </label>
+                                <input
+                                  type="url"
+                                  value={supabaseUrl}
+                                  onChange={(e) => setSupabaseUrl(e.target.value)}
+                                  placeholder="https://xyz.supabase.co"
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono outline-none focus:border-emerald-500"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                  <KeyRound className="w-3 h-3 text-amber-500" />
+                                  <span>Supabase Anon API Key:</span>
+                                </label>
+                                <input
+                                  type="password"
+                                  value={supabaseKey}
+                                  onChange={(e) => setSupabaseKey(e.target.value)}
+                                  placeholder="eyJhbGciOi..."
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono outline-none focus:border-emerald-500"
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              {(supabaseUrl || supabaseKey) && (
+                                <button
+                                  type="button"
+                                  onClick={handleClearSupabase}
+                                  className="px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Disconnect</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="submit"
+                                disabled={isSavingSupabase}
+                                className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              >
+                                {isSavingSupabase ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                <span>Save & Sync Database</span>
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* Backup */}
                           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3 flex flex-col justify-between">
