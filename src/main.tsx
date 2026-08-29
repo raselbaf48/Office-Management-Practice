@@ -21,12 +21,12 @@ interface ErrorBoundaryState {
 }
 
 class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public state: ErrorBoundaryState = { hasError: false, error: null };
-  public props: ErrorBoundaryProps;
+  declare props: ErrorBoundaryProps;
+  declare state: ErrorBoundaryState;
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.props = props;
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -38,7 +38,7 @@ class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState>
   }
 
   handleReset = () => {
-    localStorage.removeItem('baf_airmen_v3');
+    localStorage.clear();
     sessionStorage.clear();
     window.location.reload();
   };
@@ -53,7 +53,7 @@ class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState>
             </div>
             <h2 className="text-xl font-bold tracking-wide">155 UASU BAF Application</h2>
             <p className="text-sm text-slate-400">
-              An unexpected error occurred during rendering. You can reload the application or reset local cache.
+              {this.state.error?.message || 'An unexpected error occurred during rendering. You can reload the application or reset local cache.'}
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <button
