@@ -109,18 +109,168 @@ export function reportSyncSuccess(operation: string, table: string): void {
   lastSyncStatus = 'connected';
   lastSyncTime = new Date().toLocaleTimeString();
   lastSuccessMessage = `Successfully executed ${operation} on ${table}`;
+  // Clear any existing sync errors on successful operation
+  if (globalSyncErrors.length > 0) {
+    globalSyncErrors = globalSyncErrors.filter((e) => e.table !== table);
+  }
   broadcastSyncState();
+}
+
+/**
+ * Intelligent Schema Adapter for Supabase Postgres tables
+ * Handles schema differences (snake_case vs camelCase and column aliases like action vs action_type)
+ */
+export function adaptRowForTable(table: string, row: any, mode: 'snake' | 'camel' | 'action_compat' = 'camel'): any {
+  if (!row || typeof row !== 'object') return row;
+  const res: any = {};
+
+  if (table === 'assignments') {
+    if (mode === 'action_compat' || mode === 'camel') {
+      res.id = row.id || `${row.airman_id || row.airmanId}_${row.date}_${row.duty_code || row.dutyCode}${row.ida_shift || row.idaShift ? '_' + (row.ida_shift || row.idaShift) : ''}`;
+      res.airmanId = row.airmanId ?? row.airman_id ?? '';
+      res.date = row.date ?? '';
+      res.dutyCode = row.dutyCode ?? row.duty_code ?? 'GD';
+      res.idaShift = row.idaShift ?? row.ida_shift ?? null;
+      res.proxyForFlight = row.proxyForFlight ?? row.proxy_for_flight ?? null;
+      res.disposalScope = row.disposalScope ?? row.disposal_scope ?? 'ALL';
+      res.notes = row.notes ?? null;
+      res.isCustom = row.isCustom ?? row.is_custom ?? false;
+      res.updatedAt = row.updatedAt ?? row.updated_at ?? new Date().toISOString();
+      return res;
+    } else {
+      res.id = row.id || `${row.airman_id || row.airmanId}_${row.date}_${row.duty_code || row.dutyCode}${row.ida_shift || row.idaShift ? '_' + (row.ida_shift || row.idaShift) : ''}`;
+      res.airman_id = row.airman_id ?? row.airmanId ?? '';
+      res.date = row.date ?? '';
+      res.duty_code = row.duty_code ?? row.dutyCode ?? 'GD';
+      res.ida_shift = row.ida_shift ?? row.idaShift ?? null;
+      res.proxy_for_flight = row.proxy_for_flight ?? row.proxyForFlight ?? null;
+      res.disposal_scope = row.disposal_scope ?? row.disposalScope ?? 'ALL';
+      res.notes = row.notes ?? null;
+      res.is_custom = row.is_custom ?? row.isCustom ?? false;
+      res.updated_at = row.updated_at ?? row.updatedAt ?? new Date().toISOString();
+      return res;
+    }
+  }
+
+  if (table === 'activity_history') {
+    const act = row.action ?? row.action_type ?? row.actionType ?? 'ASSIGN_RANGE';
+    if (mode === 'action_compat' || mode === 'camel') {
+      res.id = row.id || `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      res.action = act; // Postgres column 'action' NOT NULL constraint
+      res.actionType = act;
+      res.airmanId = row.airmanId ?? row.airman_id ?? '';
+      res.airmanName = row.airmanName ?? row.airman_name ?? '';
+      res.airmanRank = row.airmanRank ?? row.airman_rank ?? '';
+      res.airmanTrade = row.airmanTrade ?? row.airman_trade ?? '';
+      res.dutyCode = row.dutyCode ?? row.duty_code ?? '';
+      res.idaShift = row.idaShift ?? row.ida_shift ?? null;
+      res.fromDate = row.fromDate ?? row.from_date ?? '';
+      res.toDate = row.toDate ?? row.to_date ?? '';
+      res.notes = row.notes ?? null;
+      res.previousAssignments = row.previousAssignments ?? row.previous_assignments ?? null;
+      res.timestamp = row.timestamp ?? new Date().toISOString();
+      return res;
+    } else {
+      res.id = row.id || `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      res.action = act;
+      res.action_type = act;
+      res.airman_id = row.airman_id ?? row.airmanId ?? '';
+      res.airman_name = row.airman_name ?? row.airmanName ?? '';
+      res.airman_rank = row.airman_rank ?? row.airmanRank ?? '';
+      res.airman_trade = row.airman_trade ?? row.airmanTrade ?? '';
+      res.duty_code = row.duty_code ?? row.dutyCode ?? '';
+      res.ida_shift = row.ida_shift ?? row.idaShift ?? null;
+      res.from_date = row.from_date ?? row.fromDate ?? '';
+      res.to_date = row.to_date ?? row.toDate ?? '';
+      res.notes = row.notes ?? null;
+      res.previous_assignments = row.previous_assignments ?? row.previousAssignments ?? null;
+      res.timestamp = row.timestamp ?? new Date().toISOString();
+      return res;
+    }
+  }
+
+  if (table === 'airmen') {
+    if (mode === 'action_compat' || mode === 'camel') {
+      res.id = String(row.id);
+      res.serNo = row.serNo ?? row.ser_no ?? 1;
+      res.code = row.code ?? '';
+      res.bdNo = row.bdNo ?? row.bd_no ?? '';
+      res.rank = row.rank ?? 'LAC';
+      res.name = row.name ?? 'Airman';
+      res.trade = row.trade ?? '';
+      res.addressBlock = row.addressBlock ?? row.address_block ?? '';
+      res.mobileNo = row.mobileNo ?? row.mobile_no ?? '';
+      res.flightName = row.flightName ?? row.flight_name ?? 'Admin';
+      res.remarks = row.remarks ?? '';
+      res.active = row.active !== false;
+      return res;
+    } else {
+      res.id = String(row.id);
+      res.ser_no = row.ser_no ?? row.serNo ?? 1;
+      res.code = row.code ?? '';
+      res.bd_no = row.bd_no ?? row.bdNo ?? '';
+      res.rank = row.rank ?? 'LAC';
+      res.name = row.name ?? 'Airman';
+      res.trade = row.trade ?? '';
+      res.address_block = row.address_block ?? row.addressBlock ?? '';
+      res.mobile_no = row.mobile_no ?? row.mobileNo ?? '';
+      res.flight_name = row.flight_name ?? row.flightName ?? 'Admin';
+      res.remarks = row.remarks ?? '';
+      res.active = row.active !== false;
+      return res;
+    }
+  }
+
+  return row;
 }
 
 export async function asyncSupabase(
   operationName: string,
   table: string,
-  promiseLike: any
+  promiseLike: any,
+  rawPayload?: any,
+  operationType: 'insert' | 'upsert' | 'update' | 'delete' = 'upsert'
 ): Promise<any> {
   if (!promiseLike) return null;
   try {
     const res = await Promise.resolve(promiseLike);
     if (res && res.error) {
+      const errMsg = (res.error.message || '').toLowerCase();
+      const code = res.error.code || '';
+
+      // Auto-Retry if column mismatch or NOT NULL constraint occurred (e.g. airmanId or action column)
+      if (
+        (code === '23502' || code === 'PGRST204' || code === 'PGRST104' || errMsg.includes('violates') || errMsg.includes('column')) &&
+        rawPayload &&
+        getSupabase()
+      ) {
+        try {
+          const supabase = getSupabase()!;
+          const adapted = Array.isArray(rawPayload)
+            ? rawPayload.map((r) => adaptRowForTable(table, r, 'action_compat'))
+            : adaptRowForTable(table, rawPayload, 'action_compat');
+
+          let retryPromise: any;
+          if (operationType === 'insert') {
+            retryPromise = supabase.from(table).insert(adapted);
+          } else if (operationType === 'upsert') {
+            retryPromise = supabase.from(table).upsert(adapted);
+          } else if (operationType === 'update') {
+            retryPromise = supabase.from(table).update(adapted);
+          }
+
+          if (retryPromise) {
+            const retryRes = await Promise.resolve(retryPromise);
+            if (!retryRes?.error) {
+              reportSyncSuccess(operationName + '_ADAPTED', table);
+              return retryRes;
+            }
+          }
+        } catch (retryErr) {
+          console.warn(`[Supabase Retry] Schema adaptation retry failed:`, retryErr);
+        }
+      }
+
       reportSyncError({
         operation: operationName,
         table,
@@ -337,10 +487,56 @@ export class LocalDatabaseEngine {
             disposalScope: row.disposal_scope || row.disposalScope || 'ALL',
             notes: row.notes || '',
             isCustom: row.is_custom || false,
-            updatedAt: row.updated_at,
+            updatedAt: row.updated_at || row.updatedAt,
           });
         });
-        this.db.assignments = monthMap;
+
+        // Non-destructive merge with local storage
+        for (const [monthKey, remoteAssignments] of Object.entries(monthMap)) {
+          const localAssignments = this.db.assignments[monthKey] || [];
+          if (localAssignments.length === 0) {
+            this.db.assignments[monthKey] = remoteAssignments;
+          } else {
+            const mergedMap = new Map<string, DutyAssignment>();
+            remoteAssignments.forEach((ra) => {
+              const key = `${ra.airmanId}_${ra.date}_${ra.dutyCode}${ra.idaShift ? '_' + ra.idaShift : ''}`;
+              mergedMap.set(key, ra);
+            });
+            localAssignments.forEach((la) => {
+              const key = `${la.airmanId}_${la.date}_${la.dutyCode}${la.idaShift ? '_' + la.idaShift : ''}`;
+              const remote = mergedMap.get(key);
+              if (!remote || (la.updatedAt && remote.updatedAt && new Date(la.updatedAt).getTime() >= new Date(remote.updatedAt).getTime())) {
+                mergedMap.set(key, la);
+              }
+            });
+            this.db.assignments[monthKey] = Array.from(mergedMap.values());
+          }
+        }
+      } else if (assignData && assignData.length === 0) {
+        // Supabase assignments table is empty, seed from local database
+        const allLocalRows: any[] = [];
+        for (const list of Object.values(this.db.assignments)) {
+          for (const a of list) {
+            allLocalRows.push({
+              id: `${a.airmanId}_${a.date}_${a.dutyCode}${a.idaShift ? '_' + a.idaShift : ''}`,
+              airman_id: a.airmanId,
+              date: a.date,
+              duty_code: a.dutyCode,
+              ida_shift: a.idaShift || null,
+              proxy_for_flight: a.proxyForFlight || null,
+              disposal_scope: a.disposalScope || 'ALL',
+              notes: a.notes || null,
+              is_custom: a.isCustom || false,
+              updated_at: a.updatedAt || new Date().toISOString(),
+            });
+          }
+        }
+        if (allLocalRows.length > 0) {
+          for (let i = 0; i < allLocalRows.length; i += 50) {
+            const batch = allLocalRows.slice(i, i + 50);
+            asyncSupabase('SEED_ASSIGNMENTS', 'assignments', supabase.from('assignments').upsert(batch), batch, 'upsert');
+          }
+        }
       }
 
       // 3. Fetch Admin Passcode (safe query for both integer PK or text PK)
@@ -456,27 +652,31 @@ export class LocalDatabaseEngine {
       this.db.activityHistory = this.db.activityHistory.slice(0, 100);
     }
 
-    // Persist activity to Supabase
+    // Persist activity to Supabase with schema-safe columns
     const supabase = getSupabase();
     if (supabase) {
+      const payload = {
+        id: item.id,
+        action: item.actionType, // PostgreSQL column 'action' NOT NULL
+        action_type: item.actionType,
+        airman_id: item.airmanId,
+        airman_name: item.airmanName,
+        airman_rank: item.airmanRank || null,
+        airman_trade: item.airmanTrade || null,
+        duty_code: item.dutyCode || null,
+        ida_shift: item.idaShift || null,
+        from_date: item.fromDate || null,
+        to_date: item.toDate || null,
+        notes: item.notes || null,
+        previous_assignments: item.previousAssignments ? JSON.stringify(item.previousAssignments) : null,
+        timestamp: item.timestamp,
+      };
       asyncSupabase(
         'INSERT',
         'activity_history',
-        supabase.from('activity_history').insert({
-          id: item.id,
-          action_type: item.actionType,
-          airman_id: item.airmanId,
-          airman_name: item.airmanName,
-          airman_rank: item.airmanRank,
-          airman_trade: item.airmanTrade,
-          duty_code: item.dutyCode,
-          ida_shift: item.idaShift,
-          from_date: item.fromDate,
-          to_date: item.toDate,
-          notes: item.notes,
-          previous_assignments: item.previousAssignments,
-          timestamp: item.timestamp,
-        })
+        supabase.from('activity_history').insert(payload),
+        payload,
+        'insert'
       );
     }
   }
@@ -763,21 +963,24 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       const assignmentId = `${newAss.airmanId}_${newAss.date}_${newAss.dutyCode}${newAss.idaShift ? '_' + newAss.idaShift : ''}`;
+      const payload = {
+        id: assignmentId,
+        airman_id: newAss.airmanId,
+        date: newAss.date,
+        duty_code: newAss.dutyCode,
+        ida_shift: newAss.idaShift || null,
+        proxy_for_flight: newAss.proxyForFlight || null,
+        disposal_scope: newAss.disposalScope || 'ALL',
+        notes: newAss.notes || null,
+        is_custom: newAss.isCustom || false,
+        updated_at: newAss.updatedAt,
+      };
       asyncSupabase(
         'UPSERT',
         'assignments',
-        supabase.from('assignments').upsert({
-          id: assignmentId,
-          airman_id: newAss.airmanId,
-          date: newAss.date,
-          duty_code: newAss.dutyCode,
-          ida_shift: newAss.idaShift || null,
-          proxy_for_flight: newAss.proxyForFlight || null,
-          disposal_scope: newAss.disposalScope || 'ALL',
-          notes: newAss.notes || null,
-          is_custom: newAss.isCustom || false,
-          updated_at: newAss.updatedAt,
-        })
+        supabase.from('assignments').upsert(payload),
+        payload,
+        'upsert'
       );
     }
 
@@ -828,6 +1031,11 @@ export class LocalDatabaseEngine {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift === 'Night');
         } else {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
+        }
+      } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
+        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY'));
+        if (index < 0) {
+          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
         }
       } else {
         index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && a.dutyCode === dutyCode);
@@ -890,7 +1098,7 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase && supabaseRows.length > 0) {
-      asyncSupabase('UPSERT_RANGE', 'assignments', supabase.from('assignments').upsert(supabaseRows));
+      asyncSupabase('UPSERT_RANGE', 'assignments', supabase.from('assignments').upsert(supabaseRows), supabaseRows, 'upsert');
     }
 
     return { count: assignedDates.length, assignedDates };
@@ -951,6 +1159,11 @@ export class LocalDatabaseEngine {
           } else {
             index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
           }
+        } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
+          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY'));
+          if (index < 0) {
+            index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
+          }
         } else {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && a.dutyCode === dutyCode);
           if (index < 0) {
@@ -994,7 +1207,7 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase && supabaseRows.length > 0) {
-      asyncSupabase('BATCH_UPSERT', 'assignments', supabase.from('assignments').upsert(supabaseRows));
+      asyncSupabase('BATCH_UPSERT', 'assignments', supabase.from('assignments').upsert(supabaseRows), supabaseRows, 'upsert');
     }
 
     return { count: assignments.length * assignedDates.length, assignedDates };
@@ -1008,7 +1221,16 @@ export class LocalDatabaseEngine {
     let removed = false;
 
     if (dutyCode) {
-      const idx = list.findIndex((a) => a.airmanId === airmanId && a.date === date && a.dutyCode === dutyCode);
+      const idx = list.findIndex((a) => {
+        if (a.airmanId !== airmanId || a.date !== date) return false;
+        if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
+          return a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY';
+        }
+        if (dutyCode === 'IDAC' || dutyCode === 'IDA') {
+          return a.dutyCode === 'IDAC' || a.dutyCode === 'IDA';
+        }
+        return a.dutyCode === dutyCode;
+      });
       if (idx >= 0) {
         list.splice(idx, 1);
         removed = true;
@@ -1023,8 +1245,12 @@ export class LocalDatabaseEngine {
       this.saveToStorage();
       const supabase = getSupabase();
       if (supabase) {
-        if (dutyCode) {
-          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date).eq('duty_code', dutyCode));
+        const deleteCodes = dutyCode
+          ? (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY' ? ['AIRPORT', 'AIRFIELD_DUTY'] : [dutyCode])
+          : null;
+
+        if (deleteCodes) {
+          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date).in('duty_code', deleteCodes));
         } else {
           asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date));
         }
@@ -2029,7 +2255,16 @@ export class LocalDatabaseEngine {
     try {
       console.log('🧪 [Supabase Test] Initiating test insert into `airmen` table:', payload);
       // 1. Insert
-      const insertRes = await supabase.from('airmen').insert(payload);
+      let insertRes = await supabase.from('airmen').insert(payload);
+      if (insertRes.error) {
+        // Retry with camelCase payload
+        const camelPayload = adaptRowForTable('airmen', payload, 'camel');
+        const retryRes = await supabase.from('airmen').insert(camelPayload);
+        if (!retryRes.error) {
+          insertRes = retryRes;
+        }
+      }
+
       if (insertRes.error) {
         console.error('❌ [Supabase Test] Insert failed:', insertRes.error);
         reportSyncError({
