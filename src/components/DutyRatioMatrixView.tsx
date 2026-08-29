@@ -21,8 +21,11 @@ import {
   Lock,
   Eye,
   FileDown,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { exportDutyRatioDocx } from '../utils/docxExport';
+import { ImportDutyRatioModal } from './ImportDutyRatioModal';
 
 interface DutyRatioMatrixViewProps {
   role?: UserRole;
@@ -37,6 +40,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [selectedFlightFilter, setSelectedFlightFilter] = useState<FlightName | 'All'>('All');
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   const daysArray = Array.from({ length: 31 }, (_, i) => i + 1);
   const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
@@ -127,6 +131,13 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     }
   };
 
+  const handleImportRatioComplete = (newMatrix: DutyRatioTable[]) => {
+    setMatrix(newMatrix);
+    saveDutyMatrix(newMatrix);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+  };
+
   // Grand totals calculation
   const totalSlotsOverall = matrix.reduce((grandSum, table) => {
     return (
@@ -161,14 +172,14 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                155 UASU BAF • Monthly Duty Ratio Matrix
+                155 UASU BAF • Duty Ratio
               </h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800">
                 Official Roster Scale
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Configured daily quota matrix for Security Duty, Nazirpara T/F, Base T/F, and IDAC Shifts (Days 1–31).
+              Configured daily quota ratio for Security Duty, Nazirpara T/F, Base T/F, and IDAC Shifts (Days 1–31).
             </p>
           </div>
         </div>
@@ -179,7 +190,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             type="button"
             onClick={() => exportDutyRatioDocx(matrix)}
             className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors flex items-center space-x-1.5 shadow-xs cursor-pointer"
-            title="Download Duty Ratio Matrix as Document"
+            title="Download Duty Ratio as Document"
           >
             <FileDown className="w-4 h-4" />
             <span>Download Document</span>
@@ -189,8 +200,18 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             <>
               <button
                 type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                title="Import Duty Ratio from CSV or Excel file"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Import Ratio</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleReset}
-                className="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors flex items-center space-x-1.5"
+                className="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors flex items-center space-x-1.5 cursor-pointer"
                 title="Reset to official BAF template"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -200,10 +221,10 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
               <button
                 type="button"
                 onClick={handleSave}
-                className={`px-5 py-2 text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-2 ${
+                className={`px-5 py-2 text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-2 cursor-pointer ${
                   isSaved
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95'
+                    : 'bg-emerald-700 hover:bg-emerald-800 text-white active:scale-95'
                 }`}
               >
                 {isSaved ? <Check className="w-4 h-4 animate-bounce" /> : <Save className="w-4 h-4" />}
@@ -220,7 +241,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                 <button
                   type="button"
                   onClick={onRequestAdminAccess}
-                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs transition-all"
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer"
                 >
                   <Lock className="w-3.5 h-3.5" />
                   <span>Admin Unlock</span>
@@ -231,7 +252,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
         </div>
       </div>
 
-      {/* Airman Read-Only Notice */}
+      {/* Airman Read-Only Notice - Admin passcode removed for security */}
       {role !== 'ADMIN' && (
         <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 rounded-xl p-3.5 text-xs text-blue-900 dark:text-blue-200 flex items-center justify-between shadow-xs">
           <div className="flex items-center space-x-2">
@@ -240,9 +261,6 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
               <strong>Airman View Active:</strong> The official ratio quotas are displayed in read-only mode. All search and flight filters are active.
             </span>
           </div>
-          <span className="font-semibold text-[11px] text-blue-700 dark:text-blue-300 hidden sm:inline">
-            Admin Passcode: 1124
-          </span>
         </div>
       )}
 
@@ -263,189 +281,176 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
           >
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
               <span>{fl} Flight</span>
-              <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-bold text-slate-700 dark:text-slate-300">
-                {flightShortMap[fl]}
-              </span>
+              <span className="font-mono text-emerald-600 font-bold">{flightShortMap[fl]}</span>
             </div>
-            <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {flightTotalsOverall[fl]} <span className="text-xs font-semibold text-slate-400">Duties</span>
+            <div className="text-xl font-black text-slate-900 dark:text-white mt-1">
+              {flightTotalsOverall[fl]}
+              <span className="text-xs font-normal text-slate-500 ml-1">slots/mo</span>
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Monthly Total</div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${totalSlotsOverall > 0 ? (flightTotalsOverall[fl] / totalSlotsOverall) * 100 : 0}%`,
+                }}
+              />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Controls & Flight Filter */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <Search className="w-4 h-4 text-slate-400" />
+      {/* Filter and Search Bar */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search duty category..."
+            placeholder="Search duty table name..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 w-full sm:w-60"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
-        <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-500 mr-1">Flight:</span>
-          {(['All', ...flights] as const).map((fl) => (
+        <div className="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto">
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Filter Flight:</span>
+          {(['All', ...flights] as (FlightName | 'All')[]).map((f) => (
             <button
-              key={fl}
+              key={f}
               type="button"
-              onClick={() => setSelectedFlightFilter(fl)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
-                selectedFlightFilter === fl
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+              onClick={() => setSelectedFlightFilter(f)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                selectedFlightFilter === f
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
               }`}
             >
-              {fl}
+              {f}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tables List */}
+      {/* Ratio Tables Grid */}
       <div className="space-y-6">
         {matrix
-          .filter((t) => t.title.toLowerCase().includes(filterQuery.toLowerCase()))
-          .map((tableObj, tableIdx) => {
-            const colors = tableColorMap[tableObj.id] || {
+          .filter((t) =>
+            t.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
+            t.id.toLowerCase().includes(filterQuery.toLowerCase())
+          )
+          .map((table, tableIdx) => {
+            const colors = tableColorMap[table.id] || {
               header: 'bg-slate-800 text-white',
               badge: 'bg-slate-100 text-slate-900',
               border: 'border-slate-300',
             };
 
-            const displayFlights =
-              selectedFlightFilter === 'All'
-                ? flights
-                : flights.filter((f) => f === selectedFlightFilter);
-
-            // Compute column sums (daily total)
-            const dailyTotals = daysArray.map((_, dayIdx) => {
-              return flights.reduce((sum, fl) => sum + (tableObj.data[fl]?.[dayIdx] || 0), 0);
-            });
-
-            // Table monthly sum
-            const tableMonthlyTotal = flights.reduce((sum, fl) => {
-              return sum + (tableObj.data[fl]?.reduce((dSum, c) => dSum + c, 0) || 0);
+            const tableTotal = flights.reduce((sum, fl) => {
+              return sum + table.data[fl].reduce((s, c) => s + c, 0);
             }, 0);
 
             return (
               <div
-                key={tableObj.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border ${colors.border} shadow-lg overflow-hidden transition-all`}
+                key={table.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden"
               >
-                {/* Table Header Banner */}
+                {/* Table Header Bar */}
                 <div className={`px-4 py-3 flex items-center justify-between ${colors.header}`}>
-                  <div className="flex items-center space-x-2.5">
-                    <Shield className="w-5 h-5 shrink-0" />
-                    <span className="font-black text-sm uppercase tracking-wide">
-                      {tableObj.title}
+                  <div className="flex items-center space-x-3">
+                    <span className="font-mono font-black text-sm tracking-wider">
+                      {tableIdx + 1}. {table.title}
                     </span>
-                    {tableObj.shiftLabel && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white/20 text-white">
-                        {tableObj.shiftLabel} Shift
-                      </span>
-                    )}
+                    <span className="text-[11px] opacity-85 px-2 py-0.5 rounded-md bg-black/20 font-bold">
+                      Code: {table.dutyCode}
+                    </span>
                   </div>
-                  <div className="text-xs font-bold">
-                    Monthly Quota: <span className="text-sm font-black underline">{tableMonthlyTotal} No.</span>
+
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-lg">
+                      Month Total: <strong className="font-mono">{tableTotal}</strong>
+                    </span>
                   </div>
                 </div>
 
-                {/* Table Responsive Scroll Matrix */}
-                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-                  <table className="w-full text-center border-collapse text-xs">
+                {/* Table Body (Days 1 to 31) */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-center border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                        <th className="py-2 px-3 text-left w-24 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700">
-                          Flight / Date
+                      <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+                        <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700">
+                          Flight
                         </th>
-                        {daysArray.map((dayNum) => (
-                          <th
-                            key={dayNum}
-                            className="py-1.5 px-1 min-w-[32px] border-r border-slate-200 dark:border-slate-800 font-mono text-[11px]"
-                          >
-                            {dayNum}
+                        {daysArray.map((d) => (
+                          <th key={d} className="p-1 min-w-[28px] max-w-[32px] font-mono text-[11px]">
+                            {d}
                           </th>
                         ))}
-                        <th className="py-2 px-2 min-w-[50px] font-black bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100">
+                        <th className="p-2 w-16 min-w-16 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700">
                           Total
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-800 dark:text-slate-200">
-                      {displayFlights.map((fl) => {
-                        const flightRowArr = tableObj.data[fl] || [];
-                        const rowSum = flightRowArr.reduce((s, c) => s + c, 0);
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {flights
+                        .filter((fl) => selectedFlightFilter === 'All' || selectedFlightFilter === fl)
+                        .map((flight) => {
+                          const rowSum = table.data[flight].reduce((a, b) => a + b, 0);
 
-                        return (
-                          <tr key={fl} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                            {/* Flight Label Sticky */}
-                            <td className="py-1.5 px-3 text-left font-bold bg-slate-50 dark:bg-slate-900 sticky left-0 border-r border-slate-200 dark:border-slate-800 z-10 text-slate-900 dark:text-slate-100">
-                              {flightShortMap[fl]}
-                            </td>
+                          return (
+                            <tr
+                              key={flight}
+                              className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                            >
+                              <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center justify-between">
+                                  <span>{flight}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {flightShortMap[flight]}
+                                  </span>
+                                </div>
+                              </td>
 
-                            {/* 31 Days Inputs */}
-                            {daysArray.map((_, dayIdx) => {
-                              const currentVal = flightRowArr[dayIdx] || 0;
-                              return (
-                                <td
-                                  key={dayIdx}
-                                  className={`p-0 border-r border-slate-200 dark:border-slate-800 ${
-                                    currentVal > 0
-                                      ? 'bg-amber-500/10 dark:bg-amber-500/20 font-black text-amber-900 dark:text-amber-200'
-                                      : 'text-slate-400 dark:text-slate-600'
-                                  }`}
-                                >
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="9"
-                                    readOnly={role !== 'ADMIN'}
-                                    value={currentVal === 0 ? '' : currentVal}
-                                    placeholder="0"
-                                    onChange={(e) =>
-                                      handleCellChange(tableIdx, fl, dayIdx, e.target.value)
-                                    }
-                                    className={`w-full h-8 text-center bg-transparent text-xs font-mono font-bold outline-none transition-colors ${
-                                      role === 'ADMIN' ? 'focus:bg-indigo-100 dark:focus:bg-indigo-950/80 cursor-pointer' : 'cursor-default'
-                                    } ${
-                                      currentVal > 0 ? 'font-black text-slate-900 dark:text-amber-300' : 'text-slate-300 dark:text-slate-700'
+                              {daysArray.map((dayNum, dayIdx) => {
+                                const val = table.data[flight][dayIdx] || 0;
+                                const isPositive = val > 0;
+
+                                return (
+                                  <td
+                                    key={dayNum}
+                                    className={`p-0.5 border border-slate-100 dark:border-slate-800/50 ${
+                                      isPositive
+                                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-black'
+                                        : 'text-slate-400 dark:text-slate-600 font-normal'
                                     }`}
-                                  />
-                                </td>
-                              );
-                            })}
+                                  >
+                                    {role === 'ADMIN' ? (
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={9}
+                                        value={val}
+                                        onChange={(e) =>
+                                          handleCellChange(tableIdx, flight, dayIdx, e.target.value)
+                                        }
+                                        className={`w-full text-center py-1 font-mono text-xs rounded-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                                          isPositive
+                                            ? 'bg-emerald-100/70 dark:bg-emerald-900/60 font-bold'
+                                            : 'bg-transparent text-slate-400'
+                                        }`}
+                                      />
+                                    ) : (
+                                      <span className="inline-block py-1 font-mono text-xs">{val}</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
 
-                            {/* Flight Row Total */}
-                            <td className="py-1.5 px-2 font-black bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-center font-mono">
-                              {rowSum}
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                      {/* Column Daily Totals Row */}
-                      <tr className="bg-slate-200/80 dark:bg-slate-800 font-black text-slate-900 dark:text-slate-100 border-t-2 border-slate-300 dark:border-slate-700">
-                        <td className="py-2 px-3 text-left uppercase text-[10px] tracking-wider sticky left-0 bg-slate-200 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700">
-                          Daily Total
-                        </td>
-                        {dailyTotals.map((colSum, dayIdx) => (
-                          <td
-                            key={dayIdx}
-                            className="py-1.5 px-1 font-mono text-[11px] border-r border-slate-300 dark:border-slate-700"
-                          >
-                            {colSum}
-                          </td>
-                        ))}
-                        <td className="py-2 px-2 text-center text-sm font-black bg-slate-300 dark:bg-slate-700 text-indigo-950 dark:text-indigo-200">
-                          {tableMonthlyTotal}
-                        </td>
-                      </tr>
+                              <td className="p-2 font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700">
+                                {rowSum}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
@@ -453,6 +458,14 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             );
           })}
       </div>
+
+      {/* Import Ratio Modal */}
+      <ImportDutyRatioModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        currentMatrix={matrix}
+        onImport={handleImportRatioComplete}
+      />
     </div>
   );
 };

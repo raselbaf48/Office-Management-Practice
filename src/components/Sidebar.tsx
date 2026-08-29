@@ -30,6 +30,8 @@ import {
   Activity,
 } from 'lucide-react';
 import { UserRole } from '../types';
+import { UserSession } from '../utils/authSession';
+import { User } from 'lucide-react';
 
 export type SidebarTab =
   | 'overview'
@@ -56,9 +58,11 @@ interface SidebarProps {
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
   airmenCount: number;
+  userSession?: UserSession | null;
   onOpenImportModal?: () => void;
   onOpenAdminLogin?: () => void;
   onLogoutAdmin?: () => void;
+  onLogoutUser?: () => void;
   onOpenSettings?: () => void;
 }
 
@@ -72,9 +76,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   setMobileOpen,
   airmenCount,
+  userSession,
   onOpenImportModal,
   onOpenAdminLogin,
   onLogoutAdmin,
+  onLogoutUser,
   onOpenSettings,
 }) => {
   // Accordion section open states
@@ -418,7 +424,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {!collapsed && <span className="ml-3 truncate">Duty Roster</span>}
                     </button>
 
-                    {/* Duty Ratio Matrix (BAF 155 Scale) */}
+                    {/* Duty Ratio (BAF 155 Scale) */}
                     <button
                       onClick={() => handleSelectTab('duty-ratio')}
                       className={`w-full flex items-center ${
@@ -428,10 +434,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
                           : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
                       }`}
-                      title="Duty Ratio Matrix (BAF 155 UASU)"
+                      title="Duty Ratio (BAF 155 UASU)"
                     >
                       <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                      {!collapsed && <span className="ml-3 truncate">Duty Ratio Matrix</span>}
+                      {!collapsed && <span className="ml-3 truncate">Duty Ratio</span>}
                     </button>
 
                     {/* Duty Analytics & Working Hours */}
@@ -479,7 +485,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Settings Button in Sidebar Bottom for Admin (Admin SNCO box removed as requested) */}
+        {/* User Session Profile in Sidebar */}
+        {userSession && !collapsed && (
+          <div className="px-3 py-2.5 bg-[#052818] border-t border-[#0d4f31] shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 truncate">
+                <div className="w-7 h-7 rounded-lg bg-emerald-700/60 text-emerald-200 flex items-center justify-center font-bold text-xs shrink-0">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <div className="truncate text-left leading-tight">
+                  <div className="text-xs font-bold text-white truncate">
+                    {userSession.rank} {userSession.name}
+                  </div>
+                  <div className="text-[10px] font-mono text-emerald-300/80">
+                    BD/{userSession.bdNo} • {userSession.flightName}
+                  </div>
+                </div>
+              </div>
+
+              {onLogoutUser && (
+                <button
+                  type="button"
+                  onClick={onLogoutUser}
+                  className="p-1 text-emerald-300/60 hover:text-rose-400 hover:bg-[#0c4e2f] rounded-lg transition-colors cursor-pointer"
+                  title="Logout User Session"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Settings Button in Sidebar Bottom for Admin */}
         {role === 'ADMIN' && onOpenSettings && (
           <div className="px-3 py-2 bg-[#052818] border-t border-[#0d4f31] shrink-0">
             <button

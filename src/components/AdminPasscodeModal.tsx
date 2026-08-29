@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, ShieldAlert, Lock, Unlock, KeyRound, X, CheckCircle2, AlertTriangle, Delete, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Lock, Unlock, KeyRound, X, CheckCircle2, AlertTriangle, Delete, Loader2, Clock } from 'lucide-react';
 
 interface AdminPasscodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const ATTEMPTS_STORAGE_KEY = 'baf_admin_passcode_attempts';
+const LOCK_UNTIL_STORAGE_KEY = 'baf_admin_passcode_lock_until';
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const LOCKOUT_MS = 60 * 1000; // 60 seconds
 
 export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   isOpen,
@@ -16,6 +22,8 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [lockRemainingSec, setLockRemainingSec] = useState<number>(0);
+
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -23,21 +31,104 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
     useRef<HTMLInputElement>(null),
   ];
 
+  // Check lock status
+  const checkLockStatus = () => {
+    const lockUntilStr = localStorage.getItem(LOCK_UNTIL_STORAGE_KEY);
+    if (lockUntilStr) {
+      const lockUntil = parseInt(lockUntilStr, 10);
+      const now = Date.now();
+      if (lockUntil > now) {
+        setLockRemainingSec(Math.ceil((lockUntil - now) / 1000));
+        return true;
+      } else {
+        localStorage.removeItem(LOCK_UNTIL_STORAGE_KEY);
+        setLockRemainingSec(0);
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
-    if (isOpen) {
-      setDigits(['', '', '', '']);
-      setErrorMsg('');
-      setIsSuccess(false);
-      setIsVerifying(false);
+    if (!isOpen) return;
+
+    checkLockStatus();
+    setDigits(['', '', '', '']);
+    setErrorMsg('');
+    setIsSuccess(false);
+    setIsVerifying(false);
+
+    const isLocked = checkLockStatus();
+    if (!isLocked) {
       setTimeout(() => {
         inputRefs[0].current?.focus();
       }, 100);
     }
   }, [isOpen]);
 
+  // Lock countdown timer
+  useEffect(() => {
+    if (lockRemainingSec <= 0) return;
+
+    const timer = setInterval(() => {
+      const lockUntilStr = localStorage.getItem(LOCK_UNTIL_STORAGE_KEY);
+      if (lockUntilStr) {
+        const lockUntil = parseInt(lockUntilStr, 10);
+        const now = Date.now();
+        const remaining = Math.ceil((lockUntil - now) / 1000);
+        if (remaining > 0) {
+          setLockRemainingSec(remaining);
+        } else {
+          localStorage.removeItem(LOCK_UNTIL_STORAGE_KEY);
+          setLockRemainingSec(0);
+          clearInterval(timer);
+          setTimeout(() => {
+            inputRefs[0].current?.focus();
+          }, 100);
+        }
+      } else {
+        setLockRemainingSec(0);
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [lockRemainingSec]);
+
   if (!isOpen) return null;
 
+  const recordFailedAttempt = () => {
+    const now = Date.now();
+    let attempts: number[] = [];
+    try {
+      const saved = localStorage.getItem(ATTEMPTS_STORAGE_KEY);
+      if (saved) {
+        attempts = JSON.parse(saved);
+      }
+    } catch {
+      attempts = [];
+    }
+
+    // Filter attempts in window
+    attempts = attempts.filter((t) => now - t < WINDOW_MS);
+    attempts.push(now);
+    localStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify(attempts));
+
+    if (attempts.length >= MAX_ATTEMPTS) {
+      const lockUntil = now + LOCKOUT_MS;
+      localStorage.setItem(LOCK_UNTIL_STORAGE_KEY, lockUntil.toString());
+      setLockRemainingSec(Math.ceil(LOCKOUT_MS / 1000));
+      setErrorMsg(`Too many failed attempts. Locked for ${Math.ceil(LOCKOUT_MS / 1000)} seconds.`);
+    }
+  };
+
+  const clearAttempts = () => {
+    localStorage.removeItem(ATTEMPTS_STORAGE_KEY);
+    localStorage.removeItem(LOCK_UNTIL_STORAGE_KEY);
+    setLockRemainingSec(0);
+  };
+
   const handleDigitChange = (index: number, value: string) => {
+    if (lockRemainingSec > 0 || isSuccess || isVerifying) return;
     if (!/^\d*$/.test(value)) return;
 
     const char = value.slice(-1);
@@ -50,7 +141,6 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
       inputRefs[index + 1].current?.focus();
     }
 
-    // Auto submit if all 4 digits filled
     const fullCode = newDigits.join('');
     if (fullCode.length === 4) {
       verifyPasscode(fullCode);
@@ -58,6 +148,8 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (lockRemainingSec > 0 || isSuccess || isVerifying) return;
+
     if (e.key === 'Backspace' && !digits[index] && index > 0) {
       inputRefs[index - 1].current?.focus();
     } else if (e.key === 'Enter') {
@@ -66,7 +158,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   };
 
   const handleKeypadPress = (val: string) => {
-    if (isSuccess || isVerifying) return;
+    if (lockRemainingSec > 0 || isSuccess || isVerifying) return;
 
     if (val === 'backspace') {
       const lastFilledIndex = digits.map((d, i) => (d ? i : -1)).filter((i) => i >= 0).pop();
@@ -107,7 +199,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   };
 
   const verifyPasscode = async (code: string) => {
-    if (isVerifying || code.length !== 4) return;
+    if (lockRemainingSec > 0 || isVerifying || code.length !== 4) return;
     setIsVerifying(true);
     setErrorMsg('');
 
@@ -120,6 +212,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
       const data = await res.json();
 
       if (res.ok && data.success) {
+        clearAttempts();
         setIsSuccess(true);
         setErrorMsg('');
         setTimeout(() => {
@@ -127,6 +220,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           onClose();
         }, 600);
       } else {
+        recordFailedAttempt();
         setErrorMsg(data.error || 'Incorrect passcode! Please try again.');
         setDigits(['', '', '', '']);
         setTimeout(() => {
@@ -134,29 +228,22 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
         }, 50);
       }
     } catch {
-      // Fallback check
-      if (code === '1124') {
-        setIsSuccess(true);
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 600);
-      } else {
-        setErrorMsg('Incorrect passcode! Please try again.');
-        setDigits(['', '', '', '']);
-        setTimeout(() => {
-          inputRefs[0].current?.focus();
-        }, 50);
-      }
+      // Secure fallback: do NOT bypass verification
+      recordFailedAttempt();
+      setErrorMsg('Could not verify passcode, please check your connection and try again.');
+      setDigits(['', '', '', '']);
+      setTimeout(() => {
+        inputRefs[0].current?.focus();
+      }, 50);
     } finally {
       setIsVerifying(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn select-none">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 sm:p-7 relative overflow-hidden text-center">
-        {/* Subtle decorative background gradient */}
+        {/* Decorative ambient background */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -178,6 +265,8 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 <Unlock className="w-8 h-8 text-emerald-500 animate-bounce" />
               ) : isVerifying ? (
                 <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+              ) : lockRemainingSec > 0 ? (
+                <Clock className="w-8 h-8 text-rose-500 animate-pulse" />
               ) : (
                 <Lock className="w-8 h-8" />
               )}
@@ -196,9 +285,17 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
             Admin Login
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
-            Enter 4-digit passcode to unlock Admin SNCO controls, duty assignment, and import tools.
+            Enter 4-digit master passcode to unlock Admin SNCO mode and duty assignment tools.
           </p>
         </div>
+
+        {/* Lockout banner */}
+        {lockRemainingSec > 0 && (
+          <div className="my-4 p-3.5 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 rounded-2xl text-rose-800 dark:text-rose-200 text-xs font-bold flex items-center justify-center space-x-2">
+            <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>Too many failed attempts. Locked for {lockRemainingSec}s.</span>
+          </div>
+        )}
 
         {/* 4 Digit Boxes */}
         <div className="my-6">
@@ -213,7 +310,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 value={digit}
                 onChange={(e) => handleDigitChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                disabled={isSuccess || isVerifying}
+                disabled={isSuccess || isVerifying || lockRemainingSec > 0}
                 className={`w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black rounded-2xl border-2 outline-none transition-all ${
                   isSuccess
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
@@ -249,30 +346,34 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
             <button
               key={num}
               type="button"
+              disabled={lockRemainingSec > 0 || isSuccess || isVerifying}
               onClick={() => handleKeypadPress(num)}
-              className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer"
+              className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {num}
             </button>
           ))}
           <button
             type="button"
+            disabled={lockRemainingSec > 0 || isSuccess || isVerifying}
             onClick={() => handleKeypadPress('clear')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Clear
           </button>
           <button
             type="button"
+            disabled={lockRemainingSec > 0 || isSuccess || isVerifying}
             onClick={() => handleKeypadPress('0')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-extrabold text-lg hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-2xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             0
           </button>
           <button
             type="button"
+            disabled={lockRemainingSec > 0 || isSuccess || isVerifying}
             onClick={() => handleKeypadPress('backspace')}
-            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+            className="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Delete className="w-5 h-5" />
           </button>
@@ -283,7 +384,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium hover:underline"
+            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium hover:underline cursor-pointer"
           >
             Cancel (Stay in Airman View)
           </button>
@@ -292,4 +393,3 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
     </div>
   );
 };
-

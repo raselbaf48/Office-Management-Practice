@@ -79,6 +79,14 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
     }
 
     // 2. Airmen CRUD
+    if (pathname === '/api/airmen/bulk') {
+      if (method === 'POST') {
+        const { airmen: airmenList } = body || {};
+        const result = localDb.bulkAddAirmen(airmenList || []);
+        return jsonResponse(result, 201);
+      }
+    }
+
     if (pathname === '/api/airmen') {
       if (method === 'GET') {
         const flight = searchParams.get('flight') || undefined;

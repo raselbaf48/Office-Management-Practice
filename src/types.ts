@@ -69,6 +69,7 @@ export interface DutyAssignment {
   previousDutyName?: string;
   assignedBy?: string;
   updatedAt?: string;
+  isCustom?: boolean;
 }
 
 export interface DailyParadeState {
@@ -145,8 +146,8 @@ export interface ActivityHistoryItem {
   airmanTrade?: string;
   dutyCode: DutyCategoryCode;
   idaShift?: IDAShift;
-  fromDate: string;
-  toDate: string;
+  fromDate?: string;
+  toDate?: string;
   notes?: string;
   previousAssignments?: Array<{ airmanId: string; date: string; dutyCode?: DutyCategoryCode; idaShift?: IDAShift; notes?: string }>;
 }

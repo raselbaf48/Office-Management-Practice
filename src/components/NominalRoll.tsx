@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Airman, FlightName, Rank, UserRole } from '../types';
-import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { exportNominalRollDocx } from '../utils/docxExport';
+import { BulkImportAirmenModal } from './BulkImportAirmenModal';
 
 interface NominalRollProps {
   airmen: Airman[];
@@ -30,6 +31,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   const [rankFilter, setRankFilter] = useState<Rank | 'All'>('All');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const [airmanToDelete, setAirmanToDelete] = useState<Airman | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -138,8 +140,17 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               </button>
 
               <button
+                onClick={() => setIsBulkImportOpen(true)}
+                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
+                title="Bulk Import Airmen via CSV / Excel (.xlsx)"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Import</span>
+              </button>
+
+              <button
                 onClick={onAddAirman}
-                className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all"
+                className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Add Airman</span>
@@ -388,6 +399,17 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bulk Import Airmen Modal */}
+      <BulkImportAirmenModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        existingAirmen={airmen}
+        onImportComplete={() => {
+          onRefresh();
+          window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        }}
+      />
     </div>
   );
 };

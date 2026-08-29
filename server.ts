@@ -229,6 +229,43 @@ async function startServer() {
     res.status(201).json(newAirman);
   });
 
+  // Bulk add airmen
+  app.post('/api/airmen/bulk', (req, res) => {
+    const { airmen: airmenList } = req.body;
+    if (!Array.isArray(airmenList) || airmenList.length === 0) {
+      return res.status(400).json({ error: 'Expected array of airmen' });
+    }
+
+    let currentSerNo = db.airmen.length > 0 ? Math.max(...db.airmen.map((a) => a.serNo)) : 0;
+    const createdAirmen: Airman[] = [];
+
+    for (const item of airmenList) {
+      currentSerNo++;
+      const id = `airman-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const cleanBd = item.bdNo ? (item.bdNo.toUpperCase().startsWith('BD') ? item.bdNo : `BD/${item.bdNo}`) : `BD/${Date.now().toString().slice(-6)}`;
+      const newAirman: Airman = {
+        id,
+        serNo: currentSerNo,
+        code: item.code || `${item.rank || 'LAC'}-${(item.name || 'AIR').slice(0, 3).toUpperCase()}`,
+        bdNo: cleanBd,
+        rank: item.rank || 'LAC',
+        name: item.name || 'Airman',
+        trade: item.trade || 'General Tech',
+        addressBlock: item.addressBlock || 'Airmen Mess',
+        mobileNo: item.mobileNo || '01700000000',
+        flightName: (item.flightName as FlightName) || 'Admin',
+        remarks: item.remarks || 'Bulk Imported',
+        active: true,
+      };
+
+      createdAirmen.push(newAirman);
+      db.airmen.push(newAirman);
+    }
+
+    saveDatabase(db);
+    res.status(201).json({ count: createdAirmen.length, airmen: createdAirmen });
+  });
+
   app.put('/api/airmen/:id', (req, res) => {
     const { id } = req.params;
     const index = db.airmen.findIndex((a) => a.id === id);
