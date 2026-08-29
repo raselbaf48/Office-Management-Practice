@@ -883,72 +883,361 @@ export class LocalDatabaseEngine {
     flight?: FlightName | 'Overall';
     stateType?: string;
   }): ParadeStateResponse {
-    const today = new Date();
-    const defaultDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-    const date = params?.date || defaultDate;
-    const shift = params?.shift || 'Morning';
-    const flight = params?.flight || 'Overall';
-    const stateType = params?.stateType || 'PARADE';
+    const today = new Date().toISOString().split('T')[0];
+    const date = params?.date || today;
+    const shift = (params?.shift || 'Morning') as ParadeShift;
+    const selectedFlight = params?.flight || 'Overall';
+    const stateType = (params?.stateType || 'PARADE').toUpperCase();
+    const isPT = stateType === 'PT';
 
     const monthKey = date.slice(0, 7);
     const monthAssignments = this.db.assignments[monthKey] || [];
     const dateAssignments = monthAssignments.filter((a) => a.date === date);
 
-    const relevantAirmen = this.getAirmen(flight === 'Overall' ? undefined : { flight });
+    const assignmentMap = new Map<string, DutyAssignment>();
+    dateAssignments.forEach((a) => assignmentMap.set(a.airmanId, a));
 
-    // Group duties on this date
-    const presentList: any[] = [];
-    const dutyList: any[] = [];
-    const leaveList: any[] = [];
-    const sickList: any[] = [];
-    const tdyList: any[] = [];
-    const miscList: any[] = [];
+    // Calculate yesterday's assignments for auto duty off calculation safely via UTC
+    const getYesterdayDateStr = (dateStr: string): string => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      if (!year || !month || !day) return dateStr;
+      const d = new Date(Date.UTC(year, month - 1, day));
+      d.setUTCDate(d.getUTCDate() - 1);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const da = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    };
 
-    relevantAirmen.forEach((airman) => {
-      const asns = dateAssignments.filter((a) => a.airmanId === airman.id);
-      if (asns.length === 0) {
-        presentList.push({ airman, status: 'PRESENT' });
-      } else {
-        const primary = asns[0];
-        if (['LEAVE', 'CASUAL_LEAVE', 'PRIVILEGE_LEAVE', 'ANNUAL_LEAVE'].includes(primary.dutyCode)) {
-          leaveList.push({ airman, assignment: primary });
-        } else if (['SICK', 'HOSPITAL', 'QUARANTINE'].includes(primary.dutyCode)) {
-          sickList.push({ airman, assignment: primary });
-        } else if (['TDY', 'MISSION', 'DETACHMENT'].includes(primary.dutyCode)) {
-          tdyList.push({ airman, assignment: primary });
-        } else if (['OFF', 'REST'].includes(primary.dutyCode)) {
-          miscList.push({ airman, assignment: primary });
-        } else {
-          dutyList.push({ airman, assignment: primary });
+    const yestStr = getYesterdayDateStr(date);
+    const yestMonthKey = yestStr.slice(0, 7);
+    const yestAssignments = (this.db.assignments[yestMonthKey] || []).filter((a) => a.date === yestStr);
+    const yestMap = new Map<string, DutyAssignment>();
+    yestAssignments.forEach((a) => yestMap.set(a.airmanId, a));
+
+    // Target airmen filter
+    const allAirmen = this.db.airmen || [];
+    const filteredAirmen = selectedFlight === 'Overall' 
+      ? allAirmen 
+      : allAirmen.filter((a) => a.flightName === selectedFlight);
+
+    let onParade = 0;
+    let onDuty = 0;
+    let onLeave = 0;
+    let tdy = 0;
+    let otherOff = 0;
+    let bakeNBite = 0;
+
+    const resolveEffectiveAssignment = (airmanId: string): { 
+      dutyCode: string; 
+      idaShift?: string; 
+      proxyForFlight?: string;
+      disposalScope?: 'ALL' | 'PARADE' | 'PT';
+      notes: string; 
+      dutyName: string;
+      previousDutyName?: string;
+      statusCategory: string;
+    } => {
+      const ass = assignmentMap.get(airmanId);
+      
+      const scope = ass?.disposalScope || 'ALL';
+      const isApplicable = scope === 'ALL' || (isPT && scope === 'PT') || (!isPT && scope === 'PARADE');
+
+      if (ass && isApplicable) {
+        let dutyName: string = String(ass.dutyCode);
+        let statusCategory: string = 'DUTY';
+        let previousDutyName: string | undefined = undefined;
+
+        const codeStr = String(ass.dutyCode);
+        if (codeStr === 'GD') dutyName = 'Base Security Duty';
+        else if (codeStr === 'BTF') dutyName = 'Base Taskforce Duty';
+        else if (codeStr === 'NTF') dutyName = 'Najirpara Taskforce Duty';
+        else if (codeStr === 'HALISHAHAR') dutyName = 'Halishahar Duty';
+        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'AIRFIELD_DUTY') dutyName = 'Airfield Duty';
+        else if (codeStr === 'IDAC' || codeStr === 'IDA') {
+          const s = ass.idaShift || 'Morning';
+          dutyName = `IDAC Duty (${s})`;
+          
+          if (isPT) {
+            statusCategory = 'DUTY';
+          } else {
+            if (s === 'Night' && shift === 'Morning') {
+              const yestAss = yestMap.get(airmanId);
+              const hadDutyYesterday = yestAss && (
+                ['GD', 'BTF', 'NTF', 'AIRPORT', 'HALISHAHAR'].includes(yestAss.dutyCode) ||
+                ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night')
+              );
+              if (hadDutyYesterday) {
+                statusCategory = 'OFF';
+                previousDutyName = (yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') ? 'IDAC Nt Off' : `${yestAss.dutyCode} Off`;
+                dutyName = previousDutyName;
+              } else {
+                statusCategory = 'PARADE';
+                dutyName = 'On Parade';
+              }
+            } else {
+              statusCategory = 'DUTY';
+            }
+          }
+        }
+        else if (codeStr === 'BAKE_N_BITE') {
+          dutyName = 'Bake N Bite';
+          statusCategory = 'BAKE_N_BITE';
+        }
+        else if (codeStr === 'LEAVE') {
+          dutyName = ass.notes?.includes('Annual') || ass.notes?.includes('AL') ? 'Annual Leave (AL)' : 'Casual Leave (CL)';
+          statusCategory = 'LEAVE';
+        }
+        else if (codeStr === 'TDY') {
+          dutyName = 'TDY / Attachment';
+          statusCategory = 'TDY';
+        }
+        else if (codeStr === 'DUTY_OFF') {
+          if (isPT) {
+            return {
+              dutyCode: 'ON_PARADE',
+              dutyName: 'On PT',
+              notes: '',
+              statusCategory: 'PARADE',
+              disposalScope: scope,
+            };
+          }
+
+          const yestAss = yestMap.get(airmanId);
+          let offShort = 'GD Off';
+
+          if (yestAss) {
+            const yestCodeStr = String(yestAss.dutyCode);
+            if (yestCodeStr === 'GD') offShort = 'GD Off';
+            else if (yestCodeStr === 'BTF') offShort = 'BTF Off';
+            else if (yestCodeStr === 'NTF') offShort = 'NTF Off';
+            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'AIRFIELD_DUTY') offShort = 'Airport Off';
+            else if (yestCodeStr === 'HALISHAHAR') offShort = 'Halishahar Off';
+            else if ((yestCodeStr === 'IDAC' || yestCodeStr === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
+            else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+            else if (yestCodeStr === 'DUTY_OFF') offShort = yestAss.previousDutyName || 'GD Off';
+            else offShort = `${yestAss.dutyCode} Off`;
+          } else if (ass.notes && !ass.notes.toLowerCase().includes('imported')) {
+            if (ass.notes.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+            else if (ass.notes.toLowerCase().includes('gd')) offShort = 'GD Off';
+            else if (ass.notes.toLowerCase().includes('btf')) offShort = 'BTF Off';
+            else if (ass.notes.toLowerCase().includes('ntf')) offShort = 'NTF Off';
+            else if (ass.notes.toLowerCase().includes('airport')) offShort = 'Airport Off';
+            else if (ass.notes.toLowerCase().includes('halishahar')) offShort = 'Halishahar Off';
+            else offShort = ass.notes;
+          }
+
+          offShort = offShort
+            .replace(/DUTY_OFF/g, 'Duty')
+            .replace(/Off Off/g, 'Off')
+            .replace(/Duty Off Off/g, 'Duty Off');
+
+          if (!offShort.toLowerCase().endsWith('off')) {
+            offShort = `${offShort} Off`;
+          }
+
+          previousDutyName = offShort;
+          dutyName = offShort;
+          statusCategory = 'OFF';
+        }
+        else if (codeStr === 'ON_PARADE') {
+          dutyName = isPT ? 'On PT' : 'On Parade';
+          statusCategory = 'PARADE';
+        }
+        else if (codeStr === 'ESSN') {
+          dutyName = 'Essential Task';
+          statusCategory = 'ESSN';
+        }
+        else if (codeStr === 'CMH') {
+          dutyName = 'BNS/BSH/CMH';
+          statusCategory = 'CMH';
+        }
+        else if (codeStr === 'SICK_REPORT') {
+          dutyName = 'Sick Report';
+          statusCategory = 'SICK_REPORT';
+        }
+        else if (codeStr === 'DRILL_CAT_C') {
+          dutyName = 'Drill Cat-C';
+          statusCategory = 'DRILL_CAT_C';
+        }
+        else if (codeStr === 'ADMIN_ORDER') {
+          dutyName = 'Admin Order';
+          statusCategory = 'ADMIN_ORDER';
+        }
+        else if (codeStr === 'CLASS_TRG') {
+          dutyName = 'Class / Training';
+          statusCategory = 'CLASS_TRG';
+        }
+        else if (codeStr === 'AIRFIELD_DUTY') {
+          dutyName = 'Airfield Duty';
+          statusCategory = 'AIRFIELD_DUTY';
+        }
+        else if (codeStr === 'RECEPTION') {
+          dutyName = 'K/O & Reception';
+          statusCategory = 'RECEPTION';
+        }
+        else if (codeStr === 'GAMES') {
+          dutyName = 'G/H & Games';
+          statusCategory = 'GAMES';
+        }
+        else if (codeStr === 'ABSENT') {
+          dutyName = 'Absent';
+          statusCategory = 'ABSENT';
+        }
+
+        const safeNotes = (ass.notes || '').toLowerCase().includes('imported') ? '' : (ass.notes || '');
+
+        return { 
+          dutyCode: ass.dutyCode, 
+          idaShift: ass.idaShift, 
+          proxyForFlight: ass.proxyForFlight,
+          disposalScope: scope,
+          notes: safeNotes, 
+          dutyName,
+          previousDutyName,
+          statusCategory,
+        };
+      }
+
+      if (!isPT) {
+        const yestAss = yestMap.get(airmanId);
+        if (yestAss) {
+          let offShort = 'Duty Off';
+          if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
+          else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
+          else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
+          else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airport Off';
+          else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
+          else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
+          else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+          else if (yestAss.dutyCode === 'DUTY_OFF') offShort = yestAss.previousDutyName || yestAss.notes || 'Duty Off';
+          else offShort = `${yestAss.dutyCode} Off`;
+
+          offShort = offShort
+            .replace(/DUTY_OFF/g, 'Duty')
+            .replace(/Off Off/g, 'Off')
+            .replace(/Duty Off Off/g, 'Duty Off');
+
+          const isHeavy =
+            ['GD', 'BTF', 'NTF', 'AIRPORT', 'HALISHAHAR', 'DUTY_OFF'].includes(yestAss.dutyCode) ||
+            ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') ||
+            yestAss.notes?.toLowerCase().includes('idac');
+
+          if (isHeavy) {
+            return { 
+              dutyCode: 'DUTY_OFF', 
+              dutyName: offShort, 
+              previousDutyName: offShort,
+              proxyForFlight: yestAss.proxyForFlight,
+              notes: offShort,
+              statusCategory: 'OFF',
+            };
+          }
         }
       }
+
+      return { 
+        dutyCode: 'ON_PARADE', 
+        dutyName: isPT ? 'On PT' : 'On Parade', 
+        notes: '',
+        statusCategory: 'PARADE',
+      };
+    };
+
+    const personnelStatusList = filteredAirmen.map((airman) => {
+      const eff = resolveEffectiveAssignment(airman.id);
+      const dutyCode = eff.dutyCode;
+      const idaShift = eff.idaShift;
+      const proxyForFlight = eff.proxyForFlight;
+      let notes = eff.notes;
+      const dutyName = eff.dutyName;
+      const previousDutyName = eff.previousDutyName;
+      const statusCategory = eff.statusCategory;
+
+      if (dutyCode === 'BAKE_N_BITE' || statusCategory === 'BAKE_N_BITE') {
+        bakeNBite++;
+      } else if (statusCategory === 'LEAVE' || dutyCode === 'LEAVE') {
+        onLeave++;
+      } else if (statusCategory === 'TDY' || ['TDY', 'ATT', 'DETT'].includes(dutyCode)) {
+        tdy++;
+      } else if (statusCategory === 'OFF' || dutyCode === 'DUTY_OFF') {
+        otherOff++;
+      } else if (statusCategory === 'DUTY') {
+        onDuty++;
+      } else if (statusCategory === 'PARADE' || dutyCode === 'ON_PARADE') {
+        onParade++;
+      } else {
+        otherOff++;
+      }
+
+      if ((dutyCode === 'IDAC' || dutyCode === 'IDA') && idaShift === 'Night') {
+        const shiftNote = 'IDAC Night';
+        if (!notes) notes = shiftNote;
+        else if (!notes.includes('IDAC')) notes = `${shiftNote} - ${notes}`;
+      }
+
+      return {
+        airman,
+        dutyCode,
+        idaShift,
+        proxyForFlight,
+        statusCategory,
+        notes,
+        dutyName,
+        previousDutyName,
+      };
     });
 
-    const totalStrength = relevantAirmen.length;
-    const totalOnDuty = dutyList.length;
-    const totalLeave = leaveList.length;
-    const totalSick = sickList.length;
-    const totalTdy = tdyList.length;
-    const totalMisc = miscList.length;
-    const totalPresent = presentList.length;
+    const flights: FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
+    const flightBreakdown = {} as Record<FlightName, any>;
+
+    flights.forEach((fl) => {
+      const flAirmen = (this.db.airmen || []).filter((a) => a.flightName === fl);
+      let flParade = 0;
+      let flDuty = 0;
+      let flLeave = 0;
+      let flTdy = 0;
+      let flOff = 0;
+      let flBakeNBite = 0;
+
+      flAirmen.forEach((a) => {
+        const eff = resolveEffectiveAssignment(a.id);
+        if (eff.dutyCode === 'BAKE_N_BITE' || eff.statusCategory === 'BAKE_N_BITE') {
+          flBakeNBite++;
+        } else if (eff.statusCategory === 'LEAVE' || eff.dutyCode === 'LEAVE') flLeave++;
+        else if (eff.statusCategory === 'TDY' || ['TDY', 'ATT', 'DETT'].includes(eff.dutyCode)) flTdy++;
+        else if (eff.statusCategory === 'OFF' || eff.dutyCode === 'DUTY_OFF') flOff++;
+        else if (eff.statusCategory === 'DUTY') flDuty++;
+        else if (eff.statusCategory === 'PARADE' || eff.dutyCode === 'ON_PARADE') flParade++;
+        else flOff++;
+      });
+
+      flightBreakdown[fl] = {
+        total: flAirmen.length,
+        onParade: flParade,
+        onDuty: flDuty,
+        onLeave: flLeave,
+        tdy: flTdy,
+        otherOff: flOff,
+        bakeNBite: flBakeNBite,
+      };
+    });
 
     return {
       date,
       shift,
-      flight,
-      totalStrength,
-      presentStrength: totalPresent,
-      totalOnDuty,
-      totalLeave,
-      totalSick,
-      totalTdy,
-      totalMisc,
-      dutyList,
-      leaveList,
-      sickList,
-      tdyList,
-      presentList,
-      miscList,
+      flight: selectedFlight,
+      summary: {
+        totalStrength: filteredAirmen.length,
+        onParade,
+        onDuty,
+        onLeave,
+        tdy,
+        otherOff,
+        bakeNBite,
+      },
+      flightBreakdown,
+      personnelStatusList,
     } as any;
   }
 
