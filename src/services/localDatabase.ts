@@ -1052,6 +1052,34 @@ export class LocalDatabaseEngine {
     return count;
   }
 
+  public resetToEmptyRoster(): void {
+    this.db.assignments = {};
+    this.saveToStorage();
+    const supabase = getSupabase();
+    if (supabase) {
+      asyncSupabase('DELETE_ALL', 'assignments', supabase.from('assignments').delete().neq('id', '___empty___'));
+    }
+  }
+
+  public clearMonth(monthKey: string): void {
+    if (this.db.assignments[monthKey]) {
+      delete this.db.assignments[monthKey];
+      this.saveToStorage();
+      const supabase = getSupabase();
+      if (supabase) {
+        asyncSupabase('DELETE_MONTH', 'assignments', supabase.from('assignments').delete().like('date', `${monthKey}%`));
+      }
+    }
+  }
+
+  public resetToOfficialData(): void {
+    this.db.assignments = {
+      '2026-07': generateOfficialMonthAssignments(2026, 7),
+      '2026-08': generateOfficialMonthAssignments(2026, 8),
+    };
+    this.saveToStorage();
+  }
+
   // --- PARADE STATE & PT STATE ---
   public getParadeState(params?: {
     date?: string;

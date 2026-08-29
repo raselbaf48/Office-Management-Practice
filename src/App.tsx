@@ -164,12 +164,14 @@ export default function App() {
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
+    let failureCount = 0;
 
     const connectSSE = () => {
       try {
         eventSource = new EventSource('/api/realtime/events');
 
         eventSource.onmessage = (event) => {
+          failureCount = 0;
           try {
             const data = JSON.parse(event.data);
             if (
@@ -187,16 +189,19 @@ export default function App() {
         };
 
         eventSource.onerror = () => {
+          failureCount++;
           if (eventSource) {
             eventSource.close();
             eventSource = null;
           }
-          // Reconnect after 3 seconds
-          clearTimeout(reconnectTimeout);
-          reconnectTimeout = setTimeout(connectSSE, 3000);
+          // On static hosting (like Vercel), realtime SSE endpoint is handled by client storage & Supabase
+          if (failureCount < 3) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(connectSSE, 10000);
+          }
         };
       } catch (err) {
-        console.error('SSE initialization error:', err);
+        // SSE not supported or offline
       }
     };
 

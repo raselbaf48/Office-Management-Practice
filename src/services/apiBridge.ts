@@ -145,9 +145,43 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
       return jsonResponse({ success: true, ...res });
     }
 
-    if (pathname === '/api/roster/batch-assign') {
+    if (pathname === '/api/roster/batch-assign' || pathname === '/api/roster/bulk-assign') {
       const res = localDb.batchAssign(body);
       return jsonResponse({ success: true, message: `Assigned ${res.count} duties successfully!`, ...res });
+    }
+
+    if (pathname === '/api/roster/restore-assignments') {
+      const { restoreItems } = body || {};
+      if (Array.isArray(restoreItems)) {
+        restoreItems.forEach((item: any) => {
+          if (!item.airmanId || !item.date) return;
+          const monthKey = item.date.slice(0, 7);
+          if (item.assignment === null) {
+            localDb.deleteAssignment(item.airmanId, item.date);
+          } else if (item.assignment) {
+            localDb.assignDuty(monthKey, item.assignment);
+          }
+        });
+      }
+      return jsonResponse({ success: true, count: restoreItems?.length || 0 });
+    }
+
+    if (pathname === '/api/roster/clear-all') {
+      localDb.resetToEmptyRoster();
+      return jsonResponse({ success: true, message: 'All duties cleared' });
+    }
+
+    if (pathname === '/api/roster/clear-month') {
+      const { monthKey } = body || {};
+      if (monthKey) {
+        localDb.clearMonth(monthKey);
+      }
+      return jsonResponse({ success: true, message: `Duties for ${monthKey} cleared` });
+    }
+
+    if (pathname === '/api/roster/reset-official') {
+      localDb.resetToOfficialData();
+      return jsonResponse({ success: true, message: 'Reset to official parade state data' });
     }
 
     if (pathname === '/api/roster/delete-assignment') {
