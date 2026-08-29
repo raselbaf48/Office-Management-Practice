@@ -346,8 +346,8 @@ export class LocalDatabaseEngine {
         this.db.assignments = monthMap;
       }
 
-      // 3. Fetch Admin Passcode
-      const { data: passData, error: passErr } = await supabase.from('admin_passcode').select('*').eq('id', 'current').single();
+      // 3. Fetch Admin Passcode (safe query for both integer PK or text PK)
+      const { data: passRows, error: passErr } = await supabase.from('admin_passcode').select('*').limit(1);
       if (passErr && passErr.code !== 'PGRST116') {
         reportSyncError({
           operation: 'SELECT',
@@ -357,10 +357,10 @@ export class LocalDatabaseEngine {
           details: passErr.details,
           hint: passErr.hint,
         });
-      } else if (passData && passData.passcode) {
-        this.db.adminPasscode = passData.passcode;
+      } else if (passRows && passRows.length > 0 && passRows[0].passcode) {
+        this.db.adminPasscode = passRows[0].passcode;
       } else {
-        await asyncSupabase('SEED', 'admin_passcode', supabase.from('admin_passcode').upsert({ id: 'current', passcode: this.db.adminPasscode }));
+        await asyncSupabase('SEED', 'admin_passcode', supabase.from('admin_passcode').insert({ passcode: this.db.adminPasscode }));
       }
 
       // 4. Fetch Duty Ratio Matrix
@@ -1498,7 +1498,18 @@ export class LocalDatabaseEngine {
       // Persist to Supabase
       const supabase = getSupabase();
       if (supabase) {
-        asyncSupabase('UPSERT', 'admin_passcode', supabase.from('admin_passcode').upsert({ id: 'current', passcode: newCode }));
+        // Fetch existing record ID if any, or update first record
+        Promise.resolve(supabase.from('admin_passcode').select('id').limit(1))
+          .then(({ data }) => {
+            if (data && data.length > 0 && data[0].id !== undefined) {
+              asyncSupabase('UPDATE', 'admin_passcode', supabase.from('admin_passcode').update({ passcode: newCode }).eq('id', data[0].id));
+            } else {
+              asyncSupabase('INSERT', 'admin_passcode', supabase.from('admin_passcode').insert({ passcode: newCode }));
+            }
+          })
+          .catch((err: any) => {
+            console.error('Failed to persist admin passcode to Supabase:', err);
+          });
       }
 
       return true;
