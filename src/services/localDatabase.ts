@@ -15,7 +15,7 @@ import { INITIAL_AIRMEN } from '../data/initialAirmen';
 import { DUTY_TYPES } from '../data/dutyTypes';
 import { generateOfficialMonthAssignments, getOfficialParadeStateDocument } from '../data/officialJulyAugustData';
 import { calculateDutyStats, detectConflicts, getDaysInMonth } from '../data/rosterGenerator';
-import { getSupabase } from './supabaseClient';
+import { getSupabase, getSupabaseConfigDiagnostics, SupabaseConfigDiagnostics } from './supabaseClient';
 import { DutyRatioTable, INITIAL_OFFICIAL_DUTY_MATRIX, getStoredDutyMatrix, saveDutyMatrix } from '../data/officialDutyRatioMatrix';
 
 export interface LocalStorageDB {
@@ -25,6 +25,121 @@ export interface LocalStorageDB {
   adminPasscode: string;
   importHistory: ImportHistoryBatch[];
   lastUpdated: string;
+}
+
+export interface SupabaseSyncErrorEvent {
+  id: string;
+  operation: string;
+  table: string;
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+  timestamp: string;
+}
+
+export interface SupabaseSyncStatusState {
+  isConfigured: boolean;
+  status: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured';
+  lastSyncTime: string | null;
+  lastSuccessMessage: string | null;
+  activeErrors: SupabaseSyncErrorEvent[];
+  diagnostics: SupabaseConfigDiagnostics;
+}
+
+let globalSyncErrors: SupabaseSyncErrorEvent[] = [];
+let lastSyncStatus: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured' = 'idle';
+let lastSyncTime: string | null = null;
+let lastSuccessMessage: string | null = null;
+
+export const getSupabaseSyncState = (): SupabaseSyncStatusState => {
+  const diagnostics = getSupabaseConfigDiagnostics();
+  return {
+    isConfigured: diagnostics.isConfigured,
+    status: !diagnostics.isConfigured ? 'unconfigured' : (globalSyncErrors.length > 0 ? 'error' : lastSyncStatus),
+    lastSyncTime,
+    lastSuccessMessage,
+    activeErrors: [...globalSyncErrors],
+    diagnostics,
+  };
+};
+
+export const clearSupabaseSyncErrors = (): void => {
+  globalSyncErrors = [];
+  broadcastSyncState();
+};
+
+function broadcastSyncState(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('supabase_sync_update', {
+        detail: getSupabaseSyncState(),
+      })
+    );
+  }
+}
+
+export function reportSyncError(err: Omit<SupabaseSyncErrorEvent, 'id' | 'timestamp'> & { timestamp?: string }): void {
+  const item: SupabaseSyncErrorEvent = {
+    id: `err-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    operation: err.operation,
+    table: err.table,
+    message: err.message || 'Unknown PostgREST error',
+    code: err.code,
+    details: err.details,
+    hint: err.hint,
+    timestamp: err.timestamp || new Date().toLocaleTimeString(),
+  };
+  globalSyncErrors.unshift(item);
+  if (globalSyncErrors.length > 20) {
+    globalSyncErrors = globalSyncErrors.slice(0, 20);
+  }
+  lastSyncStatus = 'error';
+  console.error(`🚨 [Supabase Sync Failure] Operation "${err.operation}" on table "${err.table}" failed:`, {
+    message: err.message,
+    code: err.code,
+    details: err.details,
+    hint: err.hint,
+  });
+  broadcastSyncState();
+}
+
+export function reportSyncSuccess(operation: string, table: string): void {
+  lastSyncStatus = 'connected';
+  lastSyncTime = new Date().toLocaleTimeString();
+  lastSuccessMessage = `Successfully executed ${operation} on ${table}`;
+  broadcastSyncState();
+}
+
+export async function asyncSupabase(
+  operationName: string,
+  table: string,
+  promiseLike: any
+): Promise<any> {
+  if (!promiseLike) return null;
+  try {
+    const res = await Promise.resolve(promiseLike);
+    if (res && res.error) {
+      reportSyncError({
+        operation: operationName,
+        table,
+        message: res.error.message || `PostgREST error on ${table}`,
+        code: res.error.code,
+        details: res.error.details,
+        hint: res.error.hint,
+      });
+      return res;
+    }
+    reportSyncSuccess(operationName, table);
+    return res;
+  } catch (err: any) {
+    reportSyncError({
+      operation: operationName,
+      table,
+      message: err?.message || String(err),
+    });
+    return null;
+  }
 }
 
 const STORAGE_KEY = 'baf_155_uasu_v2_db';
@@ -63,14 +178,6 @@ function getYesterdayDateStr(dateStr: string): string {
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const da = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${da}`;
-}
-
-function asyncSupabase(promiseLike: any): void {
-  if (promiseLike && typeof promiseLike === 'object') {
-    Promise.resolve(promiseLike).catch((err: any) => {
-      console.warn('Supabase async operation warning:', err?.message || err);
-    });
-  }
 }
 
 export class LocalDatabaseEngine {
@@ -148,13 +255,31 @@ export class LocalDatabaseEngine {
    */
   public async syncFromSupabase(): Promise<void> {
     const supabase = getSupabase();
-    if (!supabase || this.isSupabaseSyncing) return;
+    if (!supabase || this.isSupabaseSyncing) {
+      if (!supabase) {
+        lastSyncStatus = 'unconfigured';
+        broadcastSyncState();
+      }
+      return;
+    }
 
     this.isSupabaseSyncing = true;
+    lastSyncStatus = 'syncing';
+    broadcastSyncState();
+
     try {
       // 1. Fetch Airmen
       const { data: airmenData, error: airmenErr } = await supabase.from('airmen').select('*').order('ser_no', { ascending: true });
-      if (!airmenErr && airmenData && airmenData.length > 0) {
+      if (airmenErr) {
+        reportSyncError({
+          operation: 'SELECT',
+          table: 'airmen',
+          message: airmenErr.message,
+          code: airmenErr.code,
+          details: airmenErr.details,
+          hint: airmenErr.hint,
+        });
+      } else if (airmenData && airmenData.length > 0) {
         this.db.airmen = airmenData.map((row) => ({
           id: row.id,
           serNo: row.ser_no || 1,
@@ -185,12 +310,21 @@ export class LocalDatabaseEngine {
           remarks: a.remarks,
           active: a.active,
         }));
-        await supabase.from('airmen').insert(initialRows);
+        await asyncSupabase('SEED_INITIAL', 'airmen', supabase.from('airmen').insert(initialRows));
       }
 
       // 2. Fetch Assignments
       const { data: assignData, error: assignErr } = await supabase.from('assignments').select('*');
-      if (!assignErr && assignData && assignData.length > 0) {
+      if (assignErr) {
+        reportSyncError({
+          operation: 'SELECT',
+          table: 'assignments',
+          message: assignErr.message,
+          code: assignErr.code,
+          details: assignErr.details,
+          hint: assignErr.hint,
+        });
+      } else if (assignData && assignData.length > 0) {
         const monthMap: Record<string, DutyAssignment[]> = {};
         assignData.forEach((row) => {
           const dateStr = row.date;
@@ -214,22 +348,48 @@ export class LocalDatabaseEngine {
 
       // 3. Fetch Admin Passcode
       const { data: passData, error: passErr } = await supabase.from('admin_passcode').select('*').eq('id', 'current').single();
-      if (!passErr && passData && passData.passcode) {
+      if (passErr && passErr.code !== 'PGRST116') {
+        reportSyncError({
+          operation: 'SELECT',
+          table: 'admin_passcode',
+          message: passErr.message,
+          code: passErr.code,
+          details: passErr.details,
+          hint: passErr.hint,
+        });
+      } else if (passData && passData.passcode) {
         this.db.adminPasscode = passData.passcode;
       } else {
-        // Seed passcode in Supabase
-        await supabase.from('admin_passcode').upsert({ id: 'current', passcode: this.db.adminPasscode });
+        await asyncSupabase('SEED', 'admin_passcode', supabase.from('admin_passcode').upsert({ id: 'current', passcode: this.db.adminPasscode }));
       }
 
       // 4. Fetch Duty Ratio Matrix
       const { data: ratioData, error: ratioErr } = await supabase.from('duty_ratio_matrix').select('*').eq('id', 'current_ratio').single();
-      if (!ratioErr && ratioData && ratioData.matrix_data) {
+      if (ratioErr && ratioErr.code !== 'PGRST116') {
+        reportSyncError({
+          operation: 'SELECT',
+          table: 'duty_ratio_matrix',
+          message: ratioErr.message,
+          code: ratioErr.code,
+          details: ratioErr.details,
+          hint: ratioErr.hint,
+        });
+      } else if (ratioData && ratioData.matrix_data) {
         saveDutyMatrix(ratioData.matrix_data);
       }
 
       // 5. Fetch Activity History
       const { data: actData, error: actErr } = await supabase.from('activity_history').select('*').order('timestamp', { ascending: false }).limit(100);
-      if (!actErr && actData && actData.length > 0) {
+      if (actErr) {
+        reportSyncError({
+          operation: 'SELECT',
+          table: 'activity_history',
+          message: actErr.message,
+          code: actErr.code,
+          details: actErr.details,
+          hint: actErr.hint,
+        });
+      } else if (actData && actData.length > 0) {
         this.db.activityHistory = actData.map((row) => ({
           id: row.id,
           actionType: row.action_type,
@@ -248,10 +408,19 @@ export class LocalDatabaseEngine {
       }
 
       this.saveToStorage(this.db, true);
-    } catch (e) {
-      console.warn('Error during Supabase synchronization:', e);
+      lastSyncStatus = 'connected';
+      lastSyncTime = new Date().toLocaleTimeString();
+      broadcastSyncState();
+    } catch (e: any) {
+      console.error('❌ Exception during Supabase synchronization:', e);
+      reportSyncError({
+        operation: 'SYNC_ALL',
+        table: 'all',
+        message: e?.message || String(e),
+      });
     } finally {
       this.isSupabaseSyncing = false;
+      broadcastSyncState();
     }
   }
 
@@ -291,6 +460,8 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       asyncSupabase(
+        'INSERT',
+        'activity_history',
         supabase.from('activity_history').insert({
           id: item.id,
           action_type: item.actionType,
@@ -358,6 +529,8 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       asyncSupabase(
+        'INSERT',
+        'airmen',
         supabase.from('airmen').insert({
           id: newAirman.id,
           ser_no: newAirman.serNo,
@@ -426,7 +599,7 @@ export class LocalDatabaseEngine {
     // Persist bulk rows in Supabase
     const supabase = getSupabase();
     if (supabase && supabaseRows.length > 0) {
-      asyncSupabase(supabase.from('airmen').insert(supabaseRows));
+      asyncSupabase('BULK_INSERT', 'airmen', supabase.from('airmen').insert(supabaseRows));
     }
 
     // Log in activity history
@@ -457,6 +630,8 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       asyncSupabase(
+        'UPDATE',
+        'airmen',
         supabase
           .from('airmen')
           .update({
@@ -497,8 +672,8 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase) {
-      asyncSupabase(supabase.from('airmen').delete().eq('id', id));
-      asyncSupabase(supabase.from('assignments').delete().eq('airman_id', id));
+      asyncSupabase('DELETE', 'airmen', supabase.from('airmen').delete().eq('id', id));
+      asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', id));
     }
 
     return true;
@@ -589,6 +764,8 @@ export class LocalDatabaseEngine {
     if (supabase) {
       const assignmentId = `${newAss.airmanId}_${newAss.date}_${newAss.dutyCode}${newAss.idaShift ? '_' + newAss.idaShift : ''}`;
       asyncSupabase(
+        'UPSERT',
+        'assignments',
         supabase.from('assignments').upsert({
           id: assignmentId,
           airman_id: newAss.airmanId,
@@ -713,7 +890,7 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase && supabaseRows.length > 0) {
-      asyncSupabase(supabase.from('assignments').upsert(supabaseRows));
+      asyncSupabase('UPSERT_RANGE', 'assignments', supabase.from('assignments').upsert(supabaseRows));
     }
 
     return { count: assignedDates.length, assignedDates };
@@ -817,7 +994,7 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase && supabaseRows.length > 0) {
-      asyncSupabase(supabase.from('assignments').upsert(supabaseRows));
+      asyncSupabase('BATCH_UPSERT', 'assignments', supabase.from('assignments').upsert(supabaseRows));
     }
 
     return { count: assignments.length * assignedDates.length, assignedDates };
@@ -847,9 +1024,9 @@ export class LocalDatabaseEngine {
       const supabase = getSupabase();
       if (supabase) {
         if (dutyCode) {
-          asyncSupabase(supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date).eq('duty_code', dutyCode));
+          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date).eq('duty_code', dutyCode));
         } else {
-          asyncSupabase(supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date));
+          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date));
         }
       }
     }
@@ -1321,7 +1498,7 @@ export class LocalDatabaseEngine {
       // Persist to Supabase
       const supabase = getSupabase();
       if (supabase) {
-        asyncSupabase(supabase.from('admin_passcode').upsert({ id: 'current', passcode: newCode }));
+        asyncSupabase('UPSERT', 'admin_passcode', supabase.from('admin_passcode').upsert({ id: 'current', passcode: newCode }));
       }
 
       return true;
@@ -1369,6 +1546,8 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       asyncSupabase(
+        'UPSERT',
+        'duty_ratio_matrix',
         supabase.from('duty_ratio_matrix').upsert({
           id: 'current_ratio',
           matrix_data: matrix,
@@ -1786,9 +1965,11 @@ export class LocalDatabaseEngine {
     const supabase = getSupabase();
     if (supabase) {
       if (supabaseRows.length > 0) {
-        asyncSupabase(supabase.from('assignments').upsert(supabaseRows));
+        asyncSupabase('UPSERT_IMPORT', 'assignments', supabase.from('assignments').upsert(supabaseRows));
       }
       asyncSupabase(
+        'INSERT',
+        'import_history',
         supabase.from('import_history').insert({
           id: newBatch.id,
           timestamp: newBatch.timestamp,
@@ -1854,10 +2035,120 @@ export class LocalDatabaseEngine {
 
     const supabase = getSupabase();
     if (supabase) {
-      asyncSupabase(supabase.from('import_history').delete().eq('id', batchId));
+      asyncSupabase('DELETE', 'import_history', supabase.from('import_history').delete().eq('id', batchId));
     }
 
     return true;
+  }
+
+  /**
+   * Diagnostic round-trip write & read test for Supabase
+   */
+  public async testSupabaseWriteRead(airmanData?: Partial<Airman>): Promise<{
+    success: boolean;
+    operation: string;
+    insertedRecord?: any;
+    readBackRecord?: any;
+    error?: any;
+    diagnostics: ReturnType<typeof getSupabaseConfigDiagnostics>;
+  }> {
+    const diagnostics = getSupabaseConfigDiagnostics();
+    const supabase = getSupabase();
+
+    if (!supabase || !diagnostics.isConfigured) {
+      return {
+        success: false,
+        operation: 'INITIALIZE',
+        error: { message: diagnostics.statusMessage },
+        diagnostics,
+      };
+    }
+
+    const testId = `test-sync-${Date.now()}`;
+    const payload = {
+      id: testId,
+      ser_no: 9999,
+      code: 'TEST-AIR',
+      bd_no: `BD/${Date.now().toString().slice(-6)}`,
+      rank: 'LAC',
+      name: airmanData?.name || 'Diagnostic Sync Test Airman',
+      trade: 'Avionic Tech',
+      address_block: 'Test Block',
+      mobile_no: '01700000000',
+      flight_name: 'Avionics',
+      remarks: 'Automated Supabase Verification Test',
+      active: true,
+    };
+
+    try {
+      console.log('🧪 [Supabase Test] Initiating test insert into `airmen` table:', payload);
+      // 1. Insert
+      const insertRes = await supabase.from('airmen').insert(payload);
+      if (insertRes.error) {
+        console.error('❌ [Supabase Test] Insert failed:', insertRes.error);
+        reportSyncError({
+          operation: 'TEST_INSERT',
+          table: 'airmen',
+          message: insertRes.error.message,
+          code: insertRes.error.code,
+          details: insertRes.error.details,
+          hint: insertRes.error.hint,
+        });
+        return {
+          success: false,
+          operation: 'INSERT',
+          error: insertRes.error,
+          diagnostics,
+        };
+      }
+
+      console.log('✅ [Supabase Test] Insert succeeded. Reading back from `airmen` table...');
+      // 2. Read back
+      const readRes = await supabase.from('airmen').select('*').eq('id', testId).single();
+      if (readRes.error) {
+        console.error('❌ [Supabase Test] Read back failed:', readRes.error);
+        reportSyncError({
+          operation: 'TEST_READ_BACK',
+          table: 'airmen',
+          message: readRes.error.message,
+          code: readRes.error.code,
+        });
+        return {
+          success: false,
+          operation: 'READ_BACK',
+          insertedRecord: payload,
+          error: readRes.error,
+          diagnostics,
+        };
+      }
+
+      console.log('✅ [Supabase Test] Read back verified successfully:', readRes.data);
+      // 3. Clean up test record
+      await supabase.from('airmen').delete().eq('id', testId);
+      console.log('🧹 [Supabase Test] Cleaned up temporary test record.');
+
+      reportSyncSuccess('TEST_ROUND_TRIP', 'airmen');
+      return {
+        success: true,
+        operation: 'ROUND_TRIP_VERIFIED',
+        insertedRecord: payload,
+        readBackRecord: readRes.data,
+        diagnostics,
+      };
+    } catch (err: any) {
+      console.error('❌ [Supabase Test] Exception during test write/read:', err);
+      reportSyncError({
+        operation: 'TEST_EXCEPTION',
+        table: 'airmen',
+        message: err?.message || String(err),
+      });
+      return {
+        success: false,
+        operation: 'EXCEPTION',
+        error: { message: err?.message || String(err) },
+        diagnostics,
+      };
+    }
   }
 }
 

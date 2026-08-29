@@ -25,6 +25,7 @@ import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { PdfDutyImportModal } from './components/PdfDutyImportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { UserLoginGate } from './components/UserLoginGate';
+import { SupabaseSyncBanner } from './components/SupabaseSyncBanner';
 import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
 import { INITIAL_AIRMEN } from './data/initialAirmen';
 import { Logo155UASU } from './components/Logo155UASU';
@@ -352,6 +353,8 @@ export default function App() {
           onLogoutAdmin={() => handleRoleChange('AIRMAN')}
         />
 
+        {/* Supabase Realtime Sync & Diagnostic Debug Banner */}
+        <SupabaseSyncBanner />
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
