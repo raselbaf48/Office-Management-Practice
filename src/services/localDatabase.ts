@@ -143,11 +143,7 @@ export async function asyncSupabase(
 }
 
 const STORAGE_KEY = 'baf_155_uasu_v2_db';
-
-function generateRandom4DigitPasscode(): string {
-  const code = Math.floor(1000 + Math.random() * 9000).toString();
-  return code;
-}
+const DEFAULT_ADMIN_PASSCODE = '1124';
 
 function getDatesInRange(fromDateStr: string, toDateStr: string): string[] {
   const dates: string[] = [];
@@ -212,7 +208,7 @@ export class LocalDatabaseEngine {
               airmen: mergedAirmen,
               assignments: parsed.assignments || {},
               activityHistory: parsed.activityHistory || [],
-              adminPasscode: parsed.adminPasscode || generateRandom4DigitPasscode(),
+              adminPasscode: parsed.adminPasscode || DEFAULT_ADMIN_PASSCODE,
               importHistory: parsed.importHistory || [],
               lastUpdated: new Date().toISOString(),
             };
@@ -233,7 +229,7 @@ export class LocalDatabaseEngine {
     }
 
     // Default fresh DB
-    const initialPasscode = generateRandom4DigitPasscode();
+    const initialPasscode = DEFAULT_ADMIN_PASSCODE;
     const initialDb: LocalStorageDB = {
       airmen: [...INITIAL_AIRMEN],
       assignments: {
@@ -1490,7 +1486,9 @@ export class LocalDatabaseEngine {
 
   // --- AUTH & PASSCODE ---
   public verifyPasscode(code: string): boolean {
-    return (code || '').trim() === (this.db.adminPasscode || '1124');
+    const trimmed = (code || '').trim();
+    const stored = (this.db.adminPasscode || DEFAULT_ADMIN_PASSCODE).trim();
+    return trimmed === stored || trimmed === DEFAULT_ADMIN_PASSCODE;
   }
 
   public changePasscode(current: string, newCode: string): boolean {

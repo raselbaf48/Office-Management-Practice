@@ -100,6 +100,12 @@ export default function App() {
     }
   };
 
+  const handleUserLogout = () => {
+    clearUserSession();
+    setUserSession(null);
+    handleRoleChange('AIRMAN');
+  };
+
   // Restrict access for non-admin viewers: only Dashboard, Parade State, and PT State allowed
   useEffect(() => {
     if (role !== 'ADMIN' && activeTab !== 'overview' && activeTab !== 'parade-state' && activeTab !== 'pt-state') {
@@ -309,10 +315,10 @@ export default function App() {
     }
   };
 
-  return (
-    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* User Login Gate (Shown when not authenticated) */}
-      {!userSession && (
+  // User Login Gate: Only render login interface when not authenticated
+  if (!userSession) {
+    return (
+      <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
         <UserLoginGate
           airmen={airmen}
           onAuthenticated={() => {
@@ -323,8 +329,12 @@ export default function App() {
             }
           }}
         />
-      )}
+      </div>
+    );
+  }
 
+  return (
+    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* Left Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -336,9 +346,11 @@ export default function App() {
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
         airmenCount={airmen.length}
+        userSession={userSession}
         onOpenImportModal={() => setIsPdfImportModalOpen(true)}
         onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
         onLogoutAdmin={() => handleRoleChange('AIRMAN')}
+        onLogoutUser={handleUserLogout}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
@@ -349,8 +361,10 @@ export default function App() {
           activeTab={activeTab}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           role={role}
+          userSession={userSession}
           onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
           onLogoutAdmin={() => handleRoleChange('AIRMAN')}
+          onLogoutUser={handleUserLogout}
         />
 
         {/* Supabase Realtime Sync & Diagnostic Debug Banner */}
