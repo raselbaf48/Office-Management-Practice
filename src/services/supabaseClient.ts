@@ -2,14 +2,15 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Support both NEXT_PUBLIC_ (Vercel standard) and VITE_ (Vite standard) variable naming
 const getEnvVar = (key: string): string => {
-  if (typeof process !== 'undefined' && process.env && process.env[key]) {
-    return process.env[key] as string;
-  }
   // Vite client-side env
   if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
     const metaEnv = (import.meta as any).env;
     if (metaEnv[key]) return metaEnv[key];
     if (metaEnv[`VITE_${key}`]) return metaEnv[`VITE_${key}`];
+    if (metaEnv[`NEXT_PUBLIC_${key}`]) return metaEnv[`NEXT_PUBLIC_${key}`];
+  }
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key] as string;
   }
   return '';
 };
