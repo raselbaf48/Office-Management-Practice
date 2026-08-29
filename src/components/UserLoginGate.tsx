@@ -19,7 +19,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
     setErrorMsg('');
     const cleanInput = inputBd.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '');
     if (!cleanInput) {
-      setErrorMsg('Please enter your User ID (BD Number) to login.');
+      setErrorMsg('Please enter your User ID.');
       return;
     }
 
@@ -30,15 +30,17 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
     if (validation.success && validation.airman) {
       const airman = validation.airman;
       setSuccessAirman(airman);
-      const role = validation.detailedUser?.role || (cleanInput === '474455' ? 'ADMIN' : 'USER');
-      setUserSession(airman, role);
+      setUserSession(airman, 'USER');
       setTimeout(() => {
         setIsLoading(false);
         onAuthenticated();
       }, 400);
     } else {
       setIsLoading(false);
-      setErrorMsg(validation.message || `User ID "BD/${cleanInput}" is not recognized or authorized.`);
+      setErrorMsg(
+        validation.message ||
+          'You are not authorized to access the portal. User ID error, please enter correct User ID.'
+      );
     }
   };
 
@@ -69,7 +71,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
               155 UASU BAF
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
-              Personnel Duty & Routine Management System
+              Personnel Office Management System
             </p>
           </div>
         </div>
@@ -99,9 +101,6 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
               User ID
             </label>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-sm flex items-center space-x-1">
-                <span>BD/</span>
-              </div>
               <input
                 id="user_id_input"
                 type="text"
@@ -111,13 +110,10 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({ airmen, onAuthenti
                   setBdInput(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
-                placeholder="Enter BD Number (e.g. 474455)"
-                className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-mono font-bold text-white placeholder-slate-500 outline-none transition-all"
+                placeholder=""
+                className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
               />
             </div>
-            <p className="text-[11px] text-slate-400">
-              Enter your Airman BD Number to access the system.
-            </p>
           </div>
 
           <button

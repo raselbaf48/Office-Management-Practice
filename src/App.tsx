@@ -329,9 +329,7 @@ export default function App() {
           onAuthenticated={() => {
             const sess = getCurrentUserSession();
             setUserSession(sess);
-            if (sess?.assignedRole === 'ADMIN' || sess?.bdNo === '474455') {
-              handleRoleChange('ADMIN');
-            }
+            handleRoleChange('AIRMAN');
           }}
         />
       </div>

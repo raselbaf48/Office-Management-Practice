@@ -307,7 +307,7 @@ export function parseRosterTextHeuristically(
 
     if (dateStr) {
       if (!dateMap.has(dateStr)) {
-        dateMap.set(dateStr, { date: dateStr, day: dayName, assignments: [] });
+        dateMap.set(dateStr, { date: dateStr, dayName: dayName, assignments: [] });
       }
       const entry = dateMap.get(dateStr)!;
 

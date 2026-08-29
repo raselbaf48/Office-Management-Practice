@@ -256,7 +256,7 @@ export const validateUserLogin = (
 ): { success: boolean; airman?: Airman; detailedUser?: DetailedUserLogin; message: string } => {
   const cleanInput = bdInput.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
   if (!cleanInput) {
-    return { success: false, message: 'Please enter your BD Number to continue.' };
+    return { success: false, message: 'Please enter your User ID.' };
   }
 
   // 1. Check detailed users register first
@@ -267,13 +267,13 @@ export const validateUserLogin = (
     if (matchedDetail.status === 'DISABLED') {
       return {
         success: false,
-        message: `Login Access for BD/${matchedDetail.bdNo} (${matchedDetail.rank} ${matchedDetail.name}) is DISABLED by Unit Administrator.`,
+        message: 'You are not authorized to access the portal. User ID is disabled. Please contact administrator.',
       };
     }
     if (matchedDetail.status === 'SUSPENDED') {
       return {
         success: false,
-        message: `Login Access for BD/${matchedDetail.bdNo} is temporarily SUSPENDED. Please contact 155 UASU Admin.`,
+        message: 'You are not authorized to access the portal. User ID is temporarily suspended.',
       };
     }
 
@@ -338,7 +338,7 @@ export const validateUserLogin = (
 
   return {
     success: false,
-    message: `BD/${cleanInput.toUpperCase()} is not detailed or registered in 155 UASU Nominal Roll. Access restricted to authorized unit personnel.`,
+    message: 'You are not authorized to access the portal. User ID error, please enter correct User ID.',
   };
 };
 
@@ -355,7 +355,7 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
     flightName: airman.flightName,
     trade: airman.trade,
     loginTimestamp: new Date().toISOString(),
-    assignedRole: cleanBd === '474455' ? 'ADMIN' : assignedRole,
+    assignedRole: assignedRole,
   };
 
   try {

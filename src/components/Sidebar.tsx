@@ -485,9 +485,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* User Session Profile in Sidebar */}
+        {/* User Session Profile & Admin Mode Toggle */}
         {userSession && !collapsed && (
-          <div className="px-3 py-2.5 bg-[#052818] border-t border-[#0d4f31] shrink-0">
+          <div className="px-3 py-2.5 bg-[#052818] border-t border-[#0d4f31] shrink-0 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 truncate">
                 <div className="w-7 h-7 rounded-lg bg-emerald-700/60 text-emerald-200 flex items-center justify-center font-bold text-xs shrink-0">
@@ -514,6 +514,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Admin Switcher in Sidebar */}
+            {role === 'ADMIN' ? (
+              <div className="flex items-center justify-between px-2.5 py-1.5 bg-emerald-900/60 border border-emerald-500/40 rounded-xl">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] font-black text-emerald-200">Admin Mode Active</span>
+                </div>
+                {onLogoutAdmin && (
+                  <button
+                    type="button"
+                    onClick={onLogoutAdmin}
+                    className="text-[10px] text-emerald-300 hover:text-amber-300 underline font-semibold cursor-pointer"
+                  >
+                    Airman View
+                  </button>
+                )}
+              </div>
+            ) : (
+              onOpenAdminLogin && (
+                <button
+                  type="button"
+                  onClick={onOpenAdminLogin}
+                  className="w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  title="Enter Master Passcode for Admin privileges"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Admin Passcode</span>
+                </button>
+              )
+            )}
           </div>
         )}
 
