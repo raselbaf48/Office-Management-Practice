@@ -310,6 +310,20 @@ export default function App() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      {/* User Login Gate (Shown when not authenticated) */}
+      {!userSession && (
+        <UserLoginGate
+          airmen={airmen}
+          onAuthenticated={() => {
+            const sess = getCurrentUserSession();
+            setUserSession(sess);
+            if (sess?.assignedRole === 'ADMIN' || sess?.bdNo === '474455') {
+              handleRoleChange('ADMIN');
+            }
+          }}
+        />
+      )}
+
       {/* Left Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
