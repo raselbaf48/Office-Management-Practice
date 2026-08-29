@@ -1135,7 +1135,7 @@ export async function exportParadeStateSingleDocx(
   });
 
   const targetFileName =
-    fileName || `Parade_State_${flight.replace(/\s+/g, '_')}_${dateStr}.docx`;
+    fileName || `${isPt ? 'PT State' : 'Parade State'} - Airmen (${dateStr}).docx`;
   const blob = await Packer.toBlob(doc);
   saveAs(blob, targetFileName);
 }

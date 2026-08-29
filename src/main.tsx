@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { installApiInterceptor } from './services/apiBridge';
 
-// Initialize Universal Data Engine & API Bridge for Vercel and offline resilience
+// Initialize Universal Data Engine & API Bridge for Cloudflare Pages and offline resilience
 try {
   installApiInterceptor();
 } catch (err) {

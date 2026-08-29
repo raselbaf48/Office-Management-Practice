@@ -3,7 +3,7 @@ import { localDb } from './localDatabase';
 /**
  * Universal API Bridge & Fallback Interceptor
  * Ensures that all data operations (Parade State, Duty Assignment, Leave, TDY,
- * Airmen CRUD, Duty Roster, Analytics, Settings) work seamlessly on Vercel,
+ * Airmen CRUD, Duty Roster, Analytics, Settings) work seamlessly on Cloudflare Pages,
  * static deployments, and offline environments.
  */
 
@@ -29,7 +29,7 @@ export function installApiInterceptor() {
           return networkResponse;
         }
       } catch (networkErr) {
-        // Backend unavailable (e.g. Vercel static hosting) -> handle via local engine
+        // Backend unavailable (e.g. static hosting) -> handle via local engine
       }
 
       // Handle locally
@@ -46,7 +46,7 @@ export function installApiInterceptor() {
       configurable: true,
     });
     (window as any).__baf_interceptor_installed = true;
-    console.log('✅ BAF 155 UASU Local Data & Vercel Bridge Active');
+    console.log('✅ BAF 155 UASU Local Data & API Bridge Active');
   } catch (err) {
     try {
       (window as any).fetch = customFetch;

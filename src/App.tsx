@@ -25,7 +25,6 @@ import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { PdfDutyImportModal } from './components/PdfDutyImportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { UserLoginGate } from './components/UserLoginGate';
-import { SupabaseSyncBanner } from './components/SupabaseSyncBanner';
 import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
 import { INITIAL_AIRMEN } from './data/initialAirmen';
 import { Logo155UASU } from './components/Logo155UASU';
@@ -194,7 +193,7 @@ export default function App() {
             eventSource.close();
             eventSource = null;
           }
-          // On static hosting (like Vercel), realtime SSE endpoint is handled by client storage & Supabase
+          // On static hosting (like Cloudflare Pages), realtime events fall back to periodic polling
           if (failureCount < 3) {
             clearTimeout(reconnectTimeout);
             reconnectTimeout = setTimeout(connectSSE, 10000);
@@ -370,8 +369,6 @@ export default function App() {
           onLogoutUser={handleUserLogout}
         />
 
-        {/* Supabase Realtime Sync & Diagnostic Debug Banner */}
-        <SupabaseSyncBanner />
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
@@ -562,6 +559,7 @@ export default function App() {
           shift={selectedShift}
           flight={selectedFlight}
           airmen={airmen}
+          documentType={activeTab === 'pt-state' ? 'PT' : 'PARADE'}
           onClose={() => setIsPrintModalOpen(false)}
         />
       )}

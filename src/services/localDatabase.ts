@@ -15,7 +15,6 @@ import { INITIAL_AIRMEN } from '../data/initialAirmen';
 import { DUTY_TYPES } from '../data/dutyTypes';
 import { generateOfficialMonthAssignments, getOfficialParadeStateDocument } from '../data/officialJulyAugustData';
 import { calculateDutyStats, detectConflicts, getDaysInMonth } from '../data/rosterGenerator';
-import { getSupabase, getSupabaseConfigDiagnostics, SupabaseConfigDiagnostics } from './supabaseClient';
 import { DutyRatioTable, INITIAL_OFFICIAL_DUTY_MATRIX, getStoredDutyMatrix, saveDutyMatrix } from '../data/officialDutyRatioMatrix';
 import { findBestAirmanMatch as matchAirmanRankFirst, parseRosterTextHeuristically } from '../utils/airmanMatcher';
 
@@ -28,274 +27,32 @@ export interface LocalStorageDB {
   lastUpdated: string;
 }
 
-export interface SupabaseSyncErrorEvent {
-  id: string;
-  operation: string;
-  table: string;
-  message: string;
-  code?: string;
-  details?: string;
-  hint?: string;
-  timestamp: string;
-}
-
-export interface SupabaseSyncStatusState {
+export interface D1SyncStatusState {
   isConfigured: boolean;
   status: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured';
   lastSyncTime: string | null;
-  lastSuccessMessage: string | null;
-  activeErrors: SupabaseSyncErrorEvent[];
-  diagnostics: SupabaseConfigDiagnostics;
   d1Active: boolean;
-  d1LastSyncTime: string | null;
 }
 
-let globalSyncErrors: SupabaseSyncErrorEvent[] = [];
-let lastSyncStatus: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured' = 'idle';
-let lastSyncTime: string | null = null;
-let lastSuccessMessage: string | null = null;
 let d1Connected: boolean = false;
 let d1LastSyncTime: string | null = null;
 
-export const getSupabaseSyncState = (): SupabaseSyncStatusState => {
-  const diagnostics = getSupabaseConfigDiagnostics();
+export const getD1SyncState = (): D1SyncStatusState => {
   return {
-    isConfigured: diagnostics.isConfigured || d1Connected,
-    status: d1Connected ? 'connected' : (!diagnostics.isConfigured ? 'unconfigured' : (globalSyncErrors.length > 0 ? 'error' : lastSyncStatus)),
-    lastSyncTime: d1LastSyncTime || lastSyncTime,
-    lastSuccessMessage: d1Connected ? 'Cloudflare D1 Database Active' : lastSuccessMessage,
-    activeErrors: [...globalSyncErrors],
-    diagnostics,
+    isConfigured: d1Connected,
+    status: d1Connected ? 'connected' : 'idle',
+    lastSyncTime: d1LastSyncTime,
     d1Active: d1Connected,
-    d1LastSyncTime,
   };
-};
-
-export const clearSupabaseSyncErrors = (): void => {
-  globalSyncErrors = [];
-  broadcastSyncState();
 };
 
 function broadcastSyncState(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
-      new CustomEvent('supabase_sync_update', {
-        detail: getSupabaseSyncState(),
+      new CustomEvent('d1_sync_update', {
+        detail: getD1SyncState(),
       })
     );
-  }
-}
-
-export function reportSyncError(err: Omit<SupabaseSyncErrorEvent, 'id' | 'timestamp'> & { timestamp?: string }): void {
-  const item: SupabaseSyncErrorEvent = {
-    id: `err-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    operation: err.operation,
-    table: err.table,
-    message: err.message || 'Unknown PostgREST error',
-    code: err.code,
-    details: err.details,
-    hint: err.hint,
-    timestamp: err.timestamp || new Date().toLocaleTimeString(),
-  };
-  globalSyncErrors.unshift(item);
-  if (globalSyncErrors.length > 20) {
-    globalSyncErrors = globalSyncErrors.slice(0, 20);
-  }
-  lastSyncStatus = 'error';
-  console.error(`🚨 [Supabase Sync Failure] Operation "${err.operation}" on table "${err.table}" failed:`, {
-    message: err.message,
-    code: err.code,
-    details: err.details,
-    hint: err.hint,
-  });
-  broadcastSyncState();
-}
-
-export function reportSyncSuccess(operation: string, table: string): void {
-  lastSyncStatus = 'connected';
-  lastSyncTime = new Date().toLocaleTimeString();
-  lastSuccessMessage = `Successfully executed ${operation} on ${table}`;
-  // Clear any existing sync errors on successful operation
-  if (globalSyncErrors.length > 0) {
-    globalSyncErrors = globalSyncErrors.filter((e) => e.table !== table);
-  }
-  broadcastSyncState();
-}
-
-/**
- * Intelligent Schema Adapter for Supabase Postgres tables
- * Handles schema differences (snake_case vs camelCase and column aliases like action vs action_type)
- */
-export function adaptRowForTable(table: string, row: any, mode: 'snake' | 'camel' | 'action_compat' = 'camel'): any {
-  if (!row || typeof row !== 'object') return row;
-  const res: any = {};
-
-  if (table === 'assignments') {
-    if (mode === 'action_compat' || mode === 'camel') {
-      res.id = row.id || `${row.airman_id || row.airmanId}_${row.date}_${row.duty_code || row.dutyCode}${row.ida_shift || row.idaShift ? '_' + (row.ida_shift || row.idaShift) : ''}`;
-      res.airmanId = row.airmanId ?? row.airman_id ?? '';
-      res.date = row.date ?? '';
-      res.dutyCode = row.dutyCode ?? row.duty_code ?? 'GD';
-      res.idaShift = row.idaShift ?? row.ida_shift ?? null;
-      res.proxyForFlight = row.proxyForFlight ?? row.proxy_for_flight ?? null;
-      res.disposalScope = row.disposalScope ?? row.disposal_scope ?? 'ALL';
-      res.notes = row.notes ?? null;
-      res.isCustom = row.isCustom ?? row.is_custom ?? false;
-      res.updatedAt = row.updatedAt ?? row.updated_at ?? new Date().toISOString();
-      return res;
-    } else {
-      res.id = row.id || `${row.airman_id || row.airmanId}_${row.date}_${row.duty_code || row.dutyCode}${row.ida_shift || row.idaShift ? '_' + (row.ida_shift || row.idaShift) : ''}`;
-      res.airman_id = row.airman_id ?? row.airmanId ?? '';
-      res.date = row.date ?? '';
-      res.duty_code = row.duty_code ?? row.dutyCode ?? 'GD';
-      res.ida_shift = row.ida_shift ?? row.idaShift ?? null;
-      res.proxy_for_flight = row.proxy_for_flight ?? row.proxyForFlight ?? null;
-      res.disposal_scope = row.disposal_scope ?? row.disposalScope ?? 'ALL';
-      res.notes = row.notes ?? null;
-      res.is_custom = row.is_custom ?? row.isCustom ?? false;
-      res.updated_at = row.updated_at ?? row.updatedAt ?? new Date().toISOString();
-      return res;
-    }
-  }
-
-  if (table === 'activity_history') {
-    const act = row.action ?? row.action_type ?? row.actionType ?? 'ASSIGN_RANGE';
-    if (mode === 'action_compat' || mode === 'camel') {
-      res.id = row.id || `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      res.action = act; // Postgres column 'action' NOT NULL constraint
-      res.actionType = act;
-      res.airmanId = row.airmanId ?? row.airman_id ?? '';
-      res.airmanName = row.airmanName ?? row.airman_name ?? '';
-      res.airmanRank = row.airmanRank ?? row.airman_rank ?? '';
-      res.airmanTrade = row.airmanTrade ?? row.airman_trade ?? '';
-      res.dutyCode = row.dutyCode ?? row.duty_code ?? '';
-      res.idaShift = row.idaShift ?? row.ida_shift ?? null;
-      res.fromDate = row.fromDate ?? row.from_date ?? '';
-      res.toDate = row.toDate ?? row.to_date ?? '';
-      res.notes = row.notes ?? null;
-      res.previousAssignments = row.previousAssignments ?? row.previous_assignments ?? null;
-      res.timestamp = row.timestamp ?? new Date().toISOString();
-      return res;
-    } else {
-      res.id = row.id || `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      res.action = act;
-      res.action_type = act;
-      res.airman_id = row.airman_id ?? row.airmanId ?? '';
-      res.airman_name = row.airman_name ?? row.airmanName ?? '';
-      res.airman_rank = row.airman_rank ?? row.airmanRank ?? '';
-      res.airman_trade = row.airman_trade ?? row.airmanTrade ?? '';
-      res.duty_code = row.duty_code ?? row.dutyCode ?? '';
-      res.ida_shift = row.ida_shift ?? row.idaShift ?? null;
-      res.from_date = row.from_date ?? row.fromDate ?? '';
-      res.to_date = row.to_date ?? row.toDate ?? '';
-      res.notes = row.notes ?? null;
-      res.previous_assignments = row.previous_assignments ?? row.previousAssignments ?? null;
-      res.timestamp = row.timestamp ?? new Date().toISOString();
-      return res;
-    }
-  }
-
-  if (table === 'airmen') {
-    if (mode === 'action_compat' || mode === 'camel') {
-      res.id = String(row.id);
-      res.serNo = row.serNo ?? row.ser_no ?? 1;
-      res.code = row.code ?? '';
-      res.bdNo = row.bdNo ?? row.bd_no ?? '';
-      res.rank = row.rank ?? 'LAC';
-      res.name = row.name ?? 'Airman';
-      res.trade = row.trade ?? '';
-      res.addressBlock = row.addressBlock ?? row.address_block ?? '';
-      res.mobileNo = row.mobileNo ?? row.mobile_no ?? '';
-      res.flightName = row.flightName ?? row.flight_name ?? 'Admin';
-      res.remarks = row.remarks ?? '';
-      res.active = row.active !== false;
-      return res;
-    } else {
-      res.id = String(row.id);
-      res.ser_no = row.ser_no ?? row.serNo ?? 1;
-      res.code = row.code ?? '';
-      res.bd_no = row.bd_no ?? row.bdNo ?? '';
-      res.rank = row.rank ?? 'LAC';
-      res.name = row.name ?? 'Airman';
-      res.trade = row.trade ?? '';
-      res.address_block = row.address_block ?? row.addressBlock ?? '';
-      res.mobile_no = row.mobile_no ?? row.mobileNo ?? '';
-      res.flight_name = row.flight_name ?? row.flightName ?? 'Admin';
-      res.remarks = row.remarks ?? '';
-      res.active = row.active !== false;
-      return res;
-    }
-  }
-
-  return row;
-}
-
-export async function asyncSupabase(
-  operationName: string,
-  table: string,
-  promiseLike: any,
-  rawPayload?: any,
-  operationType: 'insert' | 'upsert' | 'update' | 'delete' = 'upsert'
-): Promise<any> {
-  if (!promiseLike) return null;
-  try {
-    const res = await Promise.resolve(promiseLike);
-    if (res && res.error) {
-      const errMsg = (res.error.message || '').toLowerCase();
-      const code = res.error.code || '';
-
-      // Auto-Retry if column mismatch or NOT NULL constraint occurred (e.g. airmanId or action column)
-      if (
-        (code === '23502' || code === 'PGRST204' || code === 'PGRST104' || errMsg.includes('violates') || errMsg.includes('column')) &&
-        rawPayload &&
-        getSupabase()
-      ) {
-        try {
-          const supabase = getSupabase()!;
-          const adapted = Array.isArray(rawPayload)
-            ? rawPayload.map((r) => adaptRowForTable(table, r, 'action_compat'))
-            : adaptRowForTable(table, rawPayload, 'action_compat');
-
-          let retryPromise: any;
-          if (operationType === 'insert') {
-            retryPromise = supabase.from(table).insert(adapted);
-          } else if (operationType === 'upsert') {
-            retryPromise = supabase.from(table).upsert(adapted);
-          } else if (operationType === 'update') {
-            retryPromise = supabase.from(table).update(adapted);
-          }
-
-          if (retryPromise) {
-            const retryRes = await Promise.resolve(retryPromise);
-            if (!retryRes?.error) {
-              reportSyncSuccess(operationName + '_ADAPTED', table);
-              return retryRes;
-            }
-          }
-        } catch (retryErr) {
-          console.warn(`[Supabase Retry] Schema adaptation retry failed:`, retryErr);
-        }
-      }
-
-      reportSyncError({
-        operation: operationName,
-        table,
-        message: res.error.message || `PostgREST error on ${table}`,
-        code: res.error.code,
-        details: res.error.details,
-        hint: res.error.hint,
-      });
-      return res;
-    }
-    reportSyncSuccess(operationName, table);
-    return res;
-  } catch (err: any) {
-    reportSyncError({
-      operation: operationName,
-      table,
-      message: err?.message || String(err),
-    });
-    return null;
   }
 }
 
@@ -335,15 +92,13 @@ function getYesterdayDateStr(dateStr: string): string {
 
 export class LocalDatabaseEngine {
   private db: LocalStorageDB;
-  private isSupabaseSyncing: boolean = false;
   private isD1Syncing: boolean = false;
 
   constructor() {
     this.db = this.loadInitialLocalState();
     if (typeof window !== 'undefined') {
-      // Async sync from Cloudflare D1 first, then Supabase
+      // Async sync from Cloudflare D1
       this.syncFromD1();
-      this.syncFromSupabase();
     }
   }
 
@@ -485,229 +240,6 @@ export class LocalDatabaseEngine {
     return initialDb;
   }
 
-  /**
-   * Synchronize all tables with Supabase Postgres
-   */
-  public async syncFromSupabase(): Promise<void> {
-    const supabase = getSupabase();
-    if (!supabase || this.isSupabaseSyncing) {
-      if (!supabase) {
-        lastSyncStatus = 'unconfigured';
-        broadcastSyncState();
-      }
-      return;
-    }
-
-    this.isSupabaseSyncing = true;
-    lastSyncStatus = 'syncing';
-    broadcastSyncState();
-
-    try {
-      // 1. Fetch Airmen
-      const { data: airmenData, error: airmenErr } = await supabase.from('airmen').select('*').order('ser_no', { ascending: true });
-      if (airmenErr) {
-        reportSyncError({
-          operation: 'SELECT',
-          table: 'airmen',
-          message: airmenErr.message,
-          code: airmenErr.code,
-          details: airmenErr.details,
-          hint: airmenErr.hint,
-        });
-      } else if (airmenData && airmenData.length > 0) {
-        this.db.airmen = airmenData.map((row) => ({
-          id: String(row.id),
-          serNo: Number(row.ser_no ?? row.serNo ?? 1),
-          code: String(row.code ?? ''),
-          bdNo: String(row.bd_no ?? row.bdNo ?? ''),
-          rank: (row.rank || 'LAC') as any,
-          name: String(row.name ?? 'Airman'),
-          trade: String(row.trade ?? ''),
-          addressBlock: String(row.address_block ?? row.addressBlock ?? ''),
-          mobileNo: String(row.mobile_no ?? row.mobileNo ?? ''),
-          flightName: (row.flight_name ?? row.flightName ?? 'Admin') as FlightName,
-          remarks: String(row.remarks ?? ''),
-          active: row.active !== false,
-        }));
-      } else if (airmenData && airmenData.length === 0) {
-        // Seed Supabase with initial airmen
-        const initialRows = this.db.airmen.map((a) => ({
-          id: a.id,
-          ser_no: a.serNo,
-          code: a.code,
-          bd_no: a.bdNo,
-          rank: a.rank,
-          name: a.name,
-          trade: a.trade,
-          address_block: a.addressBlock,
-          mobile_no: a.mobileNo,
-          flight_name: a.flightName,
-          remarks: a.remarks,
-          active: a.active,
-        }));
-        await asyncSupabase('SEED_INITIAL', 'airmen', supabase.from('airmen').insert(initialRows));
-      }
-
-      // 2. Fetch Assignments
-      const { data: assignData, error: assignErr } = await supabase.from('assignments').select('*');
-      if (assignErr) {
-        reportSyncError({
-          operation: 'SELECT',
-          table: 'assignments',
-          message: assignErr.message,
-          code: assignErr.code,
-          details: assignErr.details,
-          hint: assignErr.hint,
-        });
-      } else if (assignData && assignData.length > 0) {
-        const monthMap: Record<string, DutyAssignment[]> = {};
-        assignData.forEach((row) => {
-          const dateStr = row.date;
-          if (!dateStr) return;
-          const monthKey = dateStr.slice(0, 7);
-          if (!monthMap[monthKey]) monthMap[monthKey] = [];
-          monthMap[monthKey].push({
-            airmanId: row.airman_id || row.airmanId,
-            date: row.date,
-            dutyCode: row.duty_code || row.dutyCode,
-            idaShift: row.ida_shift || row.idaShift,
-            proxyForFlight: row.proxy_for_flight || row.proxyForFlight,
-            disposalScope: row.disposal_scope || row.disposalScope || 'ALL',
-            notes: row.notes || '',
-            isCustom: row.is_custom || false,
-            updatedAt: row.updated_at || row.updatedAt,
-          });
-        });
-
-        // Non-destructive merge with local storage
-        for (const [monthKey, remoteAssignments] of Object.entries(monthMap)) {
-          const localAssignments = this.db.assignments[monthKey] || [];
-          if (localAssignments.length === 0) {
-            this.db.assignments[monthKey] = remoteAssignments;
-          } else {
-            const mergedMap = new Map<string, DutyAssignment>();
-            remoteAssignments.forEach((ra) => {
-              const key = `${ra.airmanId}_${ra.date}_${ra.dutyCode}${ra.idaShift ? '_' + ra.idaShift : ''}`;
-              mergedMap.set(key, ra);
-            });
-            localAssignments.forEach((la) => {
-              const key = `${la.airmanId}_${la.date}_${la.dutyCode}${la.idaShift ? '_' + la.idaShift : ''}`;
-              const remote = mergedMap.get(key);
-              if (!remote || (la.updatedAt && remote.updatedAt && new Date(la.updatedAt).getTime() >= new Date(remote.updatedAt).getTime())) {
-                mergedMap.set(key, la);
-              }
-            });
-            this.db.assignments[monthKey] = Array.from(mergedMap.values());
-          }
-        }
-      } else if (assignData && assignData.length === 0) {
-        // Supabase assignments table is empty, seed from local database
-        const allLocalRows: any[] = [];
-        for (const list of Object.values(this.db.assignments)) {
-          for (const a of list) {
-            allLocalRows.push({
-              id: `${a.airmanId}_${a.date}_${a.dutyCode}${a.idaShift ? '_' + a.idaShift : ''}`,
-              airman_id: a.airmanId,
-              date: a.date,
-              duty_code: a.dutyCode,
-              ida_shift: a.idaShift || null,
-              proxy_for_flight: a.proxyForFlight || null,
-              disposal_scope: a.disposalScope || 'ALL',
-              notes: a.notes || null,
-              is_custom: a.isCustom || false,
-              updated_at: a.updatedAt || new Date().toISOString(),
-            });
-          }
-        }
-        if (allLocalRows.length > 0) {
-          for (let i = 0; i < allLocalRows.length; i += 50) {
-            const batch = allLocalRows.slice(i, i + 50);
-            asyncSupabase('SEED_ASSIGNMENTS', 'assignments', supabase.from('assignments').upsert(batch), batch, 'upsert');
-          }
-        }
-      }
-
-      // 3. Fetch Admin Passcode (safe query for both integer PK or text PK)
-      const { data: passRows, error: passErr } = await supabase.from('admin_passcode').select('*').limit(1);
-      if (passErr && passErr.code !== 'PGRST116') {
-        reportSyncError({
-          operation: 'SELECT',
-          table: 'admin_passcode',
-          message: passErr.message,
-          code: passErr.code,
-          details: passErr.details,
-          hint: passErr.hint,
-        });
-      } else if (passRows && passRows.length > 0 && passRows[0].passcode) {
-        this.db.adminPasscode = passRows[0].passcode;
-      } else {
-        await asyncSupabase('SEED', 'admin_passcode', supabase.from('admin_passcode').insert({ passcode: this.db.adminPasscode }));
-      }
-
-      // 4. Fetch Duty Ratio Matrix (safe query for both integer PK or text PK)
-      const { data: ratioRows, error: ratioErr } = await supabase.from('duty_ratio_matrix').select('*').limit(1);
-      if (ratioErr && ratioErr.code !== 'PGRST116') {
-        reportSyncError({
-          operation: 'SELECT',
-          table: 'duty_ratio_matrix',
-          message: ratioErr.message,
-          code: ratioErr.code,
-          details: ratioErr.details,
-          hint: ratioErr.hint,
-        });
-      } else if (ratioRows && ratioRows.length > 0) {
-        const matrixData = ratioRows[0].matrix_data || ratioRows[0].matrixData;
-        if (matrixData) {
-          saveDutyMatrix(matrixData);
-        }
-      }
-
-      // 5. Fetch Activity History
-      const { data: actData, error: actErr } = await supabase.from('activity_history').select('*').order('timestamp', { ascending: false }).limit(100);
-      if (actErr) {
-        reportSyncError({
-          operation: 'SELECT',
-          table: 'activity_history',
-          message: actErr.message,
-          code: actErr.code,
-          details: actErr.details,
-          hint: actErr.hint,
-        });
-      } else if (actData && actData.length > 0) {
-        this.db.activityHistory = actData.map((row) => ({
-          id: row.id,
-          actionType: row.action_type,
-          airmanId: row.airman_id,
-          airmanName: row.airman_name,
-          airmanRank: row.airman_rank,
-          airmanTrade: row.airman_trade,
-          dutyCode: row.duty_code,
-          idaShift: row.ida_shift,
-          fromDate: row.from_date,
-          toDate: row.to_date,
-          notes: row.notes,
-          previousAssignments: row.previous_assignments,
-          timestamp: row.timestamp,
-        }));
-      }
-
-      this.saveToStorage(this.db, true);
-      lastSyncStatus = 'connected';
-      lastSyncTime = new Date().toLocaleTimeString();
-      broadcastSyncState();
-    } catch (e: any) {
-      console.error('❌ Exception during Supabase synchronization:', e);
-      reportSyncError({
-        operation: 'SYNC_ALL',
-        table: 'all',
-        message: e?.message || String(e),
-      });
-    } finally {
-      this.isSupabaseSyncing = false;
-      broadcastSyncState();
-    }
-  }
-
   private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToD1: boolean = true) {
     try {
       dbToSave.lastUpdated = new Date().toISOString();
@@ -742,34 +274,6 @@ export class LocalDatabaseEngine {
     this.db.activityHistory.unshift(item);
     if (this.db.activityHistory.length > 100) {
       this.db.activityHistory = this.db.activityHistory.slice(0, 100);
-    }
-
-    // Persist activity to Supabase with schema-safe columns
-    const supabase = getSupabase();
-    if (supabase) {
-      const payload = {
-        id: item.id,
-        action: item.actionType, // PostgreSQL column 'action' NOT NULL
-        action_type: item.actionType,
-        airman_id: item.airmanId,
-        airman_name: item.airmanName,
-        airman_rank: item.airmanRank || null,
-        airman_trade: item.airmanTrade || null,
-        duty_code: item.dutyCode || null,
-        ida_shift: item.idaShift || null,
-        from_date: item.fromDate || null,
-        to_date: item.toDate || null,
-        notes: item.notes || null,
-        previous_assignments: item.previousAssignments ? JSON.stringify(item.previousAssignments) : null,
-        timestamp: item.timestamp,
-      };
-      asyncSupabase(
-        'INSERT',
-        'activity_history',
-        supabase.from('activity_history').insert(payload),
-        payload,
-        'insert'
-      );
     }
   }
 
@@ -817,36 +321,12 @@ export class LocalDatabaseEngine {
     this.db.airmen.push(newAirman);
     this.saveToStorage();
 
-    // Supabase insert
-    const supabase = getSupabase();
-    if (supabase) {
-      asyncSupabase(
-        'INSERT',
-        'airmen',
-        supabase.from('airmen').insert({
-          id: newAirman.id,
-          ser_no: newAirman.serNo,
-          code: newAirman.code,
-          bd_no: newAirman.bdNo,
-          rank: newAirman.rank,
-          name: newAirman.name,
-          trade: newAirman.trade,
-          address_block: newAirman.addressBlock,
-          mobile_no: newAirman.mobileNo,
-          flight_name: newAirman.flightName,
-          remarks: newAirman.remarks,
-          active: newAirman.active,
-        })
-      );
-    }
-
     return newAirman;
   }
 
   public bulkAddAirmen(airmenList: Partial<Airman>[]): { count: number; airmen: Airman[] } {
     let currentSerNo = this.db.airmen.length > 0 ? Math.max(...this.db.airmen.map((a) => a.serNo)) : 0;
     const createdAirmen: Airman[] = [];
-    const supabaseRows: any[] = [];
 
     for (const item of airmenList) {
       currentSerNo++;
@@ -869,30 +349,9 @@ export class LocalDatabaseEngine {
 
       createdAirmen.push(newAirman);
       this.db.airmen.push(newAirman);
-
-      supabaseRows.push({
-        id: newAirman.id,
-        ser_no: newAirman.serNo,
-        code: newAirman.code,
-        bd_no: newAirman.bdNo,
-        rank: newAirman.rank,
-        name: newAirman.name,
-        trade: newAirman.trade,
-        address_block: newAirman.addressBlock,
-        mobile_no: newAirman.mobileNo,
-        flight_name: newAirman.flightName,
-        remarks: newAirman.remarks,
-        active: newAirman.active,
-      });
     }
 
     this.saveToStorage();
-
-    // Persist bulk rows in Supabase
-    const supabase = getSupabase();
-    if (supabase && supabaseRows.length > 0) {
-      asyncSupabase('BULK_INSERT', 'airmen', supabase.from('airmen').insert(supabaseRows));
-    }
 
     // Log in activity history
     this.recordActivity({
@@ -918,32 +377,7 @@ export class LocalDatabaseEngine {
     };
     this.saveToStorage();
 
-    const updated = this.db.airmen[idx];
-    const supabase = getSupabase();
-    if (supabase) {
-      asyncSupabase(
-        'UPDATE',
-        'airmen',
-        supabase
-          .from('airmen')
-          .update({
-            ser_no: updated.serNo,
-            code: updated.code,
-            bd_no: updated.bdNo,
-            rank: updated.rank,
-            name: updated.name,
-            trade: updated.trade,
-            address_block: updated.addressBlock,
-            mobile_no: updated.mobileNo,
-            flight_name: updated.flightName,
-            remarks: updated.remarks,
-            active: updated.active,
-          })
-          .eq('id', id)
-      );
-    }
-
-    return updated;
+    return this.db.airmen[idx];
   }
 
   public deleteAirman(id: string): boolean {
@@ -961,13 +395,6 @@ export class LocalDatabaseEngine {
     }
 
     this.saveToStorage();
-
-    const supabase = getSupabase();
-    if (supabase) {
-      asyncSupabase('DELETE', 'airmen', supabase.from('airmen').delete().eq('id', id));
-      asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', id));
-    }
-
     return true;
   }
 
@@ -1050,32 +477,6 @@ export class LocalDatabaseEngine {
     });
 
     this.saveToStorage();
-
-    // Supabase upsert
-    const supabase = getSupabase();
-    if (supabase) {
-      const assignmentId = `${newAss.airmanId}_${newAss.date}_${newAss.dutyCode}${newAss.idaShift ? '_' + newAss.idaShift : ''}`;
-      const payload = {
-        id: assignmentId,
-        airman_id: newAss.airmanId,
-        date: newAss.date,
-        duty_code: newAss.dutyCode,
-        ida_shift: newAss.idaShift || null,
-        proxy_for_flight: newAss.proxyForFlight || null,
-        disposal_scope: newAss.disposalScope || 'ALL',
-        notes: newAss.notes || null,
-        is_custom: newAss.isCustom || false,
-        updated_at: newAss.updatedAt,
-      };
-      asyncSupabase(
-        'UPSERT',
-        'assignments',
-        supabase.from('assignments').upsert(payload),
-        payload,
-        'upsert'
-      );
-    }
-
     return newAss;
   }
 
@@ -1093,7 +494,6 @@ export class LocalDatabaseEngine {
     const { airmanId, dutyCode, idaShift, fromDate, toDate, notes, proxyForFlight, replaceAirmanId, disposalScope } = params;
     const assignedDates = getDatesInRange(fromDate, toDate);
     const prevStates: Array<{ airmanId: string; date: string; dutyCode?: any; idaShift?: any; notes?: string }> = [];
-    const supabaseRows: any[] = [];
 
     for (const dateStr of assignedDates) {
       const monthKey = dateStr.slice(0, 7);
@@ -1158,19 +558,6 @@ export class LocalDatabaseEngine {
       } else {
         list.push(assignment);
       }
-
-      const assignmentId = `${airmanId}_${dateStr}_${dutyCode}${idaShift ? '_' + idaShift : ''}`;
-      supabaseRows.push({
-        id: assignmentId,
-        airman_id: airmanId,
-        date: dateStr,
-        duty_code: dutyCode,
-        ida_shift: idaShift || null,
-        proxy_for_flight: proxyForFlight || null,
-        disposal_scope: disposalScope || 'ALL',
-        notes: notes || null,
-        updated_at: assignment.updatedAt,
-      });
     }
 
     const air = this.db.airmen.find((a) => a.id === airmanId);
@@ -1187,12 +574,6 @@ export class LocalDatabaseEngine {
     });
 
     this.saveToStorage();
-
-    const supabase = getSupabase();
-    if (supabase && supabaseRows.length > 0) {
-      asyncSupabase('UPSERT_RANGE', 'assignments', supabase.from('assignments').upsert(supabaseRows), supabaseRows, 'upsert');
-    }
-
     return { count: assignedDates.length, assignedDates };
   }
 
@@ -1212,7 +593,6 @@ export class LocalDatabaseEngine {
     const { fromDate, toDate, assignments, removedAirmanIds } = params;
     const assignedDates = getDatesInRange(fromDate, toDate);
     const prevStates: Array<{ airmanId: string; date: string; dutyCode?: any; idaShift?: any; notes?: string }> = [];
-    const supabaseRows: any[] = [];
 
     // Remove unassigned
     if (Array.isArray(removedAirmanIds) && removedAirmanIds.length > 0) {
@@ -1279,29 +659,10 @@ export class LocalDatabaseEngine {
         } else {
           list.push(assignment);
         }
-
-        const assignmentId = `${airmanId}_${dateStr}_${dutyCode}${idaShift ? '_' + idaShift : ''}`;
-        supabaseRows.push({
-          id: assignmentId,
-          airman_id: airmanId,
-          date: dateStr,
-          duty_code: dutyCode,
-          ida_shift: idaShift || null,
-          proxy_for_flight: proxyForFlight || null,
-          disposal_scope: disposalScope || 'ALL',
-          notes: notes || null,
-          updated_at: assignment.updatedAt,
-        });
       }
     }
 
     this.saveToStorage();
-
-    const supabase = getSupabase();
-    if (supabase && supabaseRows.length > 0) {
-      asyncSupabase('BATCH_UPSERT', 'assignments', supabase.from('assignments').upsert(supabaseRows), supabaseRows, 'upsert');
-    }
-
     return { count: assignments.length * assignedDates.length, assignedDates };
   }
 
@@ -1335,18 +696,6 @@ export class LocalDatabaseEngine {
 
     if (removed) {
       this.saveToStorage();
-      const supabase = getSupabase();
-      if (supabase) {
-        const deleteCodes = dutyCode
-          ? (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY' ? ['AIRPORT', 'AIRFIELD_DUTY'] : [dutyCode])
-          : null;
-
-        if (deleteCodes) {
-          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date).in('duty_code', deleteCodes));
-        } else {
-          asyncSupabase('DELETE', 'assignments', supabase.from('assignments').delete().eq('airman_id', airmanId).eq('date', date));
-        }
-      }
     }
 
     return removed;
@@ -1374,20 +723,12 @@ export class LocalDatabaseEngine {
   public resetToEmptyRoster(): void {
     this.db.assignments = {};
     this.saveToStorage();
-    const supabase = getSupabase();
-    if (supabase) {
-      asyncSupabase('DELETE_ALL', 'assignments', supabase.from('assignments').delete().neq('id', '___empty___'));
-    }
   }
 
   public clearMonth(monthKey: string): void {
     if (this.db.assignments[monthKey]) {
       delete this.db.assignments[monthKey];
       this.saveToStorage();
-      const supabase = getSupabase();
-      if (supabase) {
-        asyncSupabase('DELETE_MONTH', 'assignments', supabase.from('assignments').delete().like('date', `${monthKey}%`));
-      }
     }
   }
 
@@ -1842,24 +1183,6 @@ export class LocalDatabaseEngine {
     if (this.verifyPasscode(current) && newCode && newCode.length === 4) {
       this.db.adminPasscode = newCode;
       this.saveToStorage();
-
-      // Persist to Supabase
-      const supabase = getSupabase();
-      if (supabase) {
-        // Fetch existing record ID if any, or update first record
-        Promise.resolve(supabase.from('admin_passcode').select('id').limit(1))
-          .then(({ data }) => {
-            if (data && data.length > 0 && data[0].id !== undefined) {
-              asyncSupabase('UPDATE', 'admin_passcode', supabase.from('admin_passcode').update({ passcode: newCode }).eq('id', data[0].id));
-            } else {
-              asyncSupabase('INSERT', 'admin_passcode', supabase.from('admin_passcode').insert({ passcode: newCode }));
-            }
-          })
-          .catch((err: any) => {
-            console.error('Failed to persist admin passcode to Supabase:', err);
-          });
-      }
-
       return true;
     }
     return false;
@@ -1899,41 +1222,9 @@ export class LocalDatabaseEngine {
     return false;
   }
 
-  // --- DUTY RATIO PERSISTENCE (Supabase & Local) ---
+  // --- DUTY RATIO PERSISTENCE (Local & D1) ---
   public saveDutyRatioMatrix(matrix: DutyRatioTable[], updatedBy = 'ADMIN'): void {
     saveDutyMatrix(matrix);
-    const supabase = getSupabase();
-    if (supabase) {
-      Promise.resolve(supabase.from('duty_ratio_matrix').select('id').limit(1))
-        .then(({ data }) => {
-          if (data && data.length > 0 && data[0].id !== undefined) {
-            asyncSupabase(
-              'UPDATE',
-              'duty_ratio_matrix',
-              supabase
-                .from('duty_ratio_matrix')
-                .update({
-                  matrix_data: matrix,
-                  updated_by: updatedBy,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', data[0].id)
-            );
-          } else {
-            asyncSupabase(
-              'INSERT',
-              'duty_ratio_matrix',
-              supabase.from('duty_ratio_matrix').insert({
-                matrix_data: matrix,
-                updated_by: updatedBy,
-              })
-            );
-          }
-        })
-        .catch((err: any) => {
-          console.error('Failed to persist duty ratio matrix to Supabase:', err);
-        });
-    }
 
     this.recordActivity({
       actionType: 'IMPORT_DUTY_RATIO' as any,
@@ -2108,7 +1399,6 @@ export class LocalDatabaseEngine {
     const importedAssignmentsForBatch: any[] = [];
     const prevAssignmentsForBatch: any[] = [];
     const airmenNamesSet = new Set<string>();
-    const supabaseRows: any[] = [];
     let appliedCount = 0;
 
     for (const item of assignments) {
@@ -2154,18 +1444,6 @@ export class LocalDatabaseEngine {
       } else {
         list.push(dutyAssignment);
       }
-
-      const assignmentId = `${item.airmanId}_${dateStr}_${item.dutyCode}${dutyAssignment.idaShift ? '_' + dutyAssignment.idaShift : ''}`;
-      supabaseRows.push({
-        id: assignmentId,
-        airman_id: item.airmanId,
-        date: dateStr,
-        duty_code: item.dutyCode,
-        ida_shift: dutyAssignment.idaShift || null,
-        disposal_scope: dutyAssignment.disposalScope,
-        notes: dutyAssignment.notes || null,
-        updated_at: dutyAssignment.updatedAt,
-      });
 
       importedAssignmentsForBatch.push({
         airmanId: item.airmanId,
@@ -2226,28 +1504,6 @@ export class LocalDatabaseEngine {
 
     this.saveToStorage();
 
-    const supabase = getSupabase();
-    if (supabase) {
-      if (supabaseRows.length > 0) {
-        asyncSupabase('UPSERT_IMPORT', 'assignments', supabase.from('assignments').upsert(supabaseRows));
-      }
-      asyncSupabase(
-        'INSERT',
-        'import_history',
-        supabase.from('import_history').insert({
-          id: newBatch.id,
-          timestamp: newBatch.timestamp,
-          source_doc: newBatch.sourceDoc,
-          duty_count: newBatch.dutyCount,
-          dates_count: newBatch.datesCount,
-          dates: newBatch.dates,
-          airmen_names: newBatch.airmenNames,
-          imported_assignments: newBatch.importedAssignments,
-          previous_assignments: newBatch.previousAssignments,
-        })
-      );
-    }
-
     return {
       appliedCount,
       batchId: newBatch.id,
@@ -2296,132 +1552,7 @@ export class LocalDatabaseEngine {
 
     this.db.importHistory.splice(idx, 1);
     this.saveToStorage();
-
-    const supabase = getSupabase();
-    if (supabase) {
-      asyncSupabase('DELETE', 'import_history', supabase.from('import_history').delete().eq('id', batchId));
-    }
-
     return true;
-  }
-
-  /**
-   * Diagnostic round-trip write & read test for Supabase
-   */
-  public async testSupabaseWriteRead(airmanData?: Partial<Airman>): Promise<{
-    success: boolean;
-    operation: string;
-    insertedRecord?: any;
-    readBackRecord?: any;
-    error?: any;
-    diagnostics: ReturnType<typeof getSupabaseConfigDiagnostics>;
-  }> {
-    const diagnostics = getSupabaseConfigDiagnostics();
-    const supabase = getSupabase();
-
-    if (!supabase || !diagnostics.isConfigured) {
-      return {
-        success: false,
-        operation: 'INITIALIZE',
-        error: { message: diagnostics.statusMessage },
-        diagnostics,
-      };
-    }
-
-    const testId = `test-sync-${Date.now()}`;
-    const payload = {
-      id: testId,
-      ser_no: 9999,
-      code: 'TEST-AIR',
-      bd_no: `BD/${Date.now().toString().slice(-6)}`,
-      rank: 'LAC',
-      name: airmanData?.name || 'Diagnostic Sync Test Airman',
-      trade: 'Avionic Tech',
-      address_block: 'Test Block',
-      mobile_no: '01700000000',
-      flight_name: 'Avionics',
-      remarks: 'Automated Supabase Verification Test',
-      active: true,
-    };
-
-    try {
-      console.log('🧪 [Supabase Test] Initiating test insert into `airmen` table:', payload);
-      // 1. Insert
-      let insertRes = await supabase.from('airmen').insert(payload);
-      if (insertRes.error) {
-        // Retry with camelCase payload
-        const camelPayload = adaptRowForTable('airmen', payload, 'camel');
-        const retryRes = await supabase.from('airmen').insert(camelPayload);
-        if (!retryRes.error) {
-          insertRes = retryRes;
-        }
-      }
-
-      if (insertRes.error) {
-        console.error('❌ [Supabase Test] Insert failed:', insertRes.error);
-        reportSyncError({
-          operation: 'TEST_INSERT',
-          table: 'airmen',
-          message: insertRes.error.message,
-          code: insertRes.error.code,
-          details: insertRes.error.details,
-          hint: insertRes.error.hint,
-        });
-        return {
-          success: false,
-          operation: 'INSERT',
-          error: insertRes.error,
-          diagnostics,
-        };
-      }
-
-      console.log('✅ [Supabase Test] Insert succeeded. Reading back from `airmen` table...');
-      // 2. Read back
-      const readRes = await supabase.from('airmen').select('*').eq('id', testId).single();
-      if (readRes.error) {
-        console.error('❌ [Supabase Test] Read back failed:', readRes.error);
-        reportSyncError({
-          operation: 'TEST_READ_BACK',
-          table: 'airmen',
-          message: readRes.error.message,
-          code: readRes.error.code,
-        });
-        return {
-          success: false,
-          operation: 'READ_BACK',
-          insertedRecord: payload,
-          error: readRes.error,
-          diagnostics,
-        };
-      }
-
-      console.log('✅ [Supabase Test] Read back verified successfully:', readRes.data);
-      // 3. Clean up test record
-      await supabase.from('airmen').delete().eq('id', testId);
-      console.log('🧹 [Supabase Test] Cleaned up temporary test record.');
-
-      reportSyncSuccess('TEST_ROUND_TRIP', 'airmen');
-      return {
-        success: true,
-        operation: 'ROUND_TRIP_VERIFIED',
-        insertedRecord: payload,
-        readBackRecord: readRes.data,
-        diagnostics,
-      };
-    } catch (err: any) {
-      console.error('❌ [Supabase Test] Exception during test write/read:', err);
-      reportSyncError({
-        operation: 'TEST_EXCEPTION',
-        table: 'airmen',
-        message: err?.message || String(err),
-      });
-      return {
-        success: false,
-        operation: 'EXCEPTION',
-        error: { message: err?.message || String(err) },
-        diagnostics,
-      };
-    }
   }
 }
 

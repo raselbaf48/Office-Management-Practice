@@ -319,7 +319,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
         };
       });
 
-      // Use localDb bulk add (handles sync to Supabase)
+      // Use localDb bulk add
       localDb.bulkAddAirmen(airmenToImport);
 
       onImportComplete();

@@ -64,7 +64,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     setCurrentFlight(flight);
   }, [flight]);
 
-  // Format Date: e.g., "13 Aug 26"
+  // Format Date: e.g., "29 Aug 26"
   const formatDateShort = (dStr: string) => {
     if (!dStr) return '';
     const parts = dStr.split('-');
@@ -77,7 +77,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     return `${dayStr} ${monthStr} ${yearStr}`;
   };
 
-  // Format Date Super Short: e.g., "13 Aug"
+  // Format Date Super Short: e.g., "29 Aug"
   const formatDateSuperShort = (dStr: string) => {
     if (!dStr) return '';
     const parts = dStr.split('-');
@@ -86,6 +86,40 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     const dayStr = String(dateObj.getDate()).padStart(2, '0');
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${dayStr} ${months[dateObj.getMonth()]}`;
+  };
+
+  // Generate standard PDF / Document title
+  const getPdfTitle = () => {
+    const formattedDate = formatDateShort(fromDate);
+    return documentType === 'PT'
+      ? `PT State - Airmen (${formattedDate})`
+      : `Parade State - Airmen (${formattedDate})`;
+  };
+
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      document.title = getPdfTitle();
+    };
+    const handleAfterPrint = () => {
+      document.title = 'BAF 155 UASU Duty Management System';
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [fromDate, documentType]);
+
+  const handlePrint = () => {
+    const prevTitle = document.title;
+    document.title = getPdfTitle();
+    window.print();
+    setTimeout(() => {
+      document.title = prevTitle;
+    }, 1500);
   };
 
   // Calculate list of dates in range
@@ -153,10 +187,6 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       });
     }
   }, [fromDate, toDate, shift, isMultiDay, datesInRange.length, documentType]);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   // Capitalize Name
   const capitalize = (str: string) => {
@@ -420,7 +450,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const overallStats = getFlightStats('Overall');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
       {/* PRINT CSS STYLES FOR EXACT A4 LANDSCAPE */}
       <style>{`
         @media print {
@@ -441,6 +471,9 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+            background: white !important;
+            box-shadow: none !important;
+            border: none !important;
           }
           .print\\:hidden {
             display: none !important;
@@ -448,216 +481,68 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
         }
       `}</style>
 
-      <div className="bg-white text-slate-900 border border-slate-300 rounded-2xl shadow-2xl max-w-7xl w-full p-4 sm:p-6 my-4 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:m-0 print:rounded-none">
+      <div className="bg-white text-slate-900 border border-slate-300 rounded-xl shadow-lg max-w-7xl w-full p-4 sm:p-6 my-4 print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:m-0 print:rounded-none">
         
-        {/* NON-PRINTABLE TOOLBAR WITH FROM / TO DATE AND FLIGHT SELECTOR */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-200 print:hidden">
+        {/* NON-PRINTABLE TOOLBAR: ONLY PRINT DOCUMENT / SAVE PDF + ESSENTIAL DATE/FLIGHT SELECTOR */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-200 print:hidden">
           <div className="flex items-center space-x-3">
-            <Logo155UASU size="md" />
-            <div>
-              <h2 className="font-bold text-base text-slate-900 leading-tight">
-                PT/PARADE STATE: AIRMEN (155 UASU BAF)
-              </h2>
-              <p className="text-xs text-slate-500 font-medium">
-                Official Bangladesh Air Force Daily Parade State Document • A4 Landscape
-              </p>
+            <span className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+              {documentType === 'PT' ? 'PT State' : 'Parade State'} - Airmen
+            </span>
+            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              {formatDateShort(fromDate)}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center space-x-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs">
+              <span className="font-medium text-slate-600">Date:</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setToDate(e.target.value);
+                }}
+                className="bg-white px-1.5 py-0.5 border border-slate-300 rounded text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
             </div>
-          </div>
 
-          {/* CONTROLS: DATE RANGE + FLIGHT FILTER */}
-          <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-300 text-xs">
-            {documentType === 'PT' ? (
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-slate-700">Date:</span>
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => {
-                      setFromDate(e.target.value);
-                      setToDate(e.target.value);
-                    }}
-                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                {/* Flight Selector */}
-                <div className="flex items-center space-x-1 bg-white px-2 py-1 rounded-lg border border-slate-300 font-bold">
-                  <Filter className="w-3 h-3 text-slate-400" />
-                  <select
-                    value={currentFlight}
-                    onChange={(e) => setCurrentFlight(e.target.value as any)}
-                    className="bg-transparent text-slate-900 outline-none cursor-pointer text-xs"
-                  >
-                    <option value="Overall">Flight: Overall (All)</option>
-                    <option value="Avionics">Avionics Flight</option>
-                    <option value="Mechanics">Mechanics Flight</option>
-                    <option value="GCS">GCS Flight</option>
-                    <option value="Admin">Admin Flight</option>
-                  </select>
-                </div>
-                <span className="bg-blue-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider ml-1">
-                  PT State Format
-                </span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-slate-700">From:</span>
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="font-bold text-slate-700">To:</span>
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+            <div className="flex items-center space-x-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs font-medium">
+              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <select
+                value={currentFlight}
+                onChange={(e) => setCurrentFlight(e.target.value as any)}
+                className="bg-transparent text-slate-900 font-semibold outline-none cursor-pointer"
+              >
+                <option value="Overall">Overall Flight (All)</option>
+                <option value="Avionics">Avionics Flight</option>
+                <option value="Mechanics">Mechanics Flight</option>
+                <option value="GCS">GCS Flight</option>
+                <option value="Admin">Admin Flight</option>
+              </select>
+            </div>
 
-                {/* Flight Selector */}
-                <div className="flex items-center space-x-1 bg-white px-2 py-1 rounded-lg border border-slate-300 font-bold">
-                  <Filter className="w-3 h-3 text-slate-400" />
-                  <select
-                    value={currentFlight}
-                    onChange={(e) => setCurrentFlight(e.target.value as any)}
-                    className="bg-transparent text-slate-900 outline-none cursor-pointer text-xs"
-                  >
-                    <option value="Overall">Flight: Overall (All)</option>
-                    <option value="Avionics">Avionics Flight</option>
-                    <option value="Mechanics">Mechanics Flight</option>
-                    <option value="GCS">GCS Flight</option>
-                    <option value="Admin">Admin Flight</option>
-                  </select>
-                </div>
-
-                {isMultiDay ? (
-                  <span className="bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Multi-Day Format ({datesInRange.length} Days)
-                  </span>
-                ) : (
-                  <span className="bg-blue-600 text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Single-Day Format (Flight-Wise)
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center space-x-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Print Document / Save PDF</span>
             </button>
+
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Close Preview"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* NON-PRINTABLE EDITABLE SIGNATURE DETAILS (FOR BOTH SINGLE & MULTI DAY) */}
-        <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2 print:hidden">
-          <div className="font-extrabold text-slate-700 uppercase tracking-wider flex items-center justify-between">
-            <span className="flex items-center space-x-1.5">
-              <PenTool className="w-3.5 h-3.5 text-emerald-700" />
-              <span>✍️ Editable Signature Officers (Auto-saved & Print Ready):</span>
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-              <span className="font-bold text-emerald-800">Left Officer (Prepared By):</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                <input
-                  type="text"
-                  value={leftSigName}
-                  onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    setLeftSigName(val);
-                    savePreparedBy({ name: val, rank: leftSigRank, designation: leftSigDesig, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold uppercase"
-                  placeholder="NAME (BLOCK)"
-                />
-                <input
-                  type="text"
-                  value={leftSigRank}
-                  onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    setLeftSigRank(val);
-                    savePreparedBy({ name: leftSigName, rank: val, designation: leftSigDesig, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold uppercase"
-                  placeholder="RANK"
-                />
-                <input
-                  type="text"
-                  value={leftSigDesig}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setLeftSigDesig(val);
-                    savePreparedBy({ name: leftSigName, rank: leftSigRank, designation: val, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold"
-                  placeholder="DESIGNATION"
-                />
-              </div>
-            </div>
-
-            <div className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-              <span className="font-bold text-emerald-800">Right Officer (Authorized By):</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                <input
-                  type="text"
-                  value={rightSigName}
-                  onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    setRightSigName(val);
-                    saveAuthorizedBy({ name: val, rank: rightSigRank, designation: rightSigDesig, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold uppercase"
-                  placeholder="NAME (BLOCK)"
-                />
-                <input
-                  type="text"
-                  value={rightSigRank}
-                  onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    setRightSigRank(val);
-                    saveAuthorizedBy({ name: rightSigName, rank: val, designation: rightSigDesig, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold uppercase"
-                  placeholder="RANK"
-                />
-                <input
-                  type="text"
-                  value={rightSigDesig}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setRightSigDesig(val);
-                    saveAuthorizedBy({ name: rightSigName, rank: rightSigRank, designation: val, unit: '155 UASU BAF' });
-                  }}
-                  className="p-1 border rounded text-[11px] font-bold"
-                  placeholder="DESIGNATION"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* PRINTABLE PAGE CONTENT */}
-        <div id="printable-area" className="w-full">
+        <div id="printable-area" className="w-full bg-white">
           {isMultiDay ? (
             /* MULTI-DAY PARADE & DUTY DISPOSAL TABLE */
             <div>
@@ -668,7 +553,9 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                 </div>
                 <div className="flex-1 text-center">
                   <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
-                    PARADE STATE & DAILY DUTY REGISTER : AIRMEN
+                    {documentType === 'PT'
+                      ? 'PT STATE & DAILY DUTY REGISTER : AIRMEN'
+                      : 'PARADE STATE & DAILY DUTY REGISTER : AIRMEN'}
                   </h1>
                   <br />
                   <h2 className="font-bold tracking-wide text-slate-900 mt-0.5 underline inline-block text-sm uppercase">
@@ -682,7 +569,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
               {loadingMultiDay ? (
                 <div className="py-12 text-center text-slate-500 font-bold">
-                  Loading multi-day parade state records...
+                  Loading {documentType === 'PT' ? 'PT' : 'parade'} state records...
                 </div>
               ) : (
                 <div className="overflow-x-auto my-3">
@@ -701,7 +588,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         <th className="border border-slate-800 p-1.5" rowSpan={2}>Leave</th>
                         <th className="border border-slate-800 p-1.5" colSpan={3}>IDA CENTER Duty</th>
                         <th className="border border-slate-800 p-1.5" rowSpan={2}>Duty Off</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>On Parade</th>
+                        <th className="border border-slate-800 p-1.5" rowSpan={2}>{documentType === 'PT' ? 'On PT' : 'On Parade'}</th>
                       </tr>
                       <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
                         <th className="border border-slate-800 p-1">Morning</th>
@@ -831,12 +718,12 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
               )}
             </div>
           ) : (
-            /* SINGLE-DAY PARADE STATE FORMAT (FLIGHT-WISE BREAKDOWN) */
+            /* SINGLE-DAY PARADE/PT STATE FORMAT (FLIGHT-WISE BREAKDOWN) */
             <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '12px' }}>
               {/* TOP DOCUMENT HEADER */}
               <div className="relative mb-4 text-center">
                 <h1 className="font-bold tracking-wider text-black underline inline-block text-base uppercase">
-                  PARADE/PT STATE : AIRMEN
+                  {documentType === 'PT' ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wider text-black mt-0.5 underline inline-block text-sm uppercase">
@@ -940,12 +827,12 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       </th>
                       <th className="border border-black p-0.5 align-bottom text-center font-bold">
                         <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
-                          Total Out PT
+                          {documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}
                         </div>
                       </th>
                       <th className="border border-black p-0.5 align-bottom text-center font-bold">
                         <div className="w-full h-24 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] font-bold">
-                          On PT/ Parade
+                          {documentType === 'PT' ? 'On PT' : 'On Parade'}
                         </div>
                       </th>
                       <th className="border border-black p-0.5 align-bottom text-center">
