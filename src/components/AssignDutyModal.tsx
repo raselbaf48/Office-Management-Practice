@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
@@ -17,7 +18,9 @@ import {
   Clock,
   Coffee,
   Building,
-  UserCheck
+  UserCheck,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import {
   Airman,
@@ -253,6 +256,33 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     }
     return getRequiredCountForDuty(activeDutyCode);
   }, [activeDutyCode, activeIdaShift, activeFlight, fromDate]);
+
+
+  const handleShiftDate = (days: number) => {
+    if (!fromDate) return;
+    const d = new Date(fromDate);
+    d.setDate(d.getDate() + days);
+    const newDate = d.toISOString().split('T')[0];
+    setFromDate(newDate);
+    setToDate(newDate);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (dateMode === 'single') {
+        if (e.key === 'ArrowRight') {
+          handleShiftDate(1);
+        } else if (e.key === 'ArrowLeft') {
+          handleShiftDate(-1);
+        }
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, dateMode, fromDate]);
 
   // Direct Click Assignment Action (No Draft System)
   const handleToggleAssignAirman = async (airman: Airman) => {
@@ -661,8 +691,18 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             </div>
 
             <div className="flex items-center space-x-2">
-              <input
-                type="date"
+              {dateMode === 'single' && (
+                <button
+                  type="button"
+                  onClick={() => handleShiftDate(-1)}
+                  className="p-1 rounded-md text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  title="Previous Date (Left Arrow Key)"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+              <DateNavigator
+                
                 value={fromDate || ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -673,11 +713,21 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 }}
                 className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 cursor-pointer"
               />
+              {dateMode === 'single' && (
+                <button
+                  type="button"
+                  onClick={() => handleShiftDate(1)}
+                  className="p-1 rounded-md text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  title="Next Date (Right Arrow Key)"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
               {dateMode === 'multi' && (
                 <>
                   <span className="text-xs text-slate-400">to</span>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={toDate || ''}
                     min={fromDate}
                     onChange={(e) => setToDate(e.target.value)}

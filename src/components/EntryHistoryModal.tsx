@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { ActivityHistoryItem, Airman, DutyCategoryCode, IDAShift } from '../types';
 import { DUTY_TYPES } from '../data/dutyTypes';
@@ -319,8 +320,8 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                   From Date
                 </label>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={editFromDate}
                   onChange={(e) => setEditFromDate(e.target.value)}
                   required
@@ -332,8 +333,8 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                   To Date
                 </label>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={editToDate}
                   onChange={(e) => setEditToDate(e.target.value)}
                   required

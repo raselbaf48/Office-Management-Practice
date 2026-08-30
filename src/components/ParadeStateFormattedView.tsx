@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import {
   Airman,
@@ -745,9 +746,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           koReceptionCount++;
         } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
           essnCount++;
-        } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
+        } else if (['CMH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh')) {
           hospitalCount++;
-        } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
+        } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
         } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
@@ -856,10 +857,10 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         leaveList.push({ airman, note: '' });
       } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
         essnList.push({ airman, note: 'ESSN' });
-      } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
-        cmhList.push({ airman, note: 'CMH' });
-      } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
-        sickReportList.push({ airman, note: 'Sick Report' });
+      } else if (['CMH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh')) {
+        cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
+      } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
+        sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
       } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
         drillCatCList.push({ airman, note: "Drill Cat 'C'" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
@@ -1030,8 +1031,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <div className="flex items-center space-x-2">
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
                 <span className="text-slate-500 font-semibold">Date:</span>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={fromDate}
                   onChange={(e) => {
                     setFromDate(e.target.value);
@@ -1093,8 +1094,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               {/* From / To Date Filter */}
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
                 <span className="text-slate-500 font-semibold">From:</span>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={fromDate}
                   onChange={(e) => {
                     setFromDate(e.target.value);
@@ -1103,8 +1104,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
                 />
                 <span className="text-slate-400 font-semibold">To:</span>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
@@ -1663,9 +1664,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       {cmhList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            CMH / BNS / BSH
+                            CMH
                           </h3>
-                          {renderDisposalAirmenList(cmhList, 'CMH', 'CMH / Hospital')}
+                          {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
                         </div>
                       )}
 
@@ -1915,8 +1916,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
                 {disposalDateMode === 'SINGLE' ? (
                   <div>
-                    <input
-                      type="date"
+                    <DateNavigator
+                      
                       value={disposalFromDate}
                       onChange={(e) => {
                         setDisposalFromDate(e.target.value);
@@ -1930,8 +1931,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <span className="text-[11px] text-slate-500 font-semibold block mb-1">From Date:</span>
-                      <input
-                        type="date"
+                      <DateNavigator
+                        
                         value={disposalFromDate}
                         onChange={(e) => {
                           setDisposalFromDate(e.target.value);
@@ -1945,8 +1946,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     </div>
                     <div>
                       <span className="text-[11px] text-slate-500 font-semibold block mb-1">To Date:</span>
-                      <input
-                        type="date"
+                      <DateNavigator
+                        
                         value={disposalToDate}
                         min={disposalFromDate}
                         onChange={(e) => setDisposalToDate(e.target.value)}
@@ -1966,19 +1967,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
                   {[
                     { code: 'ESSN', label: 'ESSN (Essential)' },
-                    { code: 'CMH', label: 'CMH / BNS / BSH' },
-                    { code: 'SICK_REPORT', label: 'Sick Report / ED' },
+                    { code: 'SICK_REPORT', label: 'Sick Report' },
                     { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
-                    { code: 'LEAVE', label: 'Leave (Casual/Ann)' },
-                    { code: 'BAKE_N_BITE', label: 'Bake & Bite' },
-                    { code: 'RECEPTION', label: 'Reception / K/O' },
-                    { code: 'ATT', label: 'Attachment (ATT)' },
-                    { code: 'TDY', label: 'TDY' },
-                    { code: 'DETT', label: 'Detachment (DETT)' },
-                    { code: 'ADMIN_ORDER', label: 'Admin Order / BOI' },
-                    { code: 'CLASS_TRG', label: 'Class / Trg Ctrl' },
-                    { code: 'GAMES', label: 'G/H & Games' },
-                    { code: 'ABSENT', label: 'Absent / AWL' },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = disposalCategory === cat.code;
@@ -2322,8 +2312,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     From Date:
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={editDisposalFromDate}
                     onChange={(e) => setEditDisposalFromDate(e.target.value)}
                     className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
@@ -2333,8 +2323,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     To Date:
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={editDisposalToDate}
                     min={editDisposalFromDate}
                     onChange={(e) => setEditDisposalToDate(e.target.value)}
@@ -2352,19 +2342,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   {[
                     { code: 'ON_PARADE', label: '✅ On Parade (Clear)' },
                     { code: 'ESSN', label: 'ESSN (Essential)' },
-                    { code: 'CMH', label: 'CMH / Hospital' },
-                    { code: 'SICK_REPORT', label: 'Sick Report / ED' },
+                    { code: 'SICK_REPORT', label: 'Sick Report' },
                     { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
-                    { code: 'LEAVE', label: 'Leave' },
-                    { code: 'BAKE_N_BITE', label: 'Bake & Bite' },
-                    { code: 'RECEPTION', label: 'Reception / K/O' },
-                    { code: 'ATT', label: 'Attachment (ATT)' },
-                    { code: 'TDY', label: 'TDY' },
-                    { code: 'DETT', label: 'Detachment (DETT)' },
-                    { code: 'ADMIN_ORDER', label: 'Admin Order' },
-                    { code: 'CLASS_TRG', label: 'Class / Trg Ctrl' },
-                    { code: 'GAMES', label: 'G/H & Games' },
-                    { code: 'ABSENT', label: 'Absent / AWL' },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = editDisposalCategory === cat.code;

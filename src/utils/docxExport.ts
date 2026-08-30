@@ -622,7 +622,7 @@ export async function exportParadeStateSingleDocx(
     'Eff\nstr',
     'Leave',
     'Essn',
-    'BNS/BSH/\nCMH',
+    'CMH',
     'Sick\nReport',
     'Drill\nCat-C',
     'Guard Duty\nOn/Off',
@@ -713,7 +713,7 @@ export async function exportParadeStateSingleDocx(
       }),
       ...list.map((item, idx) =>
         new Paragraph({
-          spacing: { after: 20 },
+          spacing: { after: 15, line: 240 },
           children: [
             new TextRun({
               text: `${idx + 1}. ${item.displayName}`,
@@ -748,9 +748,10 @@ export async function exportParadeStateSingleDocx(
     };
   });
 
-  // Col 1: On Parade 1..15 on left, 16+ on right
+  // Col 1: On Parade up to 3 columns (1-15, 16-30, 31-45)
   const onParade1To15 = onParade.slice(0, 15);
-  const onParade16Plus = onParade.slice(15);
+  const onParade16To30 = onParade.slice(15, 30);
+  const onParade31Plus = onParade.slice(30, 45);
 
   const col1Children: (Paragraph | Table)[] = [
     new Paragraph({
@@ -778,7 +779,7 @@ export async function exportParadeStateSingleDocx(
     onParade.forEach((a, idx) => {
       col1Children.push(
         new Paragraph({
-          spacing: { after: 20 },
+          spacing: { after: 15, line: 240 },
           children: [
             new TextRun({
               text: `${idx + 1}. ${a.rank} ${a.name}`,
@@ -790,53 +791,50 @@ export async function exportParadeStateSingleDocx(
       );
     });
   } else {
-    const maxRows = Math.max(onParade1To15.length, onParade16Plus.length);
+    const maxRows = Math.max(onParade1To15.length, onParade16To30.length, onParade31Plus.length);
     const innerRows: TableRow[] = [];
-
     for (let i = 0; i < maxRows; i++) {
-      const leftItem = onParade1To15[i];
-      const rightItem = onParade16Plus[i];
-      const leftText = leftItem ? `${i + 1}. ${leftItem.rank} ${leftItem.name}` : '';
-      const rightText = rightItem ? `${16 + i}. ${rightItem.rank} ${rightItem.name}` : '';
+      const col1Item = onParade1To15[i];
+      const col2Item = onParade16To30[i];
+      const col3Item = onParade31Plus[i];
+      
+      const col1Text = col1Item ? `${i + 1}. ${col1Item.rank} ${col1Item.name}` : '';
+      const col2Text = col2Item ? `${16 + i}. ${col2Item.rank} ${col2Item.name}` : '';
+      const col3Text = col3Item ? `${31 + i}. ${col3Item.rank} ${col3Item.name}` : '';
 
       innerRows.push(
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 2520, type: WidthType.DXA },
+              width: { size: 1680, type: WidthType.DXA },
               borders: invisibleBorders,
-              margins: { top: 0, bottom: 20, left: 0, right: 20 },
+              margins: { top: 0, bottom: 20, left: 0, right: 0 },
               children: [
                 new Paragraph({
-                  spacing: { after: 20 },
-                  children: leftText
-                    ? [
-                        new TextRun({
-                          text: leftText,
-                          font: 'Arial',
-                          size: 22,
-                        }),
-                      ]
-                    : [],
+                  spacing: { after: 15, line: 240 },
+                  children: col1Text ? [new TextRun({ text: col1Text, font: 'Arial', size: 22 })] : [],
                 }),
               ],
             }),
             new TableCell({
-              width: { size: 2520, type: WidthType.DXA },
+              width: { size: 1680, type: WidthType.DXA },
               borders: invisibleBorders,
-              margins: { top: 0, bottom: 20, left: 20, right: 0 },
+              margins: { top: 0, bottom: 20, left: 0, right: 0 },
               children: [
                 new Paragraph({
-                  spacing: { after: 20 },
-                  children: rightText
-                    ? [
-                        new TextRun({
-                          text: rightText,
-                          font: 'Arial',
-                          size: 22,
-                        }),
-                      ]
-                    : [],
+                  spacing: { after: 15, line: 240 },
+                  children: col2Text ? [new TextRun({ text: col2Text, font: 'Arial', size: 22 })] : [],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 1680, type: WidthType.DXA },
+              borders: invisibleBorders,
+              margins: { top: 0, bottom: 20, left: 0, right: 0 },
+              children: [
+                new Paragraph({
+                  spacing: { after: 15, line: 240 },
+                  children: col3Text ? [new TextRun({ text: col3Text, font: 'Arial', size: 22 })] : [],
                 }),
               ],
             }),
@@ -844,14 +842,12 @@ export async function exportParadeStateSingleDocx(
         })
       );
     }
-
     const onParadeSubTable = new Table({
       width: { size: 5040, type: WidthType.DXA },
-      columnWidths: [2520, 2520],
+      columnWidths: [1680, 1680, 1680],
       borders: invisibleBorders,
       rows: innerRows,
     });
-
     col1Children.push(onParadeSubTable);
   }
 
@@ -873,7 +869,7 @@ export async function exportParadeStateSingleDocx(
   const secEssn = buildDisposalSection('ESSN', toDisplay(essn), col2Paragraphs.length === 0);
   if (secEssn.length > 0) col2Paragraphs.push(...secEssn);
 
-  const secCmh = buildDisposalSection('BNS/BSH/CMH', toDisplay(cmh), col2Paragraphs.length === 0);
+  const secCmh = buildDisposalSection('CMH', toDisplay(cmh), col2Paragraphs.length === 0);
   if (secCmh.length > 0) col2Paragraphs.push(...secCmh);
 
   const secSick = buildDisposalSection('SICK REPORT', toDisplay(sickReport), col2Paragraphs.length === 0);
@@ -966,9 +962,9 @@ export async function exportParadeStateSingleDocx(
   const leftSigRank = params.leftSig?.rank || 'SGT';
   const leftSigDesig = params.leftSig?.desig || 'UWO';
 
-  const rightSigName = params.rightSig?.name || 'MD SHAHINUZZAMAN';
-  const rightSigRank = params.rightSig?.rank || 'WO';
-  const rightSigDesig = params.rightSig?.desig || 'WOIC Orderly Room';
+  const rightSigName = params.rightSig?.name || 'MAHIM RAAD SADAT';
+  const rightSigRank = params.rightSig?.rank || 'FLT LT';
+  const rightSigDesig = params.rightSig?.desig || 'Adjutant';
 
   const signatureRow = new TableRow({
     children: [
@@ -979,7 +975,7 @@ export async function exportParadeStateSingleDocx(
         children: [
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 30 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: leftSigName.toUpperCase(),
@@ -991,7 +987,7 @@ export async function exportParadeStateSingleDocx(
           }),
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 30 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: leftSigRank.toUpperCase(),
@@ -1003,7 +999,7 @@ export async function exportParadeStateSingleDocx(
           }),
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 20 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: leftSigDesig,
@@ -1041,7 +1037,7 @@ export async function exportParadeStateSingleDocx(
         children: [
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 30 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: rightSigName.toUpperCase(),
@@ -1053,7 +1049,7 @@ export async function exportParadeStateSingleDocx(
           }),
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 30 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: rightSigRank.toUpperCase(),
@@ -1065,7 +1061,7 @@ export async function exportParadeStateSingleDocx(
           }),
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 20 },
+            spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
                 text: rightSigDesig,
@@ -1268,11 +1264,11 @@ export async function exportParadeStateMultiDocx(
 
   const lSigName = leftSig?.name || 'MD NAHID HASAN KHAN';
   const lSigRank = leftSig?.rank || 'SGT';
-  const lSigDesig = leftSig?.desig || 'Admin SNCO';
+  const lSigDesig = leftSig?.desig || 'UWO';
 
-  const rSigName = rightSig?.name || 'MD SHAHINUZZAMAN';
-  const rSigRank = rightSig?.rank || 'WO';
-  const rSigDesig = rightSig?.desig || 'WOIC Orderly Room';
+  const rSigName = rightSig?.name || 'MAHIM RAAD SADAT';
+  const rSigRank = rightSig?.rank || 'FLT LT';
+  const rSigDesig = rightSig?.desig || 'Adjutant';
 
   const sigTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1286,7 +1282,7 @@ export async function exportParadeStateMultiDocx(
             children: [
               new Paragraph({
                 alignment: AlignmentType.LEFT,
-                spacing: { after: 30 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: lSigName.toUpperCase(),
@@ -1298,7 +1294,7 @@ export async function exportParadeStateMultiDocx(
               }),
               new Paragraph({
                 alignment: AlignmentType.LEFT,
-                spacing: { after: 30 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: lSigRank.toUpperCase(),
@@ -1310,7 +1306,7 @@ export async function exportParadeStateMultiDocx(
               }),
               new Paragraph({
                 alignment: AlignmentType.LEFT,
-                spacing: { after: 20 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: lSigDesig,
@@ -1337,7 +1333,7 @@ export async function exportParadeStateMultiDocx(
             children: [
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
-                spacing: { after: 30 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: rSigName.toUpperCase(),
@@ -1349,7 +1345,7 @@ export async function exportParadeStateMultiDocx(
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
-                spacing: { after: 30 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: rSigRank.toUpperCase(),
@@ -1361,7 +1357,7 @@ export async function exportParadeStateMultiDocx(
               }),
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
-                spacing: { after: 20 },
+                spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
                     text: rSigDesig,

@@ -9,7 +9,23 @@ export const auth = getAuth();
 
 export async function saveDbToFirebase(dbData: any) {
   try {
-    await setDoc(doc(db, 'baf_155_uasu_v2_db', 'main'), dbData);
+    const extraSettings: Record<string, string> = {};
+    if (typeof window !== 'undefined' && window.localStorage) {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key && key.startsWith('baf_') && key !== 'baf_155_uasu_v2_db') {
+          const val = window.localStorage.getItem(key);
+          if (val) {
+            extraSettings[key] = val;
+          }
+        }
+      }
+    }
+    
+    await setDoc(doc(db, 'baf_155_uasu_v2_db', 'main'), {
+      ...dbData,
+      extraSettings
+    });
     return true;
   } catch (error) {
     console.error('Error saving to Firebase:', error);
@@ -22,7 +38,31 @@ export async function getDbFromFirebase() {
     const docRef = doc(db, 'baf_155_uasu_v2_db', 'main');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data();
+      const data = docSnap.data();
+      
+      if (data.extraSettings && typeof window !== 'undefined' && window.localStorage) {
+        let settingsChanged = false;
+        Object.entries(data.extraSettings).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            const current = window.localStorage.getItem(key);
+            if (current !== value) {
+              window.localStorage.setItem(key, value);
+              settingsChanged = true;
+            }
+          }
+        });
+        
+        if (settingsChanged) {
+          window.dispatchEvent(new CustomEvent('baf_idac_settings_updated'));
+          window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated'));
+          window.dispatchEvent(new CustomEvent('baf_signatures_updated'));
+          window.dispatchEvent(new CustomEvent('baf_theme_updated'));
+          window.dispatchEvent(new CustomEvent('baf_logo_updated', { detail: { logoUrl: window.localStorage.getItem('baf_custom_logo') || null } }));
+          window.dispatchEvent(new CustomEvent('baf_state_updated'));
+        }
+      }
+      
+      return data;
     } else {
       return null;
     }

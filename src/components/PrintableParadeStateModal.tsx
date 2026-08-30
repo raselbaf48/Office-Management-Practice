@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useEffect, useState } from 'react';
 import { FlightName, ParadeShift, Airman, ParadeStateResponse } from '../types';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
@@ -44,11 +45,11 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
   const [leftSigName, setLeftSigName] = useState(initialPrep.name || 'MD NAHID HASAN KHAN');
   const [leftSigRank, setLeftSigRank] = useState(initialPrep.rank || 'SGT');
-  const [leftSigDesig, setLeftSigDesig] = useState(initialPrep.designation || 'Admin SNCO');
+  const [leftSigDesig, setLeftSigDesig] = useState(initialPrep.designation || 'UWO');
 
-  const [rightSigName, setRightSigName] = useState(initialAuth.name || 'MD SHAHINUZZAMAN');
-  const [rightSigRank, setRightSigRank] = useState(initialAuth.rank || 'WO');
-  const [rightSigDesig, setRightSigDesig] = useState(initialAuth.designation || 'WOIC Orderly Room');
+  const [rightSigName, setRightSigName] = useState(initialAuth.name || 'MAHIM RAAD SADAT');
+  const [rightSigRank, setRightSigRank] = useState(initialAuth.rank || 'FLT LT');
+  const [rightSigDesig, setRightSigDesig] = useState(initialAuth.designation || 'Adjutant');
 
   // Keep fromDate/toDate and currentFlight updated when props change
   useEffect(() => {
@@ -386,7 +387,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           // Sometimes notes holds the custom disposal name if it's entered in custom field
           // but if it's a standard one, dutyName is better.
           // In AssignDuty, custom disposal stores the name in notes.
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'SICK_REPORT', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
              customKey = notes;
           }
         }
@@ -521,8 +522,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center space-x-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs">
               <span className="font-medium text-slate-600">Date:</span>
-              <input
-                type="date"
+              <DateNavigator
+                
                 value={fromDate}
                 onChange={(e) => {
                   setFromDate(e.target.value);
@@ -716,7 +717,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                     <tbody>
                       <tr>
                         <td className="w-1/2 align-top text-left pl-2 border-none">
-                          <div className="space-y-0.5">
+                          <div className="leading-tight space-y-[2px]">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {leftSigName}
                             </p>
@@ -726,7 +727,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           </div>
                         </td>
                         <td className="w-1/2 align-top text-right pr-2 border-none">
-                          <div className="space-y-0.5 inline-block text-left">
+                          <div className="leading-tight space-y-[2px] inline-block text-left">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {rightSigName}
                             </p>
@@ -981,8 +982,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           {documentType === 'PT' ? 'ON PT' : 'ON PARADE'}
                         </div>
                         {onPtList.length > 0 ? (
-                          <div className="flex items-start space-x-3 w-full">
-                            <ol className="space-y-0.5 font-normal leading-tight w-1/2 overflow-hidden text-[11px]">
+                          <div className="flex items-start space-x-1 w-full">
+                            <ol className="space-y-0.5 font-normal leading-tight w-1/3 overflow-hidden text-[11px]">
                               {onPtList.slice(0, 15).map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
                                   {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
@@ -990,10 +991,19 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                               ))}
                             </ol>
                             {onPtList.length > 15 && (
-                              <ol className="space-y-0.5 font-normal leading-tight w-1/2 overflow-hidden text-[11px]">
-                                {onPtList.slice(15).map((item, idx) => (
+                              <ol className="space-y-0.5 font-normal leading-tight w-1/3 overflow-hidden text-[11px]">
+                                {onPtList.slice(15, 30).map((item, idx) => (
                                   <li key={idx} className="whitespace-nowrap truncate">
                                     {16 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                            {onPtList.length > 30 && (
+                              <ol className="space-y-0.5 font-normal leading-tight w-1/3 overflow-hidden text-[11px]">
+                                {onPtList.slice(30, 45).map((item, idx) => (
+                                  <li key={idx} className="whitespace-nowrap truncate">
+                                    {31 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
                                   </li>
                                 ))}
                               </ol>
@@ -1061,7 +1071,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         {cmhList.length > 0 && (
                           <div className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              BNS/BSH/CMH
+                              CMH
                             </div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {cmhList.map((item, idx) => (
@@ -1193,7 +1203,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             paddingTop: '28px',
                           }}
                         >
-                          <div className="space-y-0.5 text-left text-[11px]">
+                          <div className="leading-tight space-y-[2px] text-left text-[11px]">
                             {leftSig.signDigitally && (
                               <div className="mb-1 text-left font-serif italic text-xs text-black select-none">
                                 <span className="font-bold underline">
@@ -1222,7 +1232,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             paddingTop: '28px',
                           }}
                         >
-                          <div className="space-y-0.5 text-left text-[11px]">
+                          <div className="leading-tight space-y-[2px] text-left text-[11px]">
                             {rightSig.signDigitally && (
                               <div className="mb-1 text-left font-serif italic text-xs text-black select-none">
                                 <span className="font-bold underline">

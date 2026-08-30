@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState } from 'react';
 import { FlightName, DutyCategoryCode, IDAShift } from '../types';
 import {
@@ -205,8 +206,8 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
         <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Target Date:</span>
-            <input
-              type="date"
+            <DateNavigator
+              
               value={selectedDate || ''}
               onChange={(e) => handleDateChange(e.target.value)}
               className="px-3 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"

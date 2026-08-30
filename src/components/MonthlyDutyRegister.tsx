@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { Airman, DutyAssignment, DutyCategoryCode, FlightName, UserRole, ConflictAlert, IDAShift } from '../types';
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
@@ -1890,8 +1891,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                     <span className="text-[11px] text-slate-500 font-semibold block mb-1">
                       From Date:
                     </span>
-                    <input
-                      type="date"
+                    <DateNavigator
+                      
                       value={bulkFromDate}
                       onChange={(e) => {
                         setBulkFromDate(e.target.value);
@@ -1907,8 +1908,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                     <span className="text-[11px] text-slate-500 font-semibold block mb-1">
                       To Date:
                     </span>
-                    <input
-                      type="date"
+                    <DateNavigator
+                      
                       value={bulkToDate}
                       min={bulkFromDate}
                       onChange={(e) => setBulkToDate(e.target.value)}

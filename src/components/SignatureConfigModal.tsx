@@ -13,16 +13,16 @@ export interface SignatureDetails {
 export const DEFAULT_PREPARED_BY: SignatureDetails = {
   name: 'MD NAHID HASAN KHAN',
   rank: 'SGT',
-  designation: 'Admin SNCO',
+  designation: 'UWO',
   unit: '155 UASU BAF',
   signDigitally: false,
   digitalSignatureText: '',
 };
 
 export const DEFAULT_AUTHORIZED_BY: SignatureDetails = {
-  name: 'MD SHAHINUZZAMAN',
-  rank: 'WO',
-  designation: 'WOIC Orderly Room',
+  name: 'MAHIM RAAD SADAT',
+  rank: 'FLT LT',
+  designation: 'Adjutant',
   unit: '155 UASU BAF',
   signDigitally: false,
   digitalSignatureText: '',
@@ -374,7 +374,7 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                   (Signature Space)
                 </div>
               )}
-              <div className="border-t border-slate-400 dark:border-slate-600 pt-1">
+              <div className="border-t border-slate-400 dark:border-slate-600 pt-1 leading-tight space-y-[2px]">
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {prepared.name || 'NAME'}
                 </div>
@@ -398,7 +398,7 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                   (Signature Space)
                 </div>
               )}
-              <div className="border-t border-slate-400 dark:border-slate-600 pt-1">
+              <div className="border-t border-slate-400 dark:border-slate-600 pt-1 leading-tight space-y-[2px]">
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {authorized.name || 'NAME'}
                 </div>

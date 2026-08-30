@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
 import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Plus, RefreshCw, X, Check, FileText, MapPin, History } from 'lucide-react';
@@ -617,8 +618,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                     From Date
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={tdyFromDate}
                     onChange={(e) => {
                       const newFrom = e.target.value;
@@ -634,8 +635,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                     To Date
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={tdyToDate}
                     min={tdyFromDate}
                     onChange={(e) => setTdyToDate(e.target.value)}

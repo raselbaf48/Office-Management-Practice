@@ -12,7 +12,7 @@ export type DutyCategoryCode =
   | 'IDA'          // Legacy alias for IDAC
   | 'TDY'          // Temporary Duty
   | 'ATT'          // Attachment
-  | 'DETT'         // Detachment
+  | 'DETT' | 'BNS' | 'BSH' | 'ED'
   | 'LEAVE'        // Leave
   | 'BAKE_N_BITE'  // Bake N Bite
   | 'DUTY_OFF'     // Duty Off

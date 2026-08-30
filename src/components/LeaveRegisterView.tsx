@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
 import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Sun, Moon, Plus, RefreshCw, X, Check, FileText, History } from 'lucide-react';
@@ -935,8 +936,8 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                     From Date
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={leaveFromDate}
                     onChange={(e) => {
                       const newFrom = e.target.value;
@@ -952,8 +953,8 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                     To Date
                   </label>
-                  <input
-                    type="date"
+                  <DateNavigator
+                    
                     value={leaveToDate}
                     min={leaveFromDate}
                     onChange={(e) => {

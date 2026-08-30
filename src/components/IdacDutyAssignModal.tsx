@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState } from 'react';
 import { Airman, FlightName, IDAShift } from '../types';
 import { X, Calendar, Clock, User, Check, RefreshCw, Sparkles, Shield } from 'lucide-react';
@@ -225,8 +226,8 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Duty Date
                 </label>
-                <input
-                  type="date"
+                <DateNavigator
+                  
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500"

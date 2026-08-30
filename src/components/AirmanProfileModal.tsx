@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { Airman, DutyAssignment } from '../types';
 import { X, Shield, Phone, MapPin, Award, Calendar, FileText, User, Filter, Printer, Clock } from 'lucide-react';
@@ -207,15 +208,15 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
 
                   <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                     <span className="text-slate-500">From:</span>
-                    <input
-                      type="date"
+                    <DateNavigator
+                      
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
                       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg font-mono text-xs"
                     />
                     <span className="text-slate-500">To:</span>
-                    <input
-                      type="date"
+                    <DateNavigator
+                      
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
                       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg font-mono text-xs"

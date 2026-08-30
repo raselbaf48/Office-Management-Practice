@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { 
   Users, ShieldCheck, UserMinus, Plane, Calendar, Filter,
@@ -162,8 +163,8 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           {/* Date Picker */}
           <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200">
             <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <input
-              type="date"
+            <DateNavigator
+              
               value={selectedDate || ''}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-transparent border-none outline-none font-semibold cursor-pointer text-slate-900 dark:text-slate-100"

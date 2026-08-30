@@ -100,6 +100,11 @@ export class LocalDatabaseEngine {
     if (typeof window !== 'undefined') {
       // Async sync from Cloudflare D1
       this.syncFromFirebase();
+      window.addEventListener("baf_idac_settings_updated", () => this.saveToFirebase(this.db));
+      window.addEventListener("baf_duty_ratio_updated", () => this.saveToFirebase(this.db));
+      window.addEventListener("baf_signatures_updated", () => this.saveToFirebase(this.db));
+      window.addEventListener("baf_logo_updated", () => this.saveToFirebase(this.db));
+      window.addEventListener("baf_theme_updated", () => this.saveToFirebase(this.db));
     }
   }
 

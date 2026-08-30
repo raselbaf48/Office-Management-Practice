@@ -1,3 +1,4 @@
+import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { Airman, DutyAssignment, UserRole, FlightName } from '../types';
 import { getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
@@ -500,8 +501,8 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
 
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
             <span className="text-slate-500 font-semibold">From:</span>
-            <input
-              type="date"
+            <DateNavigator
+              
               value={fromDate || ''}
               onChange={(e) => {
                 setFromDate(e.target.value);
@@ -510,8 +511,8 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
               className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
             />
             <span className="text-slate-400 font-semibold">To:</span>
-            <input
-              type="date"
+            <DateNavigator
+              
               value={toDate || ''}
               onChange={(e) => {
                 setToDate(e.target.value);
