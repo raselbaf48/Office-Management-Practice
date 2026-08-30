@@ -16,10 +16,10 @@ export interface DutyRatioTable {
 }
 
 export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
-  // 1. SECURITY DUTY (88)
+  // 1. BASE SECURITY DUTY
   {
     id: 'security_duty',
-    title: 'SECURITY DUTY (88)',
+    title: 'BASE SECURITY DUTY',
     dutyCode: 'GD',
     totalRequiredMonth: 88,
     data: {
@@ -30,24 +30,10 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 2. NAZIRPARA T/F (40)
-  {
-    id: 'nazirpara_tf',
-    title: 'NAZIRPARA T/F (40)',
-    dutyCode: 'NTF',
-    totalRequiredMonth: 40,
-    data: {
-      Mechanics: [1,1,0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,1,1,0,0,1],
-      Avionics:  [0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1],
-      GCS:       [1,0,1,1,0,0,0,0,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,0,1,1,0,1,1,0],
-      Admin:     [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    },
-  },
-
-  // 3. BASE T/F (22)
+  // 2. BASE TASKFORCE DUTY
   {
     id: 'base_tf',
-    title: 'BASE T/F (22)',
+    title: 'BASE TASKFORCE DUTY',
     dutyCode: 'BTF',
     totalRequiredMonth: 22,
     data: {
@@ -58,10 +44,24 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 4. IDAC MOR 31
+  // 3. NAZIRPARA TARKFORCE DUTY
+  {
+    id: 'nazirpara_tf',
+    title: 'NAZIRPARA TARKFORCE DUTY',
+    dutyCode: 'NTF',
+    totalRequiredMonth: 40,
+    data: {
+      Mechanics: [1,1,0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,1,1,0,0,1],
+      Avionics:  [0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1],
+      GCS:       [1,0,1,1,0,0,0,0,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,0,1,1,0,1,1,0],
+      Admin:     [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    },
+  },
+
+  // 4. IDAC MORNING
   {
     id: 'idac_mor',
-    title: 'IDAC MOR (31)',
+    title: 'IDAC MORNING',
     dutyCode: 'IDAC',
     shiftLabel: 'Morning',
     totalRequiredMonth: 31,
@@ -73,10 +73,10 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 5. IDAC A/N 31
+  // 5. IDAC AFTERNOON
   {
     id: 'idac_an',
-    title: 'IDAC A/N (31)',
+    title: 'IDAC AFTERNOON',
     dutyCode: 'IDAC',
     shiftLabel: 'Afternoon',
     totalRequiredMonth: 31,
@@ -88,10 +88,10 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 6. IDAC NT 62 (2 per night)
+  // 6. IDAC NIGHT
   {
     id: 'idac_nt',
-    title: 'IDAC NT (62)',
+    title: 'IDAC NIGHT',
     dutyCode: 'IDAC',
     shiftLabel: 'Night',
     totalRequiredMonth: 62,
@@ -103,10 +103,10 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 7. AIRPORT DUTY (93) - Regular 3 daily (1 Avi, 1 Mech, 1 GCS)
+  // 7. AIRFIELD DUTY
   {
     id: 'airport_duty',
-    title: 'AIRPORT DUTY (93)',
+    title: 'AIRFIELD DUTY',
     dutyCode: 'AIRPORT',
     totalRequiredMonth: 93,
     data: {
@@ -117,10 +117,10 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     },
   },
 
-  // 8. HALISHAHAR DUTY (14-20 AUG / 7) - 14-20 Aug Avi Flight
+  // 8. HALISHAHAR TASKFIRCE DUTY
   {
     id: 'halishahar_duty',
-    title: 'HALISHAHAR DUTY (14-20 AUG)',
+    title: 'HALISHAHAR TASKFIRCE DUTY',
     dutyCode: 'HALISHAHAR',
     totalRequiredMonth: 7,
     data: {
@@ -164,20 +164,26 @@ export function parseDayNumber(dateStr: string): number {
   return 1;
 }
 
-const MATRIX_STORAGE_KEY = 'baf_official_duty_matrix_v3';
+const MATRIX_STORAGE_KEY = 'baf_official_duty_matrix_v4';
 
 export function getStoredDutyMatrix(): DutyRatioTable[] {
   try {
-    const raw = localStorage.getItem(MATRIX_STORAGE_KEY);
+    const raw = localStorage.getItem(MATRIX_STORAGE_KEY) || localStorage.getItem('baf_official_duty_matrix_v3');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const existingIds = new Set(parsed.map((t: DutyRatioTable) => t.id));
+        // Map over parsed and ensure official updated titles are synchronized while preserving user custom data
+        const titleMap = new Map(INITIAL_OFFICIAL_DUTY_MATRIX.map((t) => [t.id, t.title]));
+        const updatedParsed = parsed.map((t: DutyRatioTable) => ({
+          ...t,
+          title: titleMap.get(t.id) || t.title,
+        }));
+        const existingIds = new Set(updatedParsed.map((t: DutyRatioTable) => t.id));
         const missing = INITIAL_OFFICIAL_DUTY_MATRIX.filter((t) => !existingIds.has(t.id));
         if (missing.length > 0) {
-          return [...parsed, ...missing];
+          return [...updatedParsed, ...missing];
         }
-        return parsed;
+        return updatedParsed;
       }
     }
   } catch (e) {

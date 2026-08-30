@@ -6,6 +6,8 @@ export interface SignatureDetails {
   rank: string;
   designation: string;
   unit: string;
+  signDigitally?: boolean;
+  digitalSignatureText?: string;
 }
 
 export const DEFAULT_PREPARED_BY: SignatureDetails = {
@@ -13,6 +15,8 @@ export const DEFAULT_PREPARED_BY: SignatureDetails = {
   rank: 'SGT',
   designation: 'Admin SNCO',
   unit: '155 UASU BAF',
+  signDigitally: false,
+  digitalSignatureText: '',
 };
 
 export const DEFAULT_AUTHORIZED_BY: SignatureDetails = {
@@ -20,6 +24,8 @@ export const DEFAULT_AUTHORIZED_BY: SignatureDetails = {
   rank: 'WO',
   designation: 'WOIC Orderly Room',
   unit: '155 UASU BAF',
+  signDigitally: false,
+  digitalSignatureText: '',
 };
 
 // Storage helper functions
@@ -232,6 +238,35 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                 className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               />
             </div>
+
+            {/* Sign Digitally Option */}
+            <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-2">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!prepared.signDigitally}
+                  onChange={(e) => setPrepared({ ...prepared, signDigitally: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                  Sign Digitally (Prepared By)
+                </span>
+              </label>
+              {prepared.signDigitally && (
+                <div className="pl-6 space-y-1 text-xs text-emerald-800 dark:text-emerald-300">
+                  <p className="text-[11px] font-medium">
+                    Digital signature will be stamped above the name in official documents.
+                  </p>
+                  <input
+                    type="text"
+                    value={prepared.digitalSignatureText || ''}
+                    onChange={(e) => setPrepared({ ...prepared, digitalSignatureText: e.target.value })}
+                    placeholder={`Custom Signature Text (Defaults to "${prepared.name || 'MD NAHID HASAN KHAN'}")`}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           /* Tab 2: Authorized By Form */
@@ -289,15 +324,56 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                 className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               />
             </div>
+
+            {/* Sign Digitally Option */}
+            <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-2">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!authorized.signDigitally}
+                  onChange={(e) => setAuthorized({ ...authorized, signDigitally: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                  Sign Digitally (Authorized By)
+                </span>
+              </label>
+              {authorized.signDigitally && (
+                <div className="pl-6 space-y-1 text-xs text-emerald-800 dark:text-emerald-300">
+                  <p className="text-[11px] font-medium">
+                    Digital signature will be stamped above the name in official documents.
+                  </p>
+                  <input
+                    type="text"
+                    value={authorized.digitalSignatureText || ''}
+                    onChange={(e) => setAuthorized({ ...authorized, digitalSignatureText: e.target.value })}
+                    placeholder={`Custom Signature Text (Defaults to "${authorized.name || 'MD SHAHINUZZAMAN'}")`}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Live Alignment Preview Box */}
+        {/* Live Alignment Preview Box with Extra Spacing */}
         <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
           <div className="text-[10px] uppercase font-bold text-slate-400 mb-2">Live Document Signature Layout</div>
           <div className="flex justify-between items-end text-slate-900 dark:text-slate-100 text-[11px] font-sans px-2">
             {/* Left Preview */}
-            <div className="text-center min-w-[140px]">
+            <div className="text-center min-w-[150px]">
+              {prepared.signDigitally ? (
+                <div className="h-10 flex flex-col items-center justify-end pb-1 font-serif italic text-sm text-emerald-800 dark:text-emerald-300 select-none">
+                  <span>{prepared.digitalSignatureText || prepared.name}</span>
+                  <span className="text-[9px] font-mono not-italic text-emerald-600 dark:text-emerald-400">
+                    [Digitally Signed]
+                  </span>
+                </div>
+              ) : (
+                <div className="h-10 flex items-end justify-center pb-1 text-[10px] text-slate-400 italic">
+                  (Signature Space)
+                </div>
+              )}
               <div className="border-t border-slate-400 dark:border-slate-600 pt-1">
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {prepared.name || 'NAME'}
@@ -309,7 +385,19 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
             </div>
 
             {/* Right Preview */}
-            <div className="text-center min-w-[140px]">
+            <div className="text-center min-w-[150px]">
+              {authorized.signDigitally ? (
+                <div className="h-10 flex flex-col items-center justify-end pb-1 font-serif italic text-sm text-emerald-800 dark:text-emerald-300 select-none">
+                  <span>{authorized.digitalSignatureText || authorized.name}</span>
+                  <span className="text-[9px] font-mono not-italic text-emerald-600 dark:text-emerald-400">
+                    [Digitally Signed]
+                  </span>
+                </div>
+              ) : (
+                <div className="h-10 flex items-end justify-center pb-1 text-[10px] text-slate-400 italic">
+                  (Signature Space)
+                </div>
+              )}
               <div className="border-t border-slate-400 dark:border-slate-600 pt-1">
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {authorized.name || 'NAME'}

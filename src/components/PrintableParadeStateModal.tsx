@@ -5,6 +5,7 @@ import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyForm
 import { Logo155UASU } from './Logo155UASU';
 import { X, Printer, Filter, PenTool } from 'lucide-react';
 import {
+  SignatureDetails,
   getSavedPreparedBy,
   getSavedAuthorizedBy,
   savePreparedBy,
@@ -38,6 +39,9 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   // Editable Signature Details (Synced with saved localStorage)
   const initialPrep = getSavedPreparedBy();
   const initialAuth = getSavedAuthorizedBy();
+  const [leftSig, setLeftSig] = useState<SignatureDetails>(getSavedPreparedBy);
+  const [rightSig, setRightSig] = useState<SignatureDetails>(getSavedAuthorizedBy);
+
   const [leftSigName, setLeftSigName] = useState(initialPrep.name || 'MD NAHID HASAN KHAN');
   const [leftSigRank, setLeftSigRank] = useState(initialPrep.rank || 'SGT');
   const [leftSigDesig, setLeftSigDesig] = useState(initialPrep.designation || 'Admin SNCO');
@@ -52,6 +56,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     setToDate(date);
     const p = getSavedPreparedBy();
     const a = getSavedAuthorizedBy();
+    setLeftSig(p);
+    setRightSig(a);
     setLeftSigName(p.name);
     setLeftSigRank(p.rank);
     setLeftSigDesig(p.designation);
@@ -1313,10 +1319,10 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       </td>
                     </tr>
 
-                    {/* SPACER ROW BETWEEN 1ST & 2ND ROWS */}
+                    {/* SPACER ROW BETWEEN 1ST & 2ND ROWS: Ample room for manual / digital signatures */}
                     {!isMultiDay && (
-                      <tr style={{ height: '14px' }}>
-                        <td colSpan={4} style={{ height: '14px', border: 'none', padding: 0 }} />
+                      <tr style={{ height: '36px' }}>
+                        <td colSpan={4} style={{ height: '36px', border: 'none', padding: 0 }} />
                       </tr>
                     )}
 
@@ -1326,12 +1332,22 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         <td
                           style={{
                             width: '36%',
-                            verticalAlign: 'top',
+                            verticalAlign: 'bottom',
                             border: 'none',
-                            paddingTop: '16px',
+                            paddingTop: '28px',
                           }}
                         >
                           <div className="space-y-0.5 text-left text-[11px]">
+                            {leftSig.signDigitally && (
+                              <div className="mb-1 text-left font-serif italic text-xs text-black select-none">
+                                <span className="font-bold underline">
+                                  {leftSig.digitalSignatureText || leftSigName}
+                                </span>
+                                <span className="block text-[8px] font-mono not-italic text-slate-700">
+                                  [Digitally Signed • BAF Verified]
+                                </span>
+                              </div>
+                            )}
                             <p className="font-bold text-black uppercase tracking-wide">
                               {leftSigName}
                             </p>
@@ -1340,17 +1356,27 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             <p className="font-normal text-black">155 UASU BAF</p>
                           </div>
                         </td>
-                        <td style={{ width: '21%', border: 'none', paddingTop: '16px' }} />
-                        <td style={{ width: '21%', border: 'none', paddingTop: '16px' }} />
+                        <td style={{ width: '21%', border: 'none', paddingTop: '28px' }} />
+                        <td style={{ width: '21%', border: 'none', paddingTop: '28px' }} />
                         <td
                           style={{
                             width: '22%',
-                            verticalAlign: 'top',
+                            verticalAlign: 'bottom',
                             border: 'none',
-                            paddingTop: '16px',
+                            paddingTop: '28px',
                           }}
                         >
                           <div className="space-y-0.5 text-left text-[11px]">
+                            {rightSig.signDigitally && (
+                              <div className="mb-1 text-left font-serif italic text-xs text-black select-none">
+                                <span className="font-bold underline">
+                                  {rightSig.digitalSignatureText || rightSigName}
+                                </span>
+                                <span className="block text-[8px] font-mono not-italic text-slate-700">
+                                  [Digitally Signed • BAF Verified]
+                                </span>
+                              </div>
+                            )}
                             <p className="font-bold text-black uppercase tracking-wide">
                               {rightSigName}
                             </p>

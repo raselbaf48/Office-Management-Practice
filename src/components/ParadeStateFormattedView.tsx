@@ -1773,8 +1773,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
             </div>
 
-            {/* SPACER ROW: 0.6 INCH HEIGHT TO PROVIDE SIGNATURE HEADROOM */}
-            <div className="w-full" style={{ height: '0.6in' }} />
+            {/* SPACER ROW: 0.9 INCH HEIGHT TO PROVIDE AMPLE SIGNATURE HEADROOM */}
+            <div className="w-full" style={{ height: '0.9in' }} />
 
             {/* OFFICIAL SIGNATURE FOOTER */}
             <div
@@ -1782,7 +1782,17 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
               {/* LEFT SIGNATURE BLOCK (Prepared By) */}
-              <div className="text-center font-bold min-w-[200px]">
+              <div className="text-center font-bold min-w-[210px]">
+                {preparedBy.signDigitally && (
+                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 select-none">
+                    <span className="font-bold underline">
+                      {preparedBy.digitalSignatureText || preparedBy.name}
+                    </span>
+                    <span className="block text-[8px] font-mono not-italic text-slate-600">
+                      [Digitally Signed • BAF Verified]
+                    </span>
+                  </div>
+                )}
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{preparedBy.name}</div>
                   <div className="text-[11px] font-bold uppercase">{preparedBy.rank}</div>
@@ -1792,7 +1802,17 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
 
               {/* RIGHT SIGNATURE BLOCK (Authorized By) */}
-              <div className="text-center font-bold min-w-[200px]">
+              <div className="text-center font-bold min-w-[210px]">
+                {authorizedBy.signDigitally && (
+                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 select-none">
+                    <span className="font-bold underline">
+                      {authorizedBy.digitalSignatureText || authorizedBy.name}
+                    </span>
+                    <span className="block text-[8px] font-mono not-italic text-slate-600">
+                      [Digitally Signed • BAF Verified]
+                    </span>
+                  </div>
+                )}
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
                   <div className="text-[11px] font-bold uppercase">{authorizedBy.rank}</div>

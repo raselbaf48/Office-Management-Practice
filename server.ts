@@ -45,23 +45,32 @@ function loadDatabase(): LocalDB {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.airmen)) {
-        // Ensure airmen array is updated to INITIAL_AIRMEN with all 48 nominal airmen
-        parsed.airmen = INITIAL_AIRMEN.map((initA) => {
-          const existing = parsed.airmen.find((a: Airman) => a.bdNo === initA.bdNo || a.id === initA.id);
-          return existing && existing.name && existing.name !== '-'
-            ? {
-                ...initA,
-                ...existing,
-                bdNo: initA.bdNo,
-                rank: initA.rank,
-                name: initA.name,
-                trade: initA.trade,
-                addressBlock: initA.addressBlock || existing.addressBlock,
-                mobileNo: initA.mobileNo || existing.mobileNo,
-                flightName: initA.flightName,
-              }
-            : initA;
+        // Preserve existing user modifications and custom airmen
+        const existingMap = new Map<string, Airman>();
+        parsed.airmen.forEach((a: Airman) => {
+          if (a && a.id) existingMap.set(a.id, a);
+          if (a && a.bdNo) existingMap.set(a.bdNo, a);
         });
+
+        // Ensure baseline airmen exist while giving 100% priority to user's saved edits
+        const finalAirmen: Airman[] = [];
+        INITIAL_AIRMEN.forEach((initA) => {
+          const existing = existingMap.get(initA.id) || existingMap.get(initA.bdNo);
+          if (existing) {
+            finalAirmen.push({ ...initA, ...existing });
+          } else {
+            finalAirmen.push(initA);
+          }
+        });
+
+        // Add any newly created custom airmen that were not in INITIAL_AIRMEN
+        parsed.airmen.forEach((a: Airman) => {
+          if (a && !finalAirmen.some((f) => f.id === a.id || f.bdNo === a.bdNo)) {
+            finalAirmen.push(a);
+          }
+        });
+
+        parsed.airmen = finalAirmen.sort((a, b) => (a.serNo || 999) - (b.serNo || 999));
         if (!parsed.assignments || typeof parsed.assignments !== 'object') {
           parsed.assignments = {};
         }

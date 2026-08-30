@@ -139,6 +139,8 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   const [f295Option, setF295Option] = useState<'2' | '3' | 'custom'>('2');
   const [f295CustomDays, setF295CustomDays] = useState<number>(2);
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(null);
+  const [customLeaveDays, setCustomLeaveDays] = useState<number>(5);
+  const [isCustomPresetActive, setIsCustomPresetActive] = useState<boolean>(false);
 
   // Calculate calendar days in current leave selection
   const leaveDurationDays = useMemo(() => {
@@ -169,20 +171,24 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
     return sortAirmenBySeniority(list);
   }, [airmen, grantLeaveFlight]);
 
-  // Ensure valid airman selected when flight filter changes
+  // Reset airman selection when flight changes if the selected airman is not in the new flight
   useEffect(() => {
-    if (grantAirmenList.length > 0) {
+    if (leaveAirmanId) {
       const exists = grantAirmenList.some((a) => a.id === leaveAirmanId);
       if (!exists) {
-        setLeaveAirmanId(grantAirmenList[0].id);
+        setLeaveAirmanId('');
       }
     }
   }, [grantAirmenList, leaveAirmanId]);
 
   // Helper to add days from leaveFromDate with optional F-295 days
-  const applyPresetDays = (baseDays: number, f295Enabled: boolean = includeF295, opt: '2' | '3' | 'custom' = f295Option, customVal: number = f295CustomDays) => {
+  const applyPresetDays = (
+    baseDays: number,
+    f295Enabled: boolean = includeF295,
+    opt: '2' | '3' | 'custom' = f295Option,
+    customVal: number = f295CustomDays
+  ) => {
     try {
-      setSelectedPresetDays(baseDays);
       let extraDays = 0;
       if (f295Enabled) {
         extraDays = opt === '2' ? 2 : opt === '3' ? 3 : Math.max(1, customVal || 1);
@@ -204,17 +210,46 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
     }
   };
 
+  // Toggle or select quick preset days (allows selecting and unselecting 3 days, etc.)
+  const handlePresetToggle = (days: number) => {
+    setIsCustomPresetActive(false);
+    if (selectedPresetDays === days) {
+      // Unselect: reset to single day (FromDate)
+      setSelectedPresetDays(null);
+      setLeaveToDate(leaveFromDate);
+    } else {
+      // Select
+      setSelectedPresetDays(days);
+      applyPresetDays(days);
+    }
+  };
+
+  // Apply custom leave days
+  const handleCustomLeaveDaysChange = (customDays: number) => {
+    const days = Math.max(1, customDays || 1);
+    setCustomLeaveDays(days);
+    setIsCustomPresetActive(true);
+    setSelectedPresetDays(null);
+    applyPresetDays(days);
+  };
+
   const handleF295Toggle = (enabled: boolean) => {
     setIncludeF295(enabled);
     if (selectedPresetDays !== null) {
       applyPresetDays(selectedPresetDays, enabled, f295Option, f295CustomDays);
+    } else if (isCustomPresetActive) {
+      applyPresetDays(customLeaveDays, enabled, f295Option, f295CustomDays);
     }
   };
 
   const handleF295OptionChange = (opt: '2' | '3' | 'custom', customVal: number = f295CustomDays) => {
     setF295Option(opt);
-    if (selectedPresetDays !== null && includeF295) {
-      applyPresetDays(selectedPresetDays, true, opt, customVal);
+    if (includeF295) {
+      if (selectedPresetDays !== null) {
+        applyPresetDays(selectedPresetDays, true, opt, customVal);
+      } else if (isCustomPresetActive) {
+        applyPresetDays(customLeaveDays, true, opt, customVal);
+      }
     }
   };
 
@@ -532,9 +567,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           {/* Record / Grant Leave Button */}
           <button
             onClick={() => {
-              if (airmen.length > 0 && !leaveAirmanId) {
-                setLeaveAirmanId(airmen[0].id);
-              }
+              setLeaveAirmanId('');
+              setSelectedPresetDays(null);
+              setIsCustomPresetActive(false);
+              setIncludeF295(false);
               setShowGrantLeaveModal(true);
             }}
             className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
@@ -861,7 +897,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                    Select Airman
+                    Select Airman <span className="text-red-500">*</span>
                   </label>
                   <span className="text-[11px] text-slate-400 font-semibold">
                     {grantAirmenList.length} Airmen available
@@ -870,14 +906,27 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 <select
                   value={leaveAirmanId}
                   onChange={(e) => setLeaveAirmanId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                  className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${
+                    !leaveAirmanId
+                      ? 'border-amber-400 dark:border-amber-600 bg-amber-50/40 dark:bg-amber-950/20'
+                      : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                  required
                 >
+                  <option value="" disabled={false}>
+                    — Select an Airman —
+                  </option>
                   {grantAirmenList.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.rank} {a.name}
                     </option>
                   ))}
                 </select>
+                {!leaveAirmanId && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold">
+                    * Please select an airman from the list above
+                  </p>
+                )}
               </div>
 
               {/* Date Range */}
@@ -907,33 +956,79 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                     type="date"
                     value={leaveToDate}
                     min={leaveFromDate}
-                    onChange={(e) => setLeaveToDate(e.target.value)}
+                    onChange={(e) => {
+                      setLeaveToDate(e.target.value);
+                      setSelectedPresetDays(null);
+                      setIsCustomPresetActive(false);
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                   />
                 </div>
               </div>
 
-              {/* Quick Duration Presets & F-295 */}
+              {/* Quick Duration Presets & Custom Leave Days */}
               <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Quick Leave Presets:</span>
-                  <span className="text-[11px] text-slate-400">Sets 'To Date' automatically</span>
+                  <span className="text-[11px] text-slate-400">Click to Select / Unselect</span>
                 </div>
                 
-                {/* 3, 4, 7, 15, 21, 30 days presets */}
+                {/* Standard presets (3, 4, 7, 15, 21, 30 days) */}
                 <div className="grid grid-cols-6 gap-1.5">
-                  {[3, 4, 7, 15, 21, 30].map((days) => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => applyPresetDays(days)}
-                      className={`py-1.5 px-1 bg-white dark:bg-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs text-center ${
-                        selectedPresetDays === days ? 'ring-2 ring-emerald-500 bg-emerald-50 text-emerald-800' : ''
-                      }`}
-                    >
-                      {days} Days
-                    </button>
-                  ))}
+                  {[3, 4, 7, 15, 21, 30].map((days) => {
+                    const isSelected = selectedPresetDays === days;
+                    return (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => handlePresetToggle(days)}
+                        className={`py-1.5 px-1 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
+                        }`}
+                        title={isSelected ? `Click to unselect ${days} days` : `Select ${days} days leave`}
+                      >
+                        {days} Days
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Leave Days Option */}
+                <div className="flex items-center justify-between bg-white dark:bg-slate-700/60 p-2 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      Custom Leave:
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        max="90"
+                        value={customLeaveDays}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                          handleCustomLeaveDaysChange(val);
+                        }}
+                        className="w-16 px-2 py-1 text-xs font-black text-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="Days"
+                      />
+                      <span className="text-xs text-slate-500 font-semibold">Days</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCustomLeaveDaysChange(customLeaveDays)}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                      isCustomPresetActive
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {isCustomPresetActive ? '✓ Custom Set' : 'Apply Custom'}
+                  </button>
                 </div>
 
                 {/* F-295 Option */}

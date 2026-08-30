@@ -94,7 +94,13 @@ export default function App() {
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     sessionStorage.setItem('baf_user_role', newRole);
-    if (newRole !== 'ADMIN' && activeTab !== 'overview' && activeTab !== 'parade-state' && activeTab !== 'pt-state') {
+    if (
+      newRole !== 'ADMIN' &&
+      activeTab !== 'overview' &&
+      activeTab !== 'parade-state' &&
+      activeTab !== 'pt-state' &&
+      activeTab !== 'ida-center'
+    ) {
       setActiveTab('overview');
     }
   };
@@ -105,9 +111,15 @@ export default function App() {
     handleRoleChange('AIRMAN');
   };
 
-  // Restrict access for non-admin viewers: only Dashboard, Parade State, and PT State allowed
+  // Restrict access for non-admin viewers: allow Dashboard, Parade State, PT State, and IDA Center Duty
   useEffect(() => {
-    if (role !== 'ADMIN' && activeTab !== 'overview' && activeTab !== 'parade-state' && activeTab !== 'pt-state') {
+    if (
+      role !== 'ADMIN' &&
+      activeTab !== 'overview' &&
+      activeTab !== 'parade-state' &&
+      activeTab !== 'pt-state' &&
+      activeTab !== 'ida-center'
+    ) {
       setActiveTab('overview');
     }
   }, [role, activeTab]);
