@@ -458,7 +458,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
           </div>
 
           {/* Admin Settings Button */}
-          {role === 'ADMIN' && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all flex items-center cursor-pointer border border-slate-200 dark:border-slate-700 shadow-xs"
@@ -763,7 +763,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                 Duties Responsibility
               </h2>
             </div>
-            {role === 'ADMIN' && (
+            {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
               <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="text-xs text-slate-400 hover:text-emerald-600 font-semibold flex items-center space-x-1 cursor-pointer"
@@ -793,7 +793,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                 Emergency Contact
               </h2>
             </div>
-            {role === 'ADMIN' && (
+            {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
               <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="text-xs text-slate-400 hover:text-amber-500 font-semibold flex items-center space-x-1 cursor-pointer"

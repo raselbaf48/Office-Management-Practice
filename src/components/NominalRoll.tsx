@@ -4,7 +4,8 @@ import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, Ch
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { exportNominalRollDocx } from '../utils/docxExport';
 import { BulkImportAirmenModal } from './BulkImportAirmenModal';
-import { UserLoginDetailModal } from './UserLoginDetailModal';
+import { EntryHistoryModal } from './EntryHistoryModal';
+import { History } from 'lucide-react';
 
 interface NominalRollProps {
   airmen: Airman[];
@@ -33,8 +34,9 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [isLoginDetailOpen, setIsLoginDetailOpen] = useState(false);
-  const [selectedAirmanForDetail, setSelectedAirmanForDetail] = useState<Airman | null>(null);
+  
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  
 
   const [airmanToDelete, setAirmanToDelete] = useState<Airman | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -130,47 +132,23 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
             <span>Print PDF</span>
           </button>
 
-          {role === 'ADMIN' ? (
-            <>
-              <button
-                onClick={() => {
-                  setSelectedAirmanForDetail(null);
-                  setIsLoginDetailOpen(true);
-                }}
-                className="flex items-center space-x-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-black text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
-                title="Manage User Login Access & Detail Nominal Roll Airmen"
-              >
-                <KeyRound className="w-4 h-4 text-emerald-400" />
-                <span>User Login Access</span>
-              </button>
+          <button
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl font-bold text-xs shadow-xs transition-colors"
+            title="View Activity History"
+          >
+            <History className="w-4 h-4 text-emerald-400" />
+            <span>History</span>
+          </button>
 
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50"
-                title="Sync personnel from Google Sheet (Duty Register : 155 UASU BAF)"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${syncing ? 'animate-spin' : ''}`} />
-                <span>{syncing ? 'Syncing...' : 'Sync Google Sheet'}</span>
-              </button>
-
-              <button
-                onClick={() => setIsBulkImportOpen(true)}
-                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
-                title="Bulk Import Airmen via CSV / Excel (.xlsx)"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Import</span>
-              </button>
-
-              <button
-                onClick={onAddAirman}
-                className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Add Airman</span>
-              </button>
-            </>
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+            <button
+              onClick={onAddAirman}
+              className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Add Airman</span>
+            </button>
           ) : (
             <div className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs font-bold">
               <Eye className="w-3.5 h-3.5" />
@@ -314,18 +292,9 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                         <Eye className="w-4 h-4" />
                       </button>
 
-                      {role === 'ADMIN' && (
+                      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
                         <>
-                          <button
-                            onClick={() => {
-                              setSelectedAirmanForDetail(airman);
-                              setIsLoginDetailOpen(true);
-                            }}
-                            className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg text-slate-500 hover:text-emerald-500 transition-colors"
-                            title="Detail / Manage Login Access for this Airman"
-                          >
-                            <KeyRound className="w-4 h-4" />
-                          </button>
+                          
 
                           <button
                             onClick={() => onEditAirman(airman)}
@@ -437,20 +406,16 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         }}
       />
 
-      {/* User Login Detail & Access Management Modal */}
-      <UserLoginDetailModal
-        isOpen={isLoginDetailOpen}
-        onClose={() => {
-          setIsLoginDetailOpen(false);
-          setSelectedAirmanForDetail(null);
-        }}
-        nominalAirmen={airmen}
-        selectedAirmanForDetail={selectedAirmanForDetail}
-        onUserDetailed={() => {
-          onRefresh();
-          window.dispatchEvent(new CustomEvent('baf_state_updated'));
-        }}
-      />
+      
+
+      {isHistoryModalOpen && (
+        <EntryHistoryModal
+          airmen={airmen}
+          filterType="ALL"
+          onClose={() => setIsHistoryModalOpen(false)}
+          onRefreshData={onRefresh}
+        />
+      )}
     </div>
   );
 };

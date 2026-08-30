@@ -1125,7 +1125,10 @@ Extract EVERY SINGLE DATE ROW and all duty columns (GD, BTF, NTF, Airfield, Hali
   // Vite middleware in dev or static serving in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: { port: 24678 }
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

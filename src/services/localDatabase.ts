@@ -196,17 +196,8 @@ export class LocalDatabaseEngine {
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.airmen) && parsed.airmen.length > 0) {
-            const airmenMap = new Map<string, Airman>();
-            INITIAL_AIRMEN.forEach((a) => airmenMap.set(a.id, a));
-            parsed.airmen.forEach((a: Airman) => {
-              const init = airmenMap.get(a.id);
-              airmenMap.set(a.id, init ? { ...init, ...a } : a);
-            });
-
-            const mergedAirmen = Array.from(airmenMap.values()).sort((a, b) => a.serNo - b.serNo);
-
             const db: LocalStorageDB = {
-              airmen: mergedAirmen,
+              airmen: parsed.airmen.sort((a: Airman, b: Airman) => a.serNo - b.serNo),
               assignments: parsed.assignments || {},
               activityHistory: parsed.activityHistory || [],
               adminPasscode: parsed.adminPasscode || DEFAULT_ADMIN_PASSCODE,
@@ -939,9 +930,13 @@ export class LocalDatabaseEngine {
           dutyName = 'Class / Training';
           statusCategory = 'CLASS_TRG';
         }
-        else if (codeStr === 'ATT' || codeStr === 'DETT') {
-          dutyName = 'Airfield Duty';
-          statusCategory = 'ATT';
+        else if (codeStr === 'ATT') {
+          dutyName = 'Attachment';
+          statusCategory = 'TDY';
+        }
+        else if (codeStr === 'DETT') {
+          dutyName = 'Detachment';
+          statusCategory = 'TDY';
         }
         else if (codeStr === 'RECEPTION') {
           dutyName = 'K/O & Reception';

@@ -18,32 +18,44 @@ export function DateNavigator({ hideArrows, className, value, disabled, onChange
     }
   };
 
+  // Format the date for display (e.g., "12 Aug")
+  const displayDate = value && typeof value === 'string' 
+    ? new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : '';
+
   return (
-    <div className="flex items-center">
+    <div className="flex items-center space-x-1">
       {!hideArrows && (
         <button
           type="button"
           disabled={disabled}
           onClick={(e) => { e.preventDefault(); addDays(-1); }}
-          className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+          className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer disabled:opacity-50 transition-colors shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
       )}
-      <input
-        type="date"
-        value={value}
-        disabled={disabled}
-        onChange={onChange}
-        className={className || "bg-transparent border-none outline-none font-semibold cursor-pointer text-slate-900 dark:text-slate-100 text-sm w-full"}
-        {...props}
-      />
+      
+      <div className="relative flex-1 flex items-center justify-center">
+        <div className={className || "px-3 py-1 font-semibold text-slate-900 dark:text-slate-100 text-sm whitespace-nowrap bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-center shadow-xs"}>
+          {displayDate || 'Select Date'}
+        </div>
+        <input
+          type="date"
+          value={value}
+          disabled={disabled}
+          onChange={onChange}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          {...props}
+        />
+      </div>
+
       {!hideArrows && (
         <button
           type="button"
           disabled={disabled}
           onClick={(e) => { e.preventDefault(); addDays(1); }}
-          className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer disabled:opacity-50 transition-colors shrink-0"
+          className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer disabled:opacity-50 transition-colors shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
         >
           <ChevronRight className="w-4 h-4" />
         </button>

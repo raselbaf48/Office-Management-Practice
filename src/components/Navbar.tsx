@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => setRole('ADMIN')}
                 className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                  role === 'ADMIN'
+                  (role === 'ADMIN' || role === 'SUPER_ADMIN')
                     ? 'bg-amber-600 text-white font-bold shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -125,9 +125,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => setRole('AIRMAN')}
+                onClick={() => setRole('USER')}
                 className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                  role === 'AIRMAN'
+                  role === 'USER'
                     ? 'bg-blue-600 text-white font-bold shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}

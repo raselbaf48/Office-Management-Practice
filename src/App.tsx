@@ -12,6 +12,7 @@ import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
 import { LeaveRegisterView } from './components/LeaveRegisterView';
 import { TdyRegisterView } from './components/TdyRegisterView';
+import { AttachmentRegisterView } from './components/AttachmentRegisterView';
 import { IdaCenterDutyView } from './components/IdaCenterDutyView';
 import { MonthlyDutyRegister } from './components/MonthlyDutyRegister';
 import { DutyRosterPeriodView } from './components/DutyRosterPeriodView';
@@ -21,9 +22,10 @@ import { DutyConflictMonitor } from './components/DutyConflictMonitor';
 import { AirmanProfileModal } from './components/AirmanProfileModal';
 import { AddEditAirmanModal } from './components/AddEditAirmanModal';
 import { PrintableParadeStateModal } from './components/PrintableParadeStateModal';
-import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { PdfDutyImportModal } from './components/PdfDutyImportModal';
+import { UserLoginDetailModal } from './components/UserLoginDetailModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { UserLoginGate } from './components/UserLoginGate';
 import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
 import { INITIAL_AIRMEN } from './data/initialAirmen';
@@ -31,17 +33,18 @@ import { Logo155UASU } from './components/Logo155UASU';
 import { Shield } from 'lucide-react';
 import { getCurrentUserSession, clearUserSession, UserSession } from './utils/authSession';
 
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
   const [role, setRole] = useState<UserRole>(() => {
     const saved = sessionStorage.getItem('baf_user_role');
-    return saved === 'ADMIN' ? 'ADMIN' : 'AIRMAN';
+    if (saved === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+    return saved === 'ADMIN' ? 'ADMIN' : 'USER';
   });
   const [userSession, setUserSession] = useState<UserSession | null>(() => getCurrentUserSession());
-  const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState<boolean>(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState<boolean>(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState<boolean>(false);
+  
   // Theme Preference State (Light / Dark / System)
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
     const saved = localStorage.getItem('baf_theme_pref');
@@ -95,7 +98,7 @@ export default function App() {
     setRole(newRole);
     sessionStorage.setItem('baf_user_role', newRole);
     if (
-      newRole !== 'ADMIN' &&
+      newRole === 'USER' &&
       activeTab !== 'overview' &&
       activeTab !== 'parade-state' &&
       activeTab !== 'pt-state' &&
@@ -108,13 +111,13 @@ export default function App() {
   const handleUserLogout = () => {
     clearUserSession();
     setUserSession(null);
-    handleRoleChange('AIRMAN');
+    handleRoleChange('USER');
   };
 
   // Restrict access for non-admin viewers: allow Dashboard, Parade State, PT State, and IDA Center Duty
   useEffect(() => {
     if (
-      role !== 'ADMIN' &&
+      role === 'USER' &&
       activeTab !== 'overview' &&
       activeTab !== 'parade-state' &&
       activeTab !== 'pt-state' &&
@@ -341,7 +344,7 @@ export default function App() {
           onAuthenticated={() => {
             const sess = getCurrentUserSession();
             setUserSession(sess);
-            handleRoleChange('AIRMAN');
+            handleRoleChange('USER');
           }}
         />
       </div>
@@ -363,10 +366,10 @@ export default function App() {
         airmenCount={airmen.length}
         userSession={userSession}
         onOpenImportModal={() => setIsPdfImportModalOpen(true)}
-        onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
-        onLogoutAdmin={() => handleRoleChange('AIRMAN')}
-        onLogoutUser={handleUserLogout}
+                        onLogoutUser={handleUserLogout}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
+                onLogoutAdmin={() => handleRoleChange('USER')}
       />
 
       {/* Right Content Wrapper */}
@@ -377,11 +380,8 @@ export default function App() {
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           role={role}
           userSession={userSession}
-          onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
-          onLogoutAdmin={() => handleRoleChange('AIRMAN')}
-          onLogoutUser={handleUserLogout}
+                              onLogoutUser={handleUserLogout}
         />
-
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
         <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto ${isPrintModalOpen ? 'print:hidden' : ''}`}>
@@ -473,6 +473,13 @@ export default function App() {
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
             />
           )}
+          {activeTab === 'attachment-register' && (
+            <AttachmentRegisterView
+              role={role}
+              airmen={airmen}
+              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+            />
+          )}
 
           {activeTab === 'ida-center' && (
             <IdaCenterDutyView
@@ -504,8 +511,7 @@ export default function App() {
           {activeTab === 'duty-ratio' && (
             <DutyRatioMatrixView
               role={role}
-              onRequestAdminAccess={() => setIsPasscodeModalOpen(true)}
-            />
+                          />
           )}
 
           {activeTab === 'analytics' && (
@@ -540,14 +546,7 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      <AdminPasscodeModal
-        isOpen={isPasscodeModalOpen}
-        onClose={() => setIsPasscodeModalOpen(false)}
-        onSuccess={() => {
-          handleRoleChange('ADMIN');
-        }}
-      />
-
+      
       {selectedAirmanProfile && (
         <AirmanProfileModal
           airman={selectedAirmanProfile}
@@ -595,13 +594,34 @@ export default function App() {
       />
 
       {/* System Settings Modal (Theme, Passcode, Import History, Backup) */}
+      <AdminPasscodeModal
+        isOpen={isAdminLoginModalOpen}
+        onClose={() => setIsAdminLoginModalOpen(false)}
+        onSuccess={(newRole) => {
+          handleRoleChange(newRole);
+          setIsAdminLoginModalOpen(false);
+        }}
+        assignedRole={userSession?.assignedRole || 'USER'}
+        bdNo={userSession?.bdNo}
+      />
+
+      <UserLoginDetailModal
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        nominalAirmen={airmen}
+        userSessionRole={role}
+      />
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         role={role}
         currentTheme={themePreference}
         onThemeChange={(newTheme) => setThemePreference(newTheme)}
-        onOpenAdminLogin={() => setIsPasscodeModalOpen(true)}
+        onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
+        onOpenUserManagement={() => {
+          setIsSettingsModalOpen(false);
+          setIsUserManagementOpen(true);
+        }}
         onRosterUpdated={() => {
           fetchAirmen();
           window.dispatchEvent(new CustomEvent('baf_state_updated'));

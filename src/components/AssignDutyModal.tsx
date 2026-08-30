@@ -482,13 +482,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
           else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
           else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
-          else if (yestAss.dutyCode === 'AIRPORT' || yestAss.dutyCode === 'ATT') offShort = 'Airport Off';
-          else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
+          else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airport Off';
           else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
           else if (yestAss.notes?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
-          else offShort = `${yestAss.dutyCode} Off`;
-
-          offShort = offShort.replace(/DUTY_OFF/g, 'Duty').replace(/Off Off/g, 'Off').replace(/Duty Off Off/g, 'Duty Off');
+          
           name = offShort;
         } else {
           name = firstDuty.previousDutyName || firstDuty.notes || 'Duty Off';
@@ -502,24 +499,19 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     if (prevAssignments.length > 0) {
       const yestAss = prevAssignments[0];
       const isHeavy =
-        ['GD', 'BTF', 'NTF', 'AIRPORT', 'ATT', 'HALISHAHAR'].includes(yestAss.dutyCode) ||
+        ['GD', 'BTF', 'NTF', 'AIRPORT'].includes(yestAss.dutyCode) ||
         ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') ||
-        (yestAss.dutyCode === 'DUTY_OFF') ||
         (yestAss.notes || '').toLowerCase().includes('idac');
-
+        
       if (isHeavy) {
         let offShort = 'Duty Off';
         if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
         else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
         else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
-        else if (yestAss.dutyCode === 'AIRPORT' || yestAss.dutyCode === 'ATT') offShort = 'Airport Off';
-        else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
+        else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airport Off';
         else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
         else if ((yestAss.notes || '').toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
-        else if (yestAss.dutyCode === 'DUTY_OFF') offShort = yestAss.previousDutyName || yestAss.notes || 'Duty Off';
-        else offShort = `${yestAss.dutyCode} Off`;
-
-        offShort = offShort.replace(/DUTY_OFF/g, 'Duty').replace(/Off Off/g, 'Off').replace(/Duty Off Off/g, 'Duty Off');
+        
         return { label: offShort, type: 'NIGHT_OFF', isFixed: false };
       }
     }
@@ -695,14 +687,14 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleShiftDate(-1)}
-                  className="p-1 rounded-md text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
                   title="Previous Date (Left Arrow Key)"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               )}
               <DateNavigator
-                
+                hideArrows={true}                
                 value={fromDate || ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -717,7 +709,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleShiftDate(1)}
-                  className="p-1 rounded-md text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
                   title="Next Date (Right Arrow Key)"
                 >
                   <ChevronRight className="w-4 h-4" />

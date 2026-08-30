@@ -15,7 +15,7 @@ export const Logo155UASU: React.FC<LogoProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() => {
     if (customLogoUrl) return customLogoUrl;
     const stored = localStorage.getItem('baf_custom_logo');
-    return stored || '/app-logo-v2.png';
+    return stored || '/new-logo.png';
   });
 
   useEffect(() => {
@@ -23,14 +23,14 @@ export const Logo155UASU: React.FC<LogoProps> = ({
       setLogoSrc(customLogoUrl);
     } else {
       const stored = localStorage.getItem('baf_custom_logo');
-      setLogoSrc(stored || '/app-logo-v2.png');
+      setLogoSrc(stored || '/new-logo.png');
     }
   }, [customLogoUrl]);
 
   useEffect(() => {
     const handleLogoUpdated = (e: any) => {
       const newLogo = e?.detail?.logoUrl !== undefined ? e.detail.logoUrl : localStorage.getItem('baf_custom_logo');
-      setLogoSrc(newLogo || '/app-logo-v2.png');
+      setLogoSrc(newLogo || '/new-logo.png');
     };
 
     window.addEventListener('baf_logo_updated', handleLogoUpdated);
@@ -63,8 +63,8 @@ export const Logo155UASU: React.FC<LogoProps> = ({
         className="h-full w-full aspect-square object-contain drop-shadow-md"
         onError={(e) => {
           // Fallback if custom upload fails
-          if (logoSrc !== '/app-logo-v2.png') {
-            setLogoSrc('/app-logo-v2.png');
+          if (logoSrc !== '/new-logo.png') {
+            setLogoSrc('/new-logo.png');
           }
         }}
       />

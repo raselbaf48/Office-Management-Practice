@@ -554,7 +554,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           </button>
 
           {/* Entry History & Undo Button */}
-          {role === 'ADMIN' && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <button
               onClick={() => setShowHistoryModal(true)}
               className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
@@ -1225,6 +1225,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
       {showHistoryModal && (
         <EntryHistoryModal
           airmen={airmen}
+          filterType="LEAVE"
           onClose={() => setShowHistoryModal(false)}
           onRefreshData={() => {
             fetchLeaves();

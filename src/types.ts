@@ -124,7 +124,7 @@ export interface ConflictAlert {
   ruleType: string;
 }
 
-export type UserRole = 'ADMIN' | 'AIRMAN';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER';
 
 export interface PersonnelStatusItem {
   airman: Airman;
@@ -239,10 +239,13 @@ export interface ImportHistoryBatch {
   }>;
 }
 
-export type UserLoginRole = 'USER' | 'ADMIN' | 'DUTY_NCO' | 'FLIGHT_IC';
+export type UserLoginRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
 export type UserLoginStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 
 export interface DetailedUserLogin {
+  password?: string;
+  adminPass?: string;
+  ownerPass?: string;
   id: string;
   airmanId?: string;
   bdNo: string;

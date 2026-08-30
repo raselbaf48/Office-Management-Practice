@@ -188,7 +188,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           </div>
 
           {/* Import Roster Button (Admin Only) */}
-          {role === 'ADMIN' && onOpenImportModal && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && onOpenImportModal && (
             <button
               onClick={onOpenImportModal}
               className="flex items-center space-x-1.5 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-3 py-2 rounded-lg shadow-xs transition-all cursor-pointer"
@@ -200,7 +200,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           )}
 
           {/* Last Entry Button (Admin Only) */}
-          {role === 'ADMIN' && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <button
               onClick={() => setShowHistoryModal(true)}
               className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition-all shadow-xs"
@@ -212,7 +212,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           )}
 
           {/* Assign Duty Button (Admin Only) */}
-          {role === 'ADMIN' && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <button
               onClick={() => setShowAssignModal(true)}
               className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-lg shadow-xs transition-all"
@@ -667,7 +667,10 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                                       return `📌 ${item.dutyName || item.dutyCode}`;
                                     }
                                     if (item.statusCategory === 'LEAVE') return `🏖️ ${item.dutyName || 'Leave'}`;
-                                    if (item.statusCategory === 'TDY') return `✈️ ${item.notes ? `TDY (${item.notes})` : 'TDY'}`;
+                                    if (item.statusCategory === 'TDY') {
+                                      const label = item.dutyCode === 'ATT' ? 'Attachment' : item.dutyCode === 'DETT' ? 'Detachment' : 'TDY';
+                                      return `✈️ ${item.notes ? `${label} (${item.notes})` : label}`;
+                                    }
                                     if (item.statusCategory === 'PARADE') return '🟢 On Parade';
                                     return item.dutyCode;
                                   })()}

@@ -5,25 +5,25 @@ import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Plus, Re
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { EntryHistoryModal } from './EntryHistoryModal';
 
-interface TdyRegisterViewProps {
+interface AttachmentRegisterViewProps {
   role?: UserRole;
   airmen: Airman[];
   onViewProfile?: (airman: Airman) => void;
 }
 
-interface TdyRecord {
+interface AttRecord {
   airmanId: string;
-  totalTdyDays: number;
-  currentlyOnTdy: boolean;
-  currentTdyLocation?: string;
-  currentTdyRange?: string;
-  tdyEntries: Array<{
+  totalAttDays: number;
+  currentlyOnAtt: boolean;
+  currentAttLocation?: string;
+  currentAttRange?: string;
+  attEntries: Array<{
     date: string;
     notes?: string;
   }>;
 }
 
-export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
+export const AttachmentRegisterView: React.FC<AttachmentRegisterViewProps> = ({
   role = 'ADMIN',
   airmen,
   onViewProfile,
@@ -31,29 +31,37 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
-  const [tdyData, setTdyData] = useState<Record<string, TdyRecord>>({});
+  const [attData, setAttData] = useState<Record<string, AttRecord>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
 
-  // Grant / Record TDY Modal
-  const [showGrantTdyModal, setShowGrantTdyModal] = useState<boolean>(false);
-  const [grantTdyFlight, setGrantTdyFlight] = useState<FlightName>('Avionics');
-  const [tdyAirmanIds, setTdyAirmanIds] = useState<string[]>([]);
-  const [tdyDestination, setTdyDestination] = useState<string>('');
-  const [tdyCustomDestination, setTdyCustomDestination] = useState<string>('');
-  const [tdyRemarks, setTdyRemarks] = useState<string>('');
-  const [tdyLocation, setTdyLocation] = useState<string>('BAF Base Matiur Rahman');
-  const [tdyFromDate, setTdyFromDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [tdyToDate, setTdyToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [savingTdy, setSavingTdy] = useState<boolean>(false);
-  const [tdySuccessMsg, setTdySuccessMsg] = useState<string>('');
+  // Grant / Record Attachment Modal
+  const [showGrantAttModal, setShowGrantAttModal] = useState<boolean>(false);
+  useEffect(() => {
+    if (showGrantAttModal) {
+      const activeIds = (Object.values(attData) as AttRecord[])
+        .filter(rec => rec.currentlyOnAtt)
+        .map(rec => rec.airmanId);
+      setAttAirmanIds(activeIds);
+    }
+  }, [showGrantAttModal, attData]);
+  const [grantAttFlight, setGrantAttFlight] = useState<FlightName | 'All'>('All');
+  const [attAirmanIds, setAttAirmanIds] = useState<string[]>([]);
+  const [attDestination, setAttDestination] = useState<string>('');
+  const [attCustomDestination, setAttCustomDestination] = useState<string>('');
+  const [attRemarks, setAttRemarks] = useState<string>('');
+  const [attLocation, setAttLocation] = useState<string>('BAF Base Matiur Rahman');
+  const [attFromDate, setAttFromDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [attToDate, setAttToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [savingAtt, setSavingAtt] = useState<boolean>(false);
+  const [attSuccessMsg, setAttSuccessMsg] = useState<string>('');
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(null);
 
-  // Calculate calendar days in current TDY selection
-  const tdyDurationDays = useMemo(() => {
+  // Calculate calendar days in current Attachment selection
+  const attDurationDays = useMemo(() => {
     try {
-      const [sY, sM, sD] = tdyFromDate.split('-').map(Number);
-      const [eY, eM, eD] = tdyToDate.split('-').map(Number);
+      const [sY, sM, sD] = attFromDate.split('-').map(Number);
+      const [eY, eM, eD] = attToDate.split('-').map(Number);
       const curr = new Date(Date.UTC(sY, sM - 1, sD));
       const end = new Date(Date.UTC(eY, eM - 1, eD));
       const diff = Math.round((end.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -61,38 +69,35 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
     } catch {
       return 1;
     }
-  }, [tdyFromDate, tdyToDate]);
+  }, [attFromDate, attToDate]);
 
-  // Filter airmen for Grant TDY Modal (Strictly 4 flights: Avionics, Mechanics, GCS, Admin)
+  // Filter airmen for Grant Attachment Modal (Strictly 4 flights: Avionics, Mechanics, GCS, Admin)
   const grantAirmenList = useMemo(() => {
-    const list = airmen.filter((a) => a.flightName === grantTdyFlight);
+    const list = grantAttFlight === 'All' ? airmen : airmen.filter((a) => a.flightName === grantAttFlight);
     return sortAirmenBySeniority(list);
-  }, [airmen, grantTdyFlight]);
+  }, [airmen, grantAttFlight]);
 
   // Selection is now multiple and defaults to none.
-  useEffect(() => {
-    // Reset selection if flight changes (optional, but good UX)
-    setTdyAirmanIds([]);
-  }, [grantTdyFlight]);
+  // Allowed cross-flight selection
 
   // Apply preset duration
   const applyPresetDays = (days: number) => {
     try {
       setSelectedPresetDays(days);
-      const [y, m, d] = tdyFromDate.split('-').map(Number);
+      const [y, m, d] = attFromDate.split('-').map(Number);
       const start = new Date(Date.UTC(y, m - 1, d));
       start.setUTCDate(start.getUTCDate() + (days - 1));
       const endYear = start.getUTCFullYear();
       const endMonth = String(start.getUTCMonth() + 1).padStart(2, '0');
       const endDay = String(start.getUTCDate()).padStart(2, '0');
-      setTdyToDate(`${endYear}-${endMonth}-${endDay}`);
+      setAttToDate(`${endYear}-${endMonth}-${endDay}`);
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Fetch all assignments for the year to calculate TDY days
-  const fetchTdyRecords = async () => {
+  // Fetch all assignments for the year to calculate Attachment days
+  const fetchAttRecords = async () => {
     setLoading(true);
     try {
       const months = Array.from({ length: 12 }, (_, i) => {
@@ -120,49 +125,49 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
       const allAssignments = monthlyResults.flat();
 
       const todayStr = new Date().toISOString().split('T')[0];
-      const recordMap: Record<string, TdyRecord> = {};
+      const recordMap: Record<string, AttRecord> = {};
 
       airmen.forEach((a) => {
         recordMap[a.id] = {
           airmanId: a.id,
-          totalTdyDays: 0,
-          currentlyOnTdy: false,
-          tdyEntries: [],
+          totalAttDays: 0,
+          currentlyOnAtt: false,
+          attEntries: [],
         };
       });
 
       Object.keys(recordMap).forEach((airmanId) => {
         const rec = recordMap[airmanId];
-        const airmanTdyAssignments = allAssignments
-          .filter((ass: any) => ass && (ass.dutyCode === 'TDY' || ass.dutyCode === 'ATT' || ass.dutyCode === 'DETT') && ass.airmanId === airmanId && ass.date)
+        const airmanAttAssignments = allAssignments
+          .filter((ass: any) => ass && (ass.dutyCode === 'ATT' || ass.dutyCode === 'BAKE_N_BITE') && ass.airmanId === airmanId && ass.date)
           .sort((a: any, b: any) => a.date.localeCompare(b.date));
 
-        airmanTdyAssignments.forEach((ass: any) => {
-          rec.totalTdyDays++;
-          rec.tdyEntries.push({
+        airmanAttAssignments.forEach((ass: any) => {
+          rec.totalAttDays++;
+          rec.attEntries.push({
             date: ass.date,
             notes: ass.notes,
           });
 
           if (ass.date === todayStr) {
-            rec.currentlyOnTdy = true;
-            rec.currentTdyLocation = ass.notes || 'TDY Outstation';
+            rec.currentlyOnAtt = true;
+            rec.currentAttLocation = ass.notes || 'Attachment Outstation';
           }
         });
       });
 
-      setTdyData(recordMap);
+      setAttData(recordMap);
     } catch (err) {
-      console.error('Failed to load TDY records:', err);
+      console.error('Failed to load Attachment records:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTdyRecords();
+    fetchAttRecords();
     const handleGlobalUpdate = () => {
-      fetchTdyRecords();
+      fetchAttRecords();
     };
     window.addEventListener('baf_state_updated', handleGlobalUpdate);
     return () => {
@@ -170,41 +175,41 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
     };
   }, [selectedYear, airmen]);
 
-  // Handle Granting TDY
-  const handleGrantTdySubmit = async (e: React.FormEvent) => {
+  // Handle Granting Attachment
+  const handleGrantAttSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tdyAirmanIds.length === 0) {
+    if (attAirmanIds.length === 0) {
       alert('Please select at least one airman');
       return;
     }
-    if (!tdyDestination) {
+    if (!attDestination) {
       alert('Please select a destination');
       return;
     }
-    const finalDest = tdyDestination === 'Custom' ? tdyCustomDestination : tdyDestination;
-    if (tdyDestination === 'Custom' && !finalDest) {
+    const finalDest = attDestination === 'Custom' ? attCustomDestination : attDestination;
+    if (attDestination === 'Custom' && !finalDest) {
       alert('Please enter custom destination');
       return;
     }
 
-    if (!tdyFromDate || !tdyToDate || tdyFromDate > tdyToDate) {
+    if (!attFromDate || !attToDate || attFromDate > attToDate) {
       alert('Invalid date range');
       return;
     }
 
-    setSavingTdy(true);
+    setSavingAtt(true);
     try {
-      const notes = tdyRemarks ? `${finalDest} - ${tdyRemarks}` : finalDest;
+      const notes = attRemarks ? `${finalDest} - ${attRemarks}` : finalDest;
       
-      const promises = tdyAirmanIds.map(id => 
+      const promises = attAirmanIds.map(id => 
         fetch('/api/roster/assign-range', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             airmanId: id,
-            dutyCode: 'TDY',
-            fromDate: tdyFromDate,
-            toDate: tdyToDate,
+            dutyCode: finalDest.includes('Bake') ? 'BAKE_N_BITE' : 'ATT',
+            fromDate: attFromDate,
+            toDate: attToDate,
             notes: notes,
           }),
         })
@@ -212,18 +217,18 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
 
       await Promise.all(promises);
 
-      setTdySuccessMsg(`✅ TDY granted to ${tdyAirmanIds.length} airmen (${tdyDurationDays} days)!`);
+      setAttSuccessMsg(`✅ Attachment granted to ${attAirmanIds.length} airmen (${attDurationDays} days)!`);
       window.dispatchEvent(new CustomEvent('baf_state_updated'));
-      await fetchTdyRecords();
+      await fetchAttRecords();
       setTimeout(() => {
-        setShowGrantTdyModal(false);
-        setTdySuccessMsg('');
+        setShowGrantAttModal(false);
+        setAttSuccessMsg('');
       }, 1300);
     } catch (err: any) {
-      console.error('Error recording TDY:', err);
-      alert(`Failed to record TDY: ${err.message}`);
+      console.error('Error recording Attachment:', err);
+      alert(`Failed to record Attachment: ${err.message}`);
     } finally {
-      setSavingTdy(false);
+      setSavingAtt(false);
     }
   };
 
@@ -246,9 +251,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   });
 
   // Calculate overall stats
-  const tdyRecordsList: TdyRecord[] = Object.values(tdyData);
-  const totalTdyDaysAll = tdyRecordsList.reduce((sum: number, r: TdyRecord) => sum + r.totalTdyDays, 0);
-  const activeTdyCount = tdyRecordsList.filter((r: TdyRecord) => r.currentlyOnTdy).length;
+  const attRecordsList: AttRecord[] = Object.values(attData);
+  const totalAttDaysAll = attRecordsList.reduce((sum: number, r: AttRecord) => sum + r.totalAttDays, 0);
+  const activeAttCount = attRecordsList.filter((r: AttRecord) => r.currentlyOnAtt).length;
 
   return (
     <div className="space-y-6">
@@ -258,15 +263,15 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
               <MapPin className="w-4 h-4" />
-              <span>Temporary Duty (TDY) Tracking</span>
+              <span>Temporary Duty (Attachment) Tracking</span>
               <span>•</span>
               <span>155 UASU BAF</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Annual TDY Register ({selectedYear})
+              Annual Attachment Register ({selectedYear})
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-              Official register of Temporary Duty (TDY), outstation detachments, unit training courses, and temporary attachments across all flights.
+              Official register of Temporary Duty (Attachment), outstation detachments, unit training courses, and temporary attachments across all flights.
             </p>
           </div>
 
@@ -285,22 +290,22 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
             <button
               onClick={() => setShowHistoryModal(true)}
               className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer backdrop-blur-xs"
-              title="View all recorded duty and TDY entry history"
+              title="View all recorded duty and Attachment entry history"
             >
               <History className="w-4 h-4 text-emerald-300" />
-              <span>TDY History</span>
+              <span>Attachment History</span>
             </button>
 
             {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
               <button
                 onClick={() => {
-                  setTdyAirmanIds([]);
-                  setShowGrantTdyModal(true);
+                  setAttAirmanIds([]);
+                  setShowGrantAttModal(true);
                 }}
                 className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-emerald-900/30 transition-all cursor-pointer transform hover:scale-[1.02]"
               >
                 <Plus className="w-4 h-4" />
-                <span>Grant / Record TDY</span>
+                <span>Grant / Record Attachment</span>
               </button>
             )}
           </div>
@@ -311,8 +316,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Currently On TDY</p>
-            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeTdyCount} Airmen</h4>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Currently On Attachment</p>
+            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeAttCount} Airmen</h4>
             <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Outstation Active Today</p>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400">
@@ -322,8 +327,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total TDY Days ({selectedYear})</p>
-            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalTdyDaysAll} Days</h4>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Attachment Days ({selectedYear})</p>
+            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalAttDaysAll} Days</h4>
             <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Across All Flights</p>
           </div>
           <div className="p-3 bg-sky-50 dark:bg-sky-950/60 rounded-xl text-sky-600 dark:text-sky-400">
@@ -334,7 +339,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Available Personnel</p>
-            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{airmen.length - activeTdyCount} Airmen</h4>
+            <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{airmen.length - activeAttCount} Airmen</h4>
             <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">At Base Location</p>
           </div>
           <div className="p-3 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -375,7 +380,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
         </div>
       </div>
 
-      {/* TDY Table */}
+      {/* Attachment Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -388,7 +393,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 <th className="py-3 px-4">Flight</th>
                 <th className="py-3 px-4">Trade</th>
                 <th className="py-3 px-3 text-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 font-black">
-                  Total TDY Days ({selectedYear})
+                  Total Attachment Days ({selectedYear})
                 </th>
                 <th className="py-3 px-4 text-center">Current Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -399,7 +404,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-400">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-500" />
-                    Loading TDY Register...
+                    Loading Attachment Register...
                   </td>
                 </tr>
               ) : filteredAirmen.length === 0 ? (
@@ -410,11 +415,11 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </tr>
               ) : (
                 filteredAirmen.map((airman, idx) => {
-                  const rec = tdyData[airman.id] || {
+                  const rec = attData[airman.id] || {
                     airmanId: airman.id,
-                    totalTdyDays: 0,
-                    currentlyOnTdy: false,
-                    tdyEntries: [],
+                    totalAttDays: 0,
+                    currentlyOnAtt: false,
+                    attEntries: [],
                   };
 
                   return (
@@ -437,7 +442,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                         <button
                           onClick={() => onViewProfile && onViewProfile(airman)}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"
-                          title="Click to view full duty & TDY history"
+                          title="Click to view full duty & Attachment history"
                         >
                           {airman.name}
                         </button>
@@ -449,18 +454,18 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                         {airman.trade}
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        {rec.totalTdyDays > 0 ? (
+                        {rec.totalAttDays > 0 ? (
                           <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/70 rounded-full font-black text-xs">
-                            {rec.totalTdyDays} Days
+                            {rec.totalAttDays} Days
                           </span>
                         ) : (
                           <span className="text-slate-300 dark:text-slate-600">0</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        {rec.currentlyOnTdy ? (
+                        {rec.currentlyOnAtt ? (
                           <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 font-black text-[10px] animate-pulse">
-                            On TDY ({rec.currentTdyLocation || 'Outstation'})
+                            On Attachment ({rec.currentAttLocation || 'Outstation'})
                           </span>
                         ) : (
                           <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -486,8 +491,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
         </div>
       </div>
 
-      {/* Grant / Record TDY Modal */}
-      {showGrantTdyModal && (
+      {/* Grant / Record Attachment Modal */}
+      {showGrantAttModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -497,26 +502,26 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 dark:text-white">
-                    Grant / Record TDY
+                    Grant / Record Attachment
                   </h3>
                   <p className="text-xs text-slate-400">Temporary Duty Outstation / Detachment</p>
                 </div>
               </div>
               <button
-                onClick={() => setShowGrantTdyModal(false)}
+                onClick={() => setShowGrantAttModal(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {tdySuccessMsg && (
+            {attSuccessMsg && (
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-xl text-center">
-                {tdySuccessMsg}
+                {attSuccessMsg}
               </div>
             )}
 
-            <form onSubmit={handleGrantTdySubmit} className="space-y-4">
+            <form onSubmit={handleGrantAttSubmit} className="space-y-4">
               {/* Flight Selector (Strictly 4 Flights) */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
@@ -527,9 +532,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     <button
                       key={flt}
                       type="button"
-                      onClick={() => setGrantTdyFlight(flt)}
+                      onClick={() => setGrantAttFlight(flt)}
                       className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                        grantTdyFlight === flt
+                        grantAttFlight === flt
                           ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                           : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
                       }`}
@@ -547,7 +552,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     Select Airman
                   </label>
                   <span className="text-[11px] text-slate-400 font-semibold">
-                    {grantAirmenList.length} Airmen in {grantTdyFlight}
+                    {grantAirmenList.length} Airmen in {grantAttFlight}
                   </span>
                 </div>
                 <div className="space-y-2 max-h-[160px] overflow-y-auto bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -556,10 +561,10 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 text-emerald-600 rounded"
-                        checked={tdyAirmanIds.includes(a.id)}
+                        checked={attAirmanIds.includes(a.id)}
                         onChange={(e) => {
-                          if (e.target.checked) setTdyAirmanIds(prev => [...prev, a.id]);
-                          else setTdyAirmanIds(prev => prev.filter(id => id !== a.id));
+                          if (e.target.checked) setAttAirmanIds(prev => [...prev, a.id]);
+                          else setAttAirmanIds(prev => prev.filter(id => id !== a.id));
                         }}
                       />
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{a.rank} {a.name}</span>
@@ -568,14 +573,14 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </div>
               </div>
 
-                            {/* TDY Destination */}
+                            {/* Attachment Destination */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Destination (Mandatory) <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={tdyDestination}
-                  onChange={(e) => setTdyDestination(e.target.value)}
+                  value={attDestination}
+                  onChange={(e) => setAttDestination(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                 >
                   <option value="">Select Destination</option>
@@ -585,13 +590,14 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   <option value="BAF MTR">BAF MTR</option>
                   <option value="BAF CXB">BAF CXB</option>
                   <option value="BAF SMD">BAF SMD</option>
+                  <option value="Bake N Bite">Bake N Bite</option>
                   <option value="Custom">Other Custom...</option>
                 </select>
-                {tdyDestination === 'Custom' && (
+                {attDestination === 'Custom' && (
                   <input
                     type="text"
-                    value={tdyCustomDestination}
-                    onChange={(e) => setTdyCustomDestination(e.target.value)}
+                    value={attCustomDestination}
+                    onChange={(e) => setAttCustomDestination(e.target.value)}
                     placeholder="Enter custom destination..."
                     className="w-full mt-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
                   />
@@ -605,8 +611,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={tdyRemarks}
-                  onChange={(e) => setTdyRemarks(e.target.value)}
+                  value={attRemarks}
+                  onChange={(e) => setAttRemarks(e.target.value)}
                   placeholder="Additional notes..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
                 />
@@ -620,12 +626,12 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   </label>
                   <DateNavigator
                     
-                    value={tdyFromDate}
+                    value={attFromDate}
                     onChange={(e) => {
                       const newFrom = e.target.value;
-                      setTdyFromDate(newFrom);
-                      if (!tdyToDate || tdyToDate < newFrom) {
-                        setTdyToDate(newFrom);
+                      setAttFromDate(newFrom);
+                      if (!attToDate || attToDate < newFrom) {
+                        setAttToDate(newFrom);
                       }
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
@@ -637,9 +643,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   </label>
                   <DateNavigator
                     
-                    value={tdyToDate}
-                    min={tdyFromDate}
-                    onChange={(e) => setTdyToDate(e.target.value)}
+                    value={attToDate}
+                    min={attFromDate}
+                    onChange={(e) => setAttToDate(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                   />
                 </div>
@@ -648,7 +654,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
               {/* Quick Presets (3, 7, 14, 30, 60 Days) */}
               <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Quick TDY Duration Presets:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Quick Attachment Duration Presets:</span>
                   <span className="text-[11px] text-slate-400">Sets 'To Date' automatically</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -669,9 +675,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
 
               {/* Total Duration Summary */}
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-600 dark:text-slate-400">Total TDY Span:</span>
+                <span className="font-bold text-slate-600 dark:text-slate-400">Total Attachment Span:</span>
                 <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                  {tdyDurationDays} Calendar Day{tdyDurationDays > 1 ? 's' : ''}
+                  {attDurationDays} Calendar Day{attDurationDays > 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -679,25 +685,25 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
               <div className="flex items-center justify-end space-x-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowGrantTdyModal(false)}
+                  onClick={() => setShowGrantAttModal(false)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={savingTdy}
+                  disabled={savingAtt}
                   className="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-md shadow-emerald-900/20 transition-all cursor-pointer flex items-center space-x-1.5"
                 >
-                  {savingTdy ? (
+                  {savingAtt ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving TDY...</span>
+                      <span>Saving Attachment...</span>
                     </>
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Confirm & Record TDY</span>
+                      <span>Confirm & Record Attachment</span>
                     </>
                   )}
                 </button>
@@ -711,10 +717,10 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
       {showHistoryModal && (
         <EntryHistoryModal
           airmen={airmen}
-          filterType="TDY"
+          filterType="Attachment"
           onClose={() => setShowHistoryModal(false)}
           onRefreshData={() => {
-            fetchTdyRecords();
+            fetchAttRecords();
           }}
         />
       )}

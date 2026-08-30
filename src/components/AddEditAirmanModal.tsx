@@ -16,14 +16,15 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
   onClose,
 }) => {
   const [name, setName] = useState(airmanToEdit?.name || '');
-  const [bdNo, setBdNo] = useState(airmanToEdit?.bdNo || 'BD/4');
+  const [bdNo, setBdNo] = useState(airmanToEdit?.bdNo || '');
   const [code, setCode] = useState(airmanToEdit?.code || '');
-  const [rank, setRank] = useState<Rank>(airmanToEdit?.rank || 'LAC');
-  const [trade, setTrade] = useState(airmanToEdit?.trade || 'Avionic Tech');
+  const [rank, setRank] = useState<Rank | ''>(airmanToEdit?.rank || '');
+  const [trade, setTrade] = useState(airmanToEdit?.trade || '');
+  const [isCustomTrade, setIsCustomTrade] = useState(false);
   const [flightName, setFlightName] = useState<FlightName>(
     airmanToEdit?.flightName || 'Avionics'
   );
-  const [mobileNo, setMobileNo] = useState(airmanToEdit?.mobileNo || '01');
+  const [mobileNo, setMobileNo] = useState(airmanToEdit?.mobileNo || '');
   const [remarks, setRemarks] = useState(airmanToEdit?.remarks || '');
   const [validationError, setValidationError] = useState<string>('');
 
@@ -106,13 +107,16 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
     e.preventDefault();
     setValidationError('');
 
-    if (!name.trim()) {
-      setValidationError('Please fill in required field: Name');
-      return;
-    }
-    if (!bdNo.trim() || bdNo.trim() === 'BD/' || bdNo.trim() === 'BD') {
-      setValidationError('Please enter a valid BD Number');
-      return;
+    if (!name.trim()) return setValidationError('Please fill in required field: Name');
+    if (!bdNo.trim() || bdNo.trim() === 'BD/' || bdNo.trim() === 'BD') return setValidationError('Please enter a valid BD Number');
+    if (!rank) return setValidationError('Please select a Rank');
+    if (!trade.trim()) return setValidationError('Please enter a Trade');
+    if (!mobileNo.trim() || mobileNo.trim() === '01') return setValidationError('Please enter a valid Mobile Number');
+    
+    if (livingType === 'L_IN' && !blockNo.trim()) return setValidationError('Please enter Block No for Live-In address');
+    if (livingType === 'L_OUT') {
+      if (livingOutType === 'QUARTER' && !svcQtrNo.trim()) return setValidationError('Please enter Service Quarter Number');
+      if (livingOutType === 'OUTSIDE_BASE' && !outsideAddress.trim()) return setValidationError('Please enter Outside Base Address');
     }
 
     // BD Number Uniqueness check (Part 2)
@@ -191,11 +195,10 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                   setName(e.target.value);
                   if (validationError) setValidationError('');
                 }}
-                placeholder="e.g. Sazzad, Russel, Anowar"
+                placeholder="Rizwan Islam Rasel"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
-
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 BD Number <span className="text-red-500">*</span>
@@ -208,7 +211,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                   setBdNo(e.target.value);
                   if (validationError) setValidationError('');
                 }}
-                placeholder="e.g. BD/478546"
+                placeholder="478546"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -222,9 +225,14 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
               </label>
               <select
                 value={rank}
-                onChange={(e) => setRank(e.target.value as Rank)}
+                required
+                onChange={(e) => {
+                  setRank(e.target.value as Rank);
+                  if (validationError) setValidationError('');
+                }}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
               >
+                <option value="" disabled>Select Rank</option>
                 {ranksList.map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -232,18 +240,47 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 ))}
               </select>
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Trade
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Trade <span className="text-red-500">*</span></span>
               </label>
-              <input
-                type="text"
-                value={trade}
-                onChange={(e) => setTrade(e.target.value)}
-                placeholder="e.g. Avionic Tech, Mech Tech, GCST"
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              />
+              {isCustomTrade ? (
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    required
+                    value={trade}
+                    onChange={(e) => {
+                      setTrade(e.target.value);
+                      if (validationError) setValidationError('');
+                    }}
+                    placeholder="Enter Custom Trade"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button type="button" onClick={() => setIsCustomTrade(false)} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded-xl text-xs font-bold">X</button>
+                </div>
+              ) : (
+                <select
+                  value={['Afr Fitt', 'Eng Fitt', 'E&I Fitt', 'Radio Fitt', 'Armt Fitt', 'GS', 'Log Asst', 'Sec Asst (GD)', 'Sec Asst (Accts)', 'Admin Asst'].includes(trade) ? trade : trade === '' ? '' : 'Custom'}
+                  required
+                  onChange={(e) => {
+                    if (e.target.value === 'Custom') {
+                      setIsCustomTrade(true);
+                      setTrade('');
+                    } else {
+                      setTrade(e.target.value);
+                    }
+                    if (validationError) setValidationError('');
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="" disabled>Select Trade</option>
+                  {['Afr Fitt', 'Eng Fitt', 'E&I Fitt', 'Radio Fitt', 'Armt Fitt', 'GS', 'Log Asst', 'Sec Asst (GD)', 'Sec Asst (Accts)', 'Admin Asst'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  <option value="Custom">Custom...</option>
+                </select>
+              )}
             </div>
           </div>
 
@@ -267,13 +304,17 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Mobile Number
+                Mobile Number <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
+                required
                 value={mobileNo}
-                onChange={(e) => setMobileNo(e.target.value)}
-                placeholder="e.g. 017xxxxxxxx"
+                onChange={(e) => {
+                  setMobileNo(e.target.value);
+                  if (validationError) setValidationError('');
+                }}
+                placeholder="01000000000"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -326,13 +367,17 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Block No (Optional)
+                    Block No <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={blockNo}
-                    onChange={(e) => setBlockNo(e.target.value)}
-                    placeholder="e.g. 05, 08, 12"
+                    onChange={(e) => {
+                      setBlockNo(e.target.value);
+                      if (validationError) setValidationError('');
+                    }}
+                    placeholder="123/04"
                     className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -366,26 +411,34 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 {livingOutType === 'QUARTER' ? (
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Quarter Number
+                      Quarter Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={svcQtrNo}
-                      onChange={(e) => setSvcQtrNo(e.target.value)}
-                      placeholder="e.g. D-14, B-08, 102/B"
+                      onChange={(e) => {
+                        setSvcQtrNo(e.target.value);
+                        if (validationError) setValidationError('');
+                      }}
+                      placeholder="79/05"
                       className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 ) : (
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Outside Residence Address / Location
+                      Outside Residence Address / Location <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={outsideAddress}
-                      onChange={(e) => setOutsideAddress(e.target.value)}
-                      placeholder="e.g. Halishahar, Agrabad, Patenga"
+                      onChange={(e) => {
+                        setOutsideAddress(e.target.value);
+                        if (validationError) setValidationError('');
+                      }}
+                      placeholder="Halishahar, Agrabad, Patenga"
                       className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
@@ -397,13 +450,13 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
           {/* Remarks */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Special Remarks / Qualifications
+              Special Remarks / Qualifications <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <textarea
               rows={2}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder="e.g. UAV Operator, Shift IC, Medic Qualified"
+              placeholder="UAV Operator, Shift IC, Medic Qualified"
               className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </div>

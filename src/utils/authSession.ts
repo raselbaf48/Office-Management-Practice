@@ -16,10 +16,12 @@ export interface UserSession {
   bdNo: string;
   rank: string;
   name: string;
-  flightName: string;
-  trade: string;
+  flightName?: string;
+  trade?: string;
   loginTimestamp: string;
-  assignedRole?: UserLoginRole;
+  assignedRole?: string;
+  adminPass?: string;
+  ownerPass?: string;
 }
 
 const SESSION_KEY = 'baf_user_session';
@@ -91,7 +93,8 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
         name: a.name,
         flightName: a.flightName,
         trade: a.trade,
-        role: isPrimary ? 'ADMIN' : 'USER',
+        role: isPrimary ? 'SUPER_ADMIN' : 'USER',
+        password: cleanBd,
         status: 'ACTIVE',
         detailOrder: isPrimary ? 'DO-155/ADMIN/01' : 'DO-155/GEN/2026',
         detailedAt: new Date().toISOString(),
@@ -115,7 +118,8 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       name: 'Rasel',
       flightName: 'Avionics',
       trade: 'E&I Fitt',
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
+      password: '474455',
       status: 'ACTIVE',
       detailOrder: 'DO-155/ADMIN/01',
       detailedAt: new Date().toISOString(),
@@ -202,7 +206,8 @@ export const batchDetailAllAirmen = (airmen: Airman[]): DetailedUserLogin[] => {
       name: airman.name,
       flightName: airman.flightName,
       trade: airman.trade,
-      role: idx >= 0 ? updatedList[idx].role : (isPrimary ? 'ADMIN' : 'USER'),
+      role: idx >= 0 ? updatedList[idx].role : (isPrimary ? 'SUPER_ADMIN' : 'USER'),
+      password: idx >= 0 && updatedList[idx].password ? updatedList[idx].password : cleanBd,
       status: idx >= 0 ? updatedList[idx].status : 'ACTIVE',
       detailOrder: idx >= 0 && updatedList[idx].detailOrder ? updatedList[idx].detailOrder : `DO-155/NR/${cleanBd}`,
       detailedAt: idx >= 0 ? updatedList[idx].detailedAt : new Date().toISOString(),
@@ -251,6 +256,7 @@ export const toggleUserLoginStatus = (bdNo: string, newStatus: UserLoginStatus):
  */
 export const validateUserLogin = (
   bdInput: string,
+  passwordInput: string,
   nominalAirmen: Airman[]
 ): { success: boolean; airman?: Airman; detailedUser?: DetailedUserLogin; message: string } => {
   const cleanInput = bdInput.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
@@ -263,6 +269,11 @@ export const validateUserLogin = (
   const matchedDetail = detailedList.find((u) => u.bdNo.toLowerCase() === cleanInput);
 
   if (matchedDetail) {
+    // Password Verification
+    const expectedPassword = matchedDetail.password || matchedDetail.bdNo;
+    if (passwordInput !== expectedPassword) {
+      return { success: false, message: 'Invalid User ID or Password. Please try again.' };
+    }
     if (matchedDetail.status === 'DISABLED') {
       return {
         success: false,
@@ -317,11 +328,16 @@ export const validateUserLogin = (
   });
 
   if (matchedAirman) {
+    // For auto-detailed airman, password is their BD No
+    const expectedPassword = matchedAirman.bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+    if (passwordInput.trim().toLowerCase() !== expectedPassword) {
+      return { success: false, message: 'Invalid User ID or Password. Please try again.' };
+    }
     // Auto-detail this airman and allow login
     const isPrimary = cleanInput === '474455';
     const newDetail = detailAirmanForLogin(
       matchedAirman,
-      isPrimary ? 'ADMIN' : 'USER',
+      isPrimary ? 'SUPER_ADMIN' : 'USER',
       'ACTIVE',
       `DO-155/AUTO/${matchedAirman.bdNo}`,
       'Automatic Detail on Nominal Match'
@@ -344,7 +360,7 @@ export const validateUserLogin = (
 /**
  * Record a user login and save session
  */
-export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'USER'): UserSession => {
+export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'USER', detailedUser?: DetailedUserLogin): UserSession => {
   const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
   const session: UserSession = {
     airmanId: airman.id,
@@ -355,6 +371,8 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
     trade: airman.trade,
     loginTimestamp: new Date().toISOString(),
     assignedRole: assignedRole,
+    adminPass: detailedUser?.adminPass || (cleanBd === '474455' ? '1124' : undefined),
+    ownerPass: detailedUser?.ownerPass
   };
 
   try {
@@ -446,3 +464,41 @@ export const clearLoginHistory = async (): Promise<void> => {
 };
 
 
+
+/**
+ * Change a user's password
+ */
+export const changeUserPassword = (bdNo: string, currentPass: string, newPass: string, isSuperAdmin: boolean = false): { success: boolean; message: string } => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const idx = current.findIndex((u) => u.bdNo.toLowerCase() === clean);
+  
+  if (idx === -1) {
+    return { success: false, message: 'User not found in system.' };
+  }
+
+  const expectedPass = current[idx].password || current[idx].bdNo;
+  
+  if (!isSuperAdmin && currentPass !== expectedPass) {
+    return { success: false, message: 'Current password is incorrect.' };
+  }
+
+  current[idx].password = newPass;
+  saveDetailedUsers(current);
+  return { success: true, message: 'Password updated successfully.' };
+};
+
+/**
+ * Change a user's role
+ */
+export const changeUserRole = (bdNo: string, newRole: UserLoginRole): DetailedUserLogin | null => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const idx = current.findIndex((u) => u.bdNo.toLowerCase() === clean);
+  
+  if (idx === -1) return null;
+
+  current[idx].role = newRole;
+  saveDetailedUsers(current);
+  return current[idx];
+};

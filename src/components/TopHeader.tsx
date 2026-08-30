@@ -17,7 +17,7 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({
   activeTab,
   onOpenMobileSidebar,
-  role = 'AIRMAN',
+  role = 'USER',
   userSession,
   onOpenAdminLogin,
   onLogoutAdmin,
@@ -40,6 +40,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         return { category: 'WORKFORCE', title: 'Leave Register' };
       case 'tdy-register':
         return { category: 'WORKFORCE', title: 'TDY Register' };
+      case 'attachment-register':
+        return { category: 'WORKFORCE', title: 'Attachment Register' };
       case 'ida-center':
         return { category: 'SCHEDULE MANAGEMENT', title: 'IDA Center Duty' };
       case 'register':
@@ -113,37 +115,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             </div>
           )}
 
-          {/* Admin Role Status / Login */}
-          {role === 'ADMIN' ? (
+                    {/* Admin Role Status & Login */}
+          {role === 'USER' ? (
+             <button
+                onClick={onOpenAdminLogin}
+                className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl shadow-xs transition-colors cursor-pointer"
+             >
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs font-bold hidden sm:inline">Admin Login</span>
+             </button>
+          ) : (
             <div className="flex items-center space-x-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1.5 rounded-xl shadow-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs font-black text-emerald-800 dark:text-emerald-200">
-                Admin Active
+                {role === 'SUPER_ADMIN' ? 'Super Admin Active' : 'Admin Active'}
               </span>
               {onLogoutAdmin && (
                 <button
+                  type="button"
                   onClick={onLogoutAdmin}
-                  className="ml-1 p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
-                  title="Switch to Airman View"
+                  className="ml-2 p-0.5 text-emerald-600/70 hover:text-rose-500 rounded transition-colors cursor-pointer"
+                  title="Logout Admin Mode"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
-          ) : (
-            <button
-              onClick={onOpenAdminLogin}
-              className="flex items-center space-x-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 px-3.5 py-1.5 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer"
-              title="Enter Master Passcode to enable Duty Assignment & Editing"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
-              <span>Admin Login</span>
-            </button>
           )}
         </div>
       </div>
     </header>
   );
 };
-
-

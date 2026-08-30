@@ -950,16 +950,16 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <li
               key={item.airman.id || i}
               onClick={() => {
-                if (role === 'ADMIN') {
+                if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
                   openEditDisposal(item.airman, dutyCode, dutyName, item.note);
                 }
               }}
               className={`truncate group flex items-center justify-between ${
-                role === 'ADMIN'
+                (role === 'ADMIN' || role === 'SUPER_ADMIN')
                   ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
                   : ''
               }`}
-              title={role === 'ADMIN' ? 'Click to edit, change or remove disposal' : undefined}
+              title={(role === 'ADMIN' || role === 'SUPER_ADMIN') ? 'Click to edit, change or remove disposal' : undefined}
             >
               <span className="truncate">
                 {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
@@ -969,7 +969,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <span className="text-[9px] text-slate-400 ml-1">({noteText})</span>
                 ) : null}
               </span>
-              {role === 'ADMIN' && (
+              {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
                 <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
                   ✏️
                 </span>
@@ -1157,7 +1157,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           </button>
 
           {/* Add Disposal Button (Admin Only) */}
-          {role === 'ADMIN' && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <button
               onClick={() => {
                 if (isPtDocument) {

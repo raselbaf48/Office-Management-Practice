@@ -19,12 +19,14 @@ interface EntryHistoryModalProps {
   airmen: Airman[];
   onClose: () => void;
   onRefreshData?: () => void;
+  filterType?: 'LEAVE' | 'TDY' | 'DUTY' | 'ALL';
 }
 
 export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   airmen,
   onClose,
   onRefreshData,
+  filterType = 'ALL'
 }) => {
   const [historyList, setHistoryList] = useState<ActivityHistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -158,6 +160,10 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   const last10Entries = historyList.slice(0, 10);
 
   const filteredHistory = last10Entries.filter((item) => {
+    if (filterType === 'LEAVE' && item.dutyCode !== 'LEAVE') return false;
+    if (filterType === 'TDY' && item.dutyCode !== 'TDY') return false;
+    if (filterType === 'DUTY' && (item.dutyCode === 'LEAVE' || item.dutyCode === 'TDY')) return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
