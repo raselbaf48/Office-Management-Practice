@@ -238,7 +238,7 @@ export function parseRosterTextHeuristically(
       return { code: 'HALISHAHAR', name: 'Halishahar Taskforce Duty', shift: null };
     }
     if (upper.includes('AIRFIELD') || upper.includes('AIRPORT')) {
-      return { code: 'AIRFIELD_DUTY', name: 'Airfield Duty', shift: null };
+      return { code: 'ATT', name: 'Airfield Duty', shift: null };
     }
     if (upper.includes('IDAC') || upper.includes('IDA CENTER')) {
       let shift: IDAShift = 'Morning';
@@ -345,7 +345,7 @@ export function parseRosterTextHeuristically(
             dutyCode = 'HALISHAHAR';
             dutyName = 'Halishahar Taskforce Duty';
           } else if (itemUpper.includes('AIRFIELD') || itemUpper.includes('AIRPORT')) {
-            dutyCode = 'AIRFIELD_DUTY';
+            dutyCode = 'ATT';
             dutyName = 'Airfield Duty';
           } else if (itemUpper.includes('LEAVE') || itemUpper.includes(' C/L') || itemUpper.includes(' A/L')) {
             dutyCode = 'LEAVE';

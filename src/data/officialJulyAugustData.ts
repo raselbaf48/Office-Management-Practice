@@ -1007,7 +1007,7 @@ export function getOfficialParadeStateDocument(
       addItems(dayData.gd, 'GD', 'Base Security Duty');
       addItems(dayData.btf, 'BTF', 'Base Taskforce Duty');
       addItems(dayData.ntf, 'NTF', 'Najirpara Taskforce Duty');
-      addItems(dayData.airfield, 'AIRFIELD_DUTY', 'Airfield Duty');
+      addItems(dayData.airfield, 'ATT', 'Airfield Duty');
       addItems(dayData.halishahar, 'HALISHAHAR', 'Halishahar Duty');
       addItems(dayData.bakeNBite, 'BAKE_N_BITE', 'Bake N Bite');
       addItems(dayData.tdy, 'TDY', 'TDY / Attachment');

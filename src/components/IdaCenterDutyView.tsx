@@ -58,13 +58,15 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
   // IDAC Settings Modal (Responsibilities & Emergency Contacts)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
-  // Responsibilities & Emergency Contacts State
+  // Responsibilities, Emergency Contacts & Shift Times State
   const [responsibilities, setResponsibilities] = useState<IdacResponsibility[]>(getIdacResponsibilities);
   const [emergencyContacts, setEmergencyContacts] = useState<IdacEmergencyContact[]>(getIdacEmergencyContacts);
+  const [shiftTimesConfig, setShiftTimesConfig] = useState<IdacShiftTimeConfig[]>(getIdacShiftTimes);
 
   const fetchSettings = () => {
     setResponsibilities(getIdacResponsibilities());
     setEmergencyContacts(getIdacEmergencyContacts());
+    setShiftTimesConfig(getIdacShiftTimes());
   };
 
   const airmanMap = useMemo(() => new Map<string, Airman>(airmen.map((a) => [a.id, a])), [airmen]);
@@ -160,6 +162,11 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
       const items: IdaScheduleItem[] = [];
       const shifts: Array<'Morning' | 'Afternoon' | 'Night'> = ['Morning', 'Afternoon', 'Night'];
 
+      const shiftTimesMap = new Map<string, string>();
+      shiftTimesConfig.forEach((st) => {
+        shiftTimesMap.set(st.shift, st.label || `${st.startTime} - ${st.endTime} hrs`);
+      });
+
       datesToFetch.forEach((dStr, idx) => {
         const pData = paradeResults[idx];
         const [y, m, d] = dStr.split('-').map(Number);
@@ -174,11 +181,12 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
 
         shifts.forEach((sh) => {
           const timeRange =
-            sh === 'Night'
+            shiftTimesMap.get(sh) ||
+            (sh === 'Night'
               ? '21:00 - 07:30 hrs'
               : sh === 'Afternoon'
               ? '14:30 - 21:00 hrs'
-              : '07:30 - 14:30 hrs';
+              : '07:30 - 14:30 hrs');
 
           // 1. Quota from Duty Ratio matrix
           const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
@@ -332,27 +340,40 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
     let nextShift: 'Morning' | 'Afternoon' | 'Night' = 'Afternoon';
     let nextDateStr = localTodayStr;
 
-    // Morning: 07:30 (450m) to 14:30 (870m)
-    // Afternoon: 14:30 (870m) to 21:00 (1260m)
-    // Night Evening: 21:00 (1260m) to 23:59 (1439m) -> assigned on today, next shift is tomorrow morning
-    // Night Early Morning: 00:00 (0m) to 07:30 (450m) -> assigned on yesterday (running overnight until 07:30), next shift is today morning
-    if (totalMinutes >= 450 && totalMinutes < 870) {
+    const parseMinutes = (timeStr?: string, fallback: number = 0): number => {
+      if (!timeStr) return fallback;
+      const [h, m] = timeStr.split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return fallback;
+      return h * 60 + m;
+    };
+
+    const mCfg = shiftTimesConfig.find((s) => s.shift === 'Morning');
+    const aCfg = shiftTimesConfig.find((s) => s.shift === 'Afternoon');
+    const nCfg = shiftTimesConfig.find((s) => s.shift === 'Night');
+
+    const mStart = parseMinutes(mCfg?.startTime, 450);
+    const mEnd = parseMinutes(mCfg?.endTime, 870);
+    const aStart = parseMinutes(aCfg?.startTime, 870);
+    const aEnd = parseMinutes(aCfg?.endTime, 1260);
+    const nStart = parseMinutes(nCfg?.startTime, 1260);
+
+    if (totalMinutes >= mStart && totalMinutes < mEnd) {
       activeShift = 'Morning';
       activeDateStr = localTodayStr;
       nextShift = 'Afternoon';
       nextDateStr = localTodayStr;
-    } else if (totalMinutes >= 870 && totalMinutes < 1260) {
+    } else if (totalMinutes >= aStart && totalMinutes < aEnd) {
       activeShift = 'Afternoon';
       activeDateStr = localTodayStr;
       nextShift = 'Night';
       nextDateStr = localTodayStr;
-    } else if (totalMinutes >= 1260) {
+    } else if (totalMinutes >= nStart) {
       activeShift = 'Night';
       activeDateStr = localTodayStr;
       nextShift = 'Morning';
       nextDateStr = localTomorrowStr;
     } else {
-      // Between 00:00 and 07:30 AM -> Night shift of yesterday is currently running!
+      // Between 00:00 and morning start -> Night shift of yesterday is currently running!
       activeShift = 'Night';
       activeDateStr = localYesterdayStr;
       nextShift = 'Morning';
@@ -360,7 +381,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
     }
 
     return { activeShift, activeDateStr, nextShift, nextDateStr, localTodayStr, localTomorrowStr };
-  }, []);
+  }, [shiftTimesConfig]);
 
   // Currently On Duty Shift Item (Resolved accurately across night-shift boundary)
   const currentlyOnDutyItem = useMemo(() => {
@@ -383,12 +404,15 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
     return scheduleList.find((s) => s.id !== currentlyOnDutyItem?.id) || scheduleList[0] || null;
   }, [scheduleList, liveShiftState, currentlyOnDutyItem]);
 
-  // Display only Today & Tomorrow (6 shifts) in the Upcoming Schedule table
+  // Display shifts starting strictly after the Next Shift
   const upcomingTableSchedule = useMemo(() => {
-    const targetDates = new Set([liveShiftState.localTodayStr, liveShiftState.localTomorrowStr]);
-    const filtered = scheduleList.filter((s) => targetDates.has(s.date));
-    return filtered.length > 0 ? filtered : scheduleList.slice(0, 6);
-  }, [scheduleList, liveShiftState]);
+    if (!nextActiveShift) return scheduleList.slice(0, 3);
+    const nextIdx = scheduleList.findIndex((s) => s.id === nextActiveShift.id);
+    if (nextIdx === -1) return scheduleList.slice(0, 3);
+    
+    // Return the upcoming shifts starting AFTER the Next Shift
+    return scheduleList.slice(nextIdx + 1, nextIdx + 4);
+  }, [scheduleList, nextActiveShift]);
 
   // Clean phone number for WhatsApp link
   const getWhatsAppLink = (airman?: Airman, customPhone?: string): string => {
@@ -406,7 +430,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div className="flex items-center space-x-3.5">
           <div className="w-12 h-14 bg-emerald-950/20 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center p-1 border border-emerald-500/20 shadow-xs">
-            <Logo155UASU className="w-10 h-12" />
+            <Logo155UASU className="h-12 w-12" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
@@ -505,14 +529,8 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="text-xl sm:text-2xl font-black text-amber-300">
-                          {slot.fallbackFlight || 'Mechanics'} Flight Slot
+                          {slot.fallbackFlight || 'Mechanics'} Flt
                         </div>
-                        <p className="text-emerald-200/70 text-xs font-medium">
-                          Duty Ratio Allocation (Slot {sIdx + 1})
-                        </p>
-                      </div>
-                      <div className="text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-3 py-1.5 rounded-xl self-start sm:self-auto">
-                        Ratio Slot
                       </div>
                     </div>
                   )}
@@ -580,14 +598,8 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="text-lg sm:text-xl font-bold text-cyan-200">
-                          {slot.fallbackFlight || 'Mechanics'} Flight Slot
+                          {slot.fallbackFlight || 'Mechanics'} Flt
                         </div>
-                        <p className="text-cyan-200/70 text-xs font-medium">
-                          {nextActiveShift?.dateDisplay} ({nextActiveShift?.shift} Shift - Slot {sIdx + 1})
-                        </p>
-                      </div>
-                      <div className="text-xs font-bold text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 px-3 py-1.5 rounded-xl self-start sm:self-auto">
-                        Ratio Slot
                       </div>
                     </div>
                   )}
@@ -603,12 +615,10 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
             <div className="flex items-center space-x-2">
               <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Upcoming Schedule (2 Days)
+                Upcoming Schedule
               </h2>
             </div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {upcomingTableSchedule.length} Scheduled Shifts
-            </span>
+            
           </div>
 
           <div className="overflow-x-auto">
@@ -618,20 +628,19 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                   <th className="py-3.5 px-6">Date / Day</th>
                   <th className="py-3.5 px-6">Shift</th>
                   <th className="py-3.5 px-6">Assigned Person</th>
-                  <th className="py-3.5 px-6">Time Window</th>
-                  <th className="py-3.5 px-6 text-right">Action</th>
+                  <th className="py-3.5 px-6 text-right">Contact</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center text-slate-400">
+                    <td colSpan={4} className="py-10 text-center text-slate-400">
                       Loading IDA schedule...
                     </td>
                   </tr>
                 ) : upcomingTableSchedule.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center text-slate-400">
+                    <td colSpan={4} className="py-10 text-center text-slate-400">
                       No schedule found for this range.
                     </td>
                   </tr>
@@ -691,11 +700,8 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                                   ) : (
                                     <>
                                       <span className="font-bold text-amber-600 dark:text-amber-400">
-                                        {slot.fallbackFlight || 'Mechanics'} Flight Slot
+                                        {slot.fallbackFlight || 'Mechanics'} Flt
                                       </span>
-                                      <div className="text-[10px] text-slate-400 italic">
-                                        Flight Duty Ratio
-                                      </div>
                                     </>
                                   )}
                                 </div>
@@ -704,10 +710,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
                           </div>
                         </td>
 
-                        {/* Time Window */}
-                        <td className="py-3.5 px-6 font-mono font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap align-top">
-                          {item.shiftTime}
-                        </td>
+                        
 
                         {/* Actions (Call + WhatsApp for all detailed personnel) */}
                         <td className="py-3.5 px-6 text-right whitespace-nowrap align-top">

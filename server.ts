@@ -738,8 +738,8 @@ function getDatesInRange(fromDateStr: string, toDateStr: string): string[] {
           const matchFn = (a: DutyAssignment) => {
             if (a.airmanId !== airmanId || a.date !== dateStr) return false;
             if (dutyCode) {
-              if (dutyCode === 'AIRFIELD_DUTY' || dutyCode === 'AIRPORT') {
-                if (a.dutyCode !== 'AIRFIELD_DUTY' && a.dutyCode !== 'AIRPORT') return false;
+              if (dutyCode === 'ATT' || dutyCode === 'AIRPORT') {
+                if (a.dutyCode !== 'ATT' && a.dutyCode !== 'AIRPORT') return false;
               } else if (dutyCode === 'IDAC' || dutyCode === 'IDA') {
                 if (a.dutyCode !== 'IDAC' && a.dutyCode !== 'IDA') return false;
                 if (idaShift && a.idaShift !== idaShift) return false;
@@ -1197,7 +1197,7 @@ function getYesterdayDateStr(dateStr: string): string {
         else if (codeStr === 'BTF') dutyName = 'Base Taskforce Duty';
         else if (codeStr === 'NTF') dutyName = 'Najirpara Taskforce Duty';
         else if (codeStr === 'HALISHAHAR') dutyName = 'Halishahar Duty';
-        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'AIRFIELD_DUTY') dutyName = 'Airfield Duty';
+        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'ATT') dutyName = 'Airfield Duty';
         else if (codeStr === 'IDAC' || codeStr === 'IDA') {
           const s = ass.idaShift || 'Morning';
           dutyName = `IDAC Duty (${s})`;
@@ -1258,7 +1258,7 @@ function getYesterdayDateStr(dateStr: string): string {
             if (yestCodeStr === 'GD') offShort = 'GD Off';
             else if (yestCodeStr === 'BTF') offShort = 'BTF Off';
             else if (yestCodeStr === 'NTF') offShort = 'NTF Off';
-            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'AIRFIELD_DUTY') offShort = 'Airport Off';
+            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'ATT') offShort = 'Airport Off';
             else if (yestCodeStr === 'HALISHAHAR') offShort = 'Halishahar Off';
             else if ((yestCodeStr === 'IDAC' || yestCodeStr === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
             else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
@@ -1315,9 +1315,9 @@ function getYesterdayDateStr(dateStr: string): string {
           dutyName = 'Class / Training';
           statusCategory = 'CLASS_TRG';
         }
-        else if (codeStr === 'AIRFIELD_DUTY') {
+        else if (codeStr === 'ATT') {
           dutyName = 'Airfield Duty';
-          statusCategory = 'AIRFIELD_DUTY';
+          statusCategory = 'ATT';
         }
         else if (codeStr === 'RECEPTION') {
           dutyName = 'K/O & Reception';
@@ -1330,6 +1330,10 @@ function getYesterdayDateStr(dateStr: string): string {
         else if (codeStr === 'ABSENT') {
           dutyName = 'Absent';
           statusCategory = 'ABSENT';
+        }
+        else if (codeStr === 'OTHERS') {
+          dutyName = ass.notes || 'Other Disposal';
+          statusCategory = 'OTHERS';
         }
 
         const safeNotes = (ass.notes || '').toLowerCase().includes('imported') ? '' : (ass.notes || '');
@@ -1878,7 +1882,7 @@ function getYesterdayDateStr(dateStr: string): string {
         return { code: 'HALISHAHAR', name: 'Halishahar Taskforce Duty', shift: null };
       }
       if (upper.includes('AIRFIELD') || upper.includes('AIRPORT')) {
-        return { code: 'AIRFIELD_DUTY', name: 'Airfield Duty', shift: null };
+        return { code: 'ATT', name: 'Airfield Duty', shift: null };
       }
       if (upper.includes('IDAC') || upper.includes('IDA CENTER')) {
         let shift: IDAShift = 'Morning';
@@ -1992,7 +1996,7 @@ function getYesterdayDateStr(dateStr: string): string {
               dutyCode = 'HALISHAHAR';
               dutyName = 'Halishahar Taskforce Duty';
             } else if (itemUpper.includes('AIRFIELD') || itemUpper.includes('AIRPORT')) {
-              dutyCode = 'AIRFIELD_DUTY';
+              dutyCode = 'ATT';
               dutyName = 'Airfield Duty';
             } else if (itemUpper.includes('LEAVE') || itemUpper.includes(' C/L') || itemUpper.includes(' A/L')) {
               dutyCode = 'LEAVE';

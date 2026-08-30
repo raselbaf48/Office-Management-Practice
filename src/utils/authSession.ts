@@ -424,7 +424,7 @@ export const recordLoginLog = async (airman: Airman): Promise<void> => {
 
     // Update in-memory & local cache immediately
     const existing = getLoginHistory();
-    cachedLoginHistory = [newLog, ...existing.filter(item => item.id !== newLog.id)].slice(0, 300);
+    cachedLoginHistory = [newLog, ...existing.filter(item => item.id !== newLog.id)];
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(cachedLoginHistory));
     } catch {}

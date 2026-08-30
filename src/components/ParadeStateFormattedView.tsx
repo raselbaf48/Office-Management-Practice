@@ -463,7 +463,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       'TDY',
       'ADMIN_ORDER',
       'CLASS_TRG',
-      'AIRFIELD_DUTY',
+      'ATT',
       'GAMES',
       'ABSENT',
       'DUTY_ON',
@@ -755,7 +755,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           adminCommCount++;
         } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
           classTrgCount++;
-        } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
+        } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
           airFdDutyCount++;
         } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
           gamesCount++;
@@ -868,7 +868,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         bakeBiteList.push({ airman, note: 'Bake & Bite' });
       } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
         receptionList.push({ airman, note: 'Reception' });
-      } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
+      } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
         airFdDutyList.push({ airman, note: 'Air Fd Duty' });
       } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
         adminOrderList.push({ airman, note: 'Admin Order' });
@@ -881,12 +881,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
         const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
         dutyOffList.push({ airman, note: offName });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'AIRFIELD_DUTY', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
         const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
         dutyOnList.push({ airman, note: dutyDisplay });
       } else {
         // Other dynamic custom disposal
-        const customKey = dutyCode || 'OTHER DISPOSAL';
+        const customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (dutyCode || 'OTHER DISPOSAL');
         if (!customDisposalsMap[customKey]) customDisposalsMap[customKey] = [];
         const safeNotes = notes && !notes.toLowerCase().includes('imported') ? notes : undefined;
         customDisposalsMap[customKey].push({ airman, note: safeNotes });
@@ -1706,7 +1706,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                           <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
                             AIR FD DUTY
                           </h3>
-                          {renderDisposalAirmenList(airFdDutyList, 'AIRFIELD_DUTY', 'Air Fd Duty')}
+                          {renderDisposalAirmenList(airFdDutyList, 'ATT', 'Air Fd Duty')}
                         </div>
                       )}
 
@@ -1972,10 +1972,11 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     { code: 'LEAVE', label: 'Leave (Casual/Ann)' },
                     { code: 'BAKE_N_BITE', label: 'Bake & Bite' },
                     { code: 'RECEPTION', label: 'Reception / K/O' },
-                    { code: 'TDY', label: 'ATT / TDY / DETT' },
+                    { code: 'ATT', label: 'Attachment (ATT)' },
+                    { code: 'TDY', label: 'TDY' },
+                    { code: 'DETT', label: 'Detachment (DETT)' },
                     { code: 'ADMIN_ORDER', label: 'Admin Order / BOI' },
                     { code: 'CLASS_TRG', label: 'Class / Trg Ctrl' },
-                    { code: 'AIRFIELD_DUTY', label: 'Airfield Duty' },
                     { code: 'GAMES', label: 'G/H & Games' },
                     { code: 'ABSENT', label: 'Absent / AWL' },
                     { code: 'OTHERS', label: '✨ Other Custom' },
@@ -2085,8 +2086,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     if (['CLASS_TRG', 'CLASS', 'TRG'].includes(codeUpper)) {
                       return { isOnParade: false, label: 'Class / Trg', dutyCode: 'CLASS_TRG', notes, dutyName: 'Class / Trg' };
                     }
-                    if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper)) {
-                      return { isOnParade: false, label: 'Airfield Duty', dutyCode: 'AIRFIELD_DUTY', notes, dutyName: 'Airfield Duty' };
+                    if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper)) {
+                      return { isOnParade: false, label: 'Airfield Duty', dutyCode: 'ATT', notes, dutyName: 'Airfield Duty' };
                     }
                     if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper)) {
                       return { isOnParade: false, label: 'G/H & Games', dutyCode: 'GAMES', notes, dutyName: 'G/H & Games' };
@@ -2357,10 +2358,11 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     { code: 'LEAVE', label: 'Leave' },
                     { code: 'BAKE_N_BITE', label: 'Bake & Bite' },
                     { code: 'RECEPTION', label: 'Reception / K/O' },
-                    { code: 'TDY', label: 'ATT / TDY / DETT' },
+                    { code: 'ATT', label: 'Attachment (ATT)' },
+                    { code: 'TDY', label: 'TDY' },
+                    { code: 'DETT', label: 'Detachment (DETT)' },
                     { code: 'ADMIN_ORDER', label: 'Admin Order' },
                     { code: 'CLASS_TRG', label: 'Class / Trg Ctrl' },
-                    { code: 'AIRFIELD_DUTY', label: 'Airfield Duty' },
                     { code: 'GAMES', label: 'G/H & Games' },
                     { code: 'ABSENT', label: 'Absent / AWL' },
                     { code: 'OTHERS', label: '✨ Other Custom' },

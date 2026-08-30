@@ -17,6 +17,7 @@ import { generateOfficialMonthAssignments, getOfficialParadeStateDocument } from
 import { calculateDutyStats, detectConflicts, getDaysInMonth } from '../data/rosterGenerator';
 import { DutyRatioTable, INITIAL_OFFICIAL_DUTY_MATRIX, getStoredDutyMatrix, saveDutyMatrix } from '../data/officialDutyRatioMatrix';
 import { findBestAirmanMatch as matchAirmanRankFirst, parseRosterTextHeuristically } from '../utils/airmanMatcher';
+import { saveDbToFirebase, getDbFromFirebase } from '../firebase';
 
 export interface LocalStorageDB {
   airmen: Airman[];
@@ -27,22 +28,22 @@ export interface LocalStorageDB {
   lastUpdated: string;
 }
 
-export interface D1SyncStatusState {
+export interface FirebaseSyncStatusState {
   isConfigured: boolean;
   status: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured';
   lastSyncTime: string | null;
   d1Active: boolean;
 }
 
-let d1Connected: boolean = false;
-let d1LastSyncTime: string | null = null;
+let firebaseConnected: boolean = false;
+let firebaseLastSyncTime: string | null = null;
 
-export const getD1SyncState = (): D1SyncStatusState => {
+export const getFirebaseSyncState = (): FirebaseSyncStatusState => {
   return {
-    isConfigured: d1Connected,
-    status: d1Connected ? 'connected' : 'idle',
-    lastSyncTime: d1LastSyncTime,
-    d1Active: d1Connected,
+    isConfigured: firebaseConnected,
+    status: firebaseConnected ? 'connected' : 'idle',
+    lastSyncTime: firebaseLastSyncTime,
+    d1Active: firebaseConnected,
   };
 };
 
@@ -50,7 +51,7 @@ function broadcastSyncState(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('d1_sync_update', {
-        detail: getD1SyncState(),
+        detail: getFirebaseSyncState(),
       })
     );
   }
@@ -92,90 +93,80 @@ function getYesterdayDateStr(dateStr: string): string {
 
 export class LocalDatabaseEngine {
   private db: LocalStorageDB;
-  private isD1Syncing: boolean = false;
+  private isFirebaseSyncing: boolean = false;
 
   constructor() {
     this.db = this.loadInitialLocalState();
     if (typeof window !== 'undefined') {
       // Async sync from Cloudflare D1
-      this.syncFromD1();
+      this.syncFromFirebase();
     }
   }
 
   /**
-   * Synchronize database with Cloudflare D1 SQL storage
+   * Synchronize database with Firebase Firestore
    */
-  public async syncFromD1(): Promise<boolean> {
-    if (typeof window === 'undefined' || typeof fetch === 'undefined' || this.isD1Syncing) return false;
-    this.isD1Syncing = true;
+  public async syncFromFirebase(): Promise<boolean> {
+    if (typeof window === 'undefined' || this.isFirebaseSyncing) return false;
+    this.isFirebaseSyncing = true;
     try {
-      const res = await fetch('/api/d1-sync', { cache: 'no-store' });
-      if (!res.ok) return false;
-      const json = await res.json();
-      if (json && json.isConfigured && json.data) {
-        d1Connected = true;
+      const data = await getDbFromFirebase();
+      if (data) {
+        firebaseConnected = true;
         let hasUpdates = false;
-        if (json.data.airmen && Array.isArray(json.data.airmen) && json.data.airmen.length > 0) {
-          this.db.airmen = json.data.airmen;
+        if (data.airmen && Array.isArray(data.airmen) && data.airmen.length > 0) {
+          this.db.airmen = data.airmen;
           hasUpdates = true;
         }
-        if (json.data.assignments && typeof json.data.assignments === 'object') {
-          this.db.assignments = { ...this.db.assignments, ...json.data.assignments };
+        if (data.assignments && typeof data.assignments === 'object') {
+          this.db.assignments = { ...this.db.assignments, ...data.assignments };
           hasUpdates = true;
         }
-        if (json.data.adminPasscode) {
-          this.db.adminPasscode = String(json.data.adminPasscode);
+        if (data.adminPasscode) {
+          this.db.adminPasscode = String(data.adminPasscode);
           hasUpdates = true;
         }
-        if (json.data.activityHistory && Array.isArray(json.data.activityHistory)) {
-          this.db.activityHistory = json.data.activityHistory;
+        if (data.activityHistory && Array.isArray(data.activityHistory)) {
+          this.db.activityHistory = data.activityHistory;
           hasUpdates = true;
         }
         if (hasUpdates) {
           this.saveToStorage(this.db, false, false);
           window.dispatchEvent(new CustomEvent('baf_state_updated', { detail: { source: 'd1Sync' } }));
-        } else if (!json.data.airmen) {
-          // Initial seed D1 with initial airmen and assignments
-          this.saveToD1(this.db);
         }
-        d1LastSyncTime = new Date().toLocaleTimeString();
+        firebaseLastSyncTime = new Date().toLocaleTimeString();
         broadcastSyncState();
         return true;
+      } else {
+        // Initial seed Firebase with initial airmen and assignments
+        this.saveToFirebase(this.db);
+        return true;
       }
-    } catch {
-      // Non-Cloudflare Pages or offline environment
+    } catch (e) {
+      console.error('Firebase sync failed', e);
     } finally {
-      this.isD1Syncing = false;
+      this.isFirebaseSyncing = false;
     }
     return false;
   }
 
   /**
-   * Push changes to Cloudflare D1
+   * Push changes to Firebase Firestore
    */
-  private async saveToD1(dbToSave: LocalStorageDB): Promise<void> {
-    if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+  private async saveToFirebase(dbToSave: LocalStorageDB): Promise<void> {
+    if (typeof window === 'undefined') return;
     try {
-      const res = await fetch('/api/d1-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch: [
-            { key: 'airmen', value: dbToSave.airmen },
-            { key: 'assignments', value: dbToSave.assignments },
-            { key: 'adminPasscode', value: dbToSave.adminPasscode },
-            { key: 'activityHistory', value: dbToSave.activityHistory },
-            { key: 'lastUpdated', value: dbToSave.lastUpdated },
-          ],
-        }),
+      const success = await saveDbToFirebase({
+        airmen: dbToSave.airmen,
+        assignments: dbToSave.assignments,
+        adminPasscode: dbToSave.adminPasscode,
+        activityHistory: dbToSave.activityHistory,
+        lastUpdated: dbToSave.lastUpdated,
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          d1Connected = true;
-          d1LastSyncTime = new Date().toLocaleTimeString();
-          broadcastSyncState();
-        }
+      if (success) {
+        firebaseConnected = true;
+        firebaseLastSyncTime = new Date().toLocaleTimeString();
+        broadcastSyncState();
       }
     } catch {
       // Non-critical fallback
@@ -240,7 +231,7 @@ export class LocalDatabaseEngine {
     return initialDb;
   }
 
-  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToD1: boolean = true) {
+  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToFirebase: boolean = true) {
     try {
       dbToSave.lastUpdated = new Date().toISOString();
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -250,8 +241,8 @@ export class LocalDatabaseEngine {
       console.error('Failed to save to localStorage:', err);
     }
 
-    if (pushToD1) {
-      this.saveToD1(dbToSave);
+    if (pushToFirebase) {
+      this.saveToFirebase(dbToSave);
     }
 
     if (notify && typeof window !== 'undefined') {
@@ -524,8 +515,8 @@ export class LocalDatabaseEngine {
         } else {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
         }
-      } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
-        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY'));
+      } else if (dutyCode === 'AIRPORT' || dutyCode === 'ATT' || dutyCode === 'DETT') {
+        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT'));
         if (index < 0) {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
         }
@@ -631,8 +622,8 @@ export class LocalDatabaseEngine {
           } else {
             index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
           }
-        } else if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
-          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY'));
+        } else if (dutyCode === 'AIRPORT' || dutyCode === 'ATT' || dutyCode === 'DETT') {
+          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT'));
           if (index < 0) {
             index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
           }
@@ -676,8 +667,8 @@ export class LocalDatabaseEngine {
     if (dutyCode) {
       const idx = list.findIndex((a) => {
         if (a.airmanId !== airmanId || a.date !== date) return false;
-        if (dutyCode === 'AIRPORT' || dutyCode === 'AIRFIELD_DUTY') {
-          return a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY';
+        if (dutyCode === 'AIRPORT' || dutyCode === 'ATT' || dutyCode === 'DETT') {
+          return a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT';
         }
         if (dutyCode === 'IDAC' || dutyCode === 'IDA') {
           return a.dutyCode === 'IDAC' || a.dutyCode === 'IDA';
@@ -817,7 +808,7 @@ export class LocalDatabaseEngine {
         else if (codeStr === 'BTF') dutyName = 'Base Taskforce Duty';
         else if (codeStr === 'NTF') dutyName = 'Najirpara Taskforce Duty';
         else if (codeStr === 'HALISHAHAR') dutyName = 'Halishahar Duty';
-        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'AIRFIELD_DUTY') dutyName = 'Airfield Duty';
+        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'ATT' || codeStr === 'DETT') dutyName = 'Airfield Duty';
         else if (codeStr === 'IDAC' || codeStr === 'IDA') {
           const s = ass.idaShift || 'Morning';
           dutyName = `IDAC Duty (${s})`;
@@ -875,7 +866,7 @@ export class LocalDatabaseEngine {
             if (yestCodeStr === 'GD') offShort = 'GD Off';
             else if (yestCodeStr === 'BTF') offShort = 'BTF Off';
             else if (yestCodeStr === 'NTF') offShort = 'NTF Off';
-            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'AIRFIELD_DUTY') offShort = 'Airport Off';
+            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'ATT' || yestCodeStr === 'DETT') offShort = 'Airport Off';
             else if (yestCodeStr === 'HALISHAHAR') offShort = 'Halishahar Off';
             else if ((yestCodeStr === 'IDAC' || yestCodeStr === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
             else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
@@ -932,9 +923,9 @@ export class LocalDatabaseEngine {
           dutyName = 'Class / Training';
           statusCategory = 'CLASS_TRG';
         }
-        else if (codeStr === 'AIRFIELD_DUTY') {
+        else if (codeStr === 'ATT' || codeStr === 'DETT') {
           dutyName = 'Airfield Duty';
-          statusCategory = 'AIRFIELD_DUTY';
+          statusCategory = 'ATT';
         }
         else if (codeStr === 'RECEPTION') {
           dutyName = 'K/O & Reception';
@@ -983,7 +974,7 @@ export class LocalDatabaseEngine {
             .replace(/Duty Off Off/g, 'Duty Off');
 
           const isHeavy =
-            ['GD', 'BTF', 'NTF', 'AIRPORT', 'HALISHAHAR', 'DUTY_OFF'].includes(yestAss.dutyCode) ||
+            ['GD', 'BTF', 'NTF', 'AIRPORT', 'ATT', 'HALISHAHAR', 'DUTY_OFF'].includes(yestAss.dutyCode) ||
             ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') ||
             yestAss.notes?.toLowerCase().includes('idac');
 

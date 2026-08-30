@@ -108,7 +108,7 @@ export function formatDutyOnShortName(
   if (
     code === 'AIRPORT' ||
     code === 'AIRFIELD' ||
-    code === 'AIRFIELD_DUTY' ||
+    code === 'ATT' ||
     code === 'AIR_FD' ||
     notesLower.includes('airfield') ||
     notesLower.includes('air fd') ||

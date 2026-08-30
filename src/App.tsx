@@ -118,7 +118,8 @@ export default function App() {
       activeTab !== 'overview' &&
       activeTab !== 'parade-state' &&
       activeTab !== 'pt-state' &&
-      activeTab !== 'ida-center'
+      activeTab !== 'ida-center' &&
+      activeTab !== 'duty-roster'
     ) {
       setActiveTab('overview');
     }
@@ -527,7 +528,7 @@ export default function App() {
         <footer className="border-t border-slate-200 dark:border-slate-800/80 py-5 bg-white dark:bg-slate-900 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto print:hidden">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center space-x-2.5">
-              <Logo155UASU className="w-5 h-6" />
+              <Logo155UASU className="h-6 w-6" />
               <span className="font-bold text-slate-700 dark:text-slate-300">
                 155 UASU BAF • Duty & Office Management System
               </span>

@@ -37,7 +37,10 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   // Grant / Record TDY Modal
   const [showGrantTdyModal, setShowGrantTdyModal] = useState<boolean>(false);
   const [grantTdyFlight, setGrantTdyFlight] = useState<FlightName>('Avionics');
-  const [tdyAirmanId, setTdyAirmanId] = useState<string>('');
+  const [tdyAirmanIds, setTdyAirmanIds] = useState<string[]>([]);
+  const [tdyDestination, setTdyDestination] = useState<string>('');
+  const [tdyCustomDestination, setTdyCustomDestination] = useState<string>('');
+  const [tdyRemarks, setTdyRemarks] = useState<string>('');
   const [tdyLocation, setTdyLocation] = useState<string>('BAF Base Matiur Rahman');
   const [tdyFromDate, setTdyFromDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [tdyToDate, setTdyToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -65,15 +68,11 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
     return sortAirmenBySeniority(list);
   }, [airmen, grantTdyFlight]);
 
-  // Ensure valid airman selected when flight changes
+  // Selection is now multiple and defaults to none.
   useEffect(() => {
-    if (grantAirmenList.length > 0) {
-      const exists = grantAirmenList.some((a) => a.id === tdyAirmanId);
-      if (!exists) {
-        setTdyAirmanId(grantAirmenList[0].id);
-      }
-    }
-  }, [grantAirmenList, tdyAirmanId]);
+    // Reset selection if flight changes (optional, but good UX)
+    setTdyAirmanIds([]);
+  }, [grantTdyFlight]);
 
   // Apply preset duration
   const applyPresetDays = (days: number) => {
@@ -173,10 +172,20 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   // Handle Granting TDY
   const handleGrantTdySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tdyAirmanId) {
-      alert('Please select an airman');
+    if (tdyAirmanIds.length === 0) {
+      alert('Please select at least one airman');
       return;
     }
+    if (!tdyDestination) {
+      alert('Please select a destination');
+      return;
+    }
+    const finalDest = tdyDestination === 'Custom' ? tdyCustomDestination : tdyDestination;
+    if (tdyDestination === 'Custom' && !finalDest) {
+      alert('Please enter custom destination');
+      return;
+    }
+
     if (!tdyFromDate || !tdyToDate || tdyFromDate > tdyToDate) {
       alert('Invalid date range');
       return;
@@ -184,31 +193,31 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
 
     setSavingTdy(true);
     try {
-      const res = await fetch('/api/roster/assign-range', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          airmanId: tdyAirmanId,
-          dutyCode: 'TDY',
-          fromDate: tdyFromDate,
-          toDate: tdyToDate,
-          notes: tdyLocation || 'TDY Outstation',
-        }),
-      });
+      const notes = tdyRemarks ? `${finalDest} - ${tdyRemarks}` : finalDest;
+      
+      const promises = tdyAirmanIds.map(id => 
+        fetch('/api/roster/assign-range', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            airmanId: id,
+            dutyCode: 'TDY',
+            fromDate: tdyFromDate,
+            toDate: tdyToDate,
+            notes: notes,
+          }),
+        })
+      );
 
-      const result = await res.json().catch(() => ({}));
-      if (res.ok && result.success) {
-        const found = airmen.find((a) => a.id === tdyAirmanId);
-        setTdySuccessMsg(`✅ TDY granted to ${found?.rank} ${found?.name} (${tdyDurationDays} days)!`);
-        window.dispatchEvent(new CustomEvent('baf_state_updated'));
-        await fetchTdyRecords();
-        setTimeout(() => {
-          setShowGrantTdyModal(false);
-          setTdySuccessMsg('');
-        }, 1300);
-      } else {
-        alert(result.error || 'Failed to record TDY');
-      }
+      await Promise.all(promises);
+
+      setTdySuccessMsg(`✅ TDY granted to ${tdyAirmanIds.length} airmen (${tdyDurationDays} days)!`);
+      window.dispatchEvent(new CustomEvent('baf_state_updated'));
+      await fetchTdyRecords();
+      setTimeout(() => {
+        setShowGrantTdyModal(false);
+        setTdySuccessMsg('');
+      }, 1300);
     } catch (err: any) {
       console.error('Error recording TDY:', err);
       alert(`Failed to record TDY: ${err.message}`);
@@ -284,7 +293,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
             {role === 'ADMIN' && (
               <button
                 onClick={() => {
-                  setTdyAirmanId(grantAirmenList[0]?.id || '');
+                  setTdyAirmanIds([]);
                   setShowGrantTdyModal(true);
                 }}
                 className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-emerald-900/30 transition-all cursor-pointer transform hover:scale-[1.02]"
@@ -540,29 +549,64 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     {grantAirmenList.length} Airmen in {grantTdyFlight}
                   </span>
                 </div>
-                <select
-                  value={tdyAirmanId}
-                  onChange={(e) => setTdyAirmanId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
-                >
+                <div className="space-y-2 max-h-[160px] overflow-y-auto bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
                   {grantAirmenList.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.rank} {a.name}
-                    </option>
+                    <label key={a.id} className="flex items-center space-x-2 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-emerald-600 rounded"
+                        checked={tdyAirmanIds.includes(a.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setTdyAirmanIds(prev => [...prev, a.id]);
+                          else setTdyAirmanIds(prev => prev.filter(id => id !== a.id));
+                        }}
+                      />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{a.rank} {a.name}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
-              {/* TDY Destination / Notes */}
+                            {/* TDY Destination */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                  TDY Destination / Unit / Purpose
+                  Destination (Mandatory) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={tdyDestination}
+                  onChange={(e) => setTdyDestination(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="">Select Destination</option>
+                  <option value="AIR HQ">AIR HQ</option>
+                  <option value="BAF AKR">BAF AKR</option>
+                  <option value="BAF BSR">BAF BSR</option>
+                  <option value="BAF MTR">BAF MTR</option>
+                  <option value="BAF CXB">BAF CXB</option>
+                  <option value="BAF SMD">BAF SMD</option>
+                  <option value="Custom">Other Custom...</option>
+                </select>
+                {tdyDestination === 'Custom' && (
+                  <input
+                    type="text"
+                    value={tdyCustomDestination}
+                    onChange={(e) => setTdyCustomDestination(e.target.value)}
+                    placeholder="Enter custom destination..."
+                    className="w-full mt-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
+                  />
+                )}
+              </div>
+              
+              {/* Remarks (Optional) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Remarks (Optional)
                 </label>
                 <input
                   type="text"
-                  value={tdyLocation}
-                  onChange={(e) => setTdyLocation(e.target.value)}
-                  placeholder="e.g. BAF Base Matiur Rahman / Training / Dhaka"
+                  value={tdyRemarks}
+                  onChange={(e) => setTdyRemarks(e.target.value)}
+                  placeholder="Additional notes..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
                 />
               </div>

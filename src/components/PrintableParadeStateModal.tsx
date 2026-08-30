@@ -275,7 +275,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           adminCommCount++;
         } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
           classTrgCount++;
-        } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
+        } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
           airFdDutyCount++;
         } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
           gamesCount++;
@@ -374,40 +374,22 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
       if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE') {
         onPtList.push({ airman, note: '' });
-      } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
-        leaveList.push({ airman, note: '' });
-      } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
-        tdyList.push({ airman, note: notes && !notesLower.includes('imported') ? notes : 'TDY' });
-      } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
-        bakeBiteList.push({ airman, note: 'Bake & Bite' });
-      } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-        receptionList.push({ airman, note: 'Reception' });
-      } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
-        essnList.push({ airman, note: 'ESSN' });
-      } else if (['CMH', 'BNS', 'BSH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh') || notesLower.includes('bns') || notesLower.includes('bsh')) {
-        cmhList.push({ airman, note: 'BNS/BSH/CMH' });
-      } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
-        sickReportList.push({ airman, note: 'Sick Report' });
-      } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
-        drillCatCList.push({ airman, note: "Drill Cat 'C'" });
-      } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
-        adminOrderList.push({ airman, note: 'Admin Order' });
-      } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
-        classTrgList.push({ airman, note: 'Class/Trg' });
-      } else if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper) || notesLower.includes('games') || notesLower.includes('g/h')) {
-        gamesList.push({ airman, note: 'Games' });
-      } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
-        absentList.push({ airman, note: 'Absent' });
-      } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'AIRFIELD_DUTY'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
-        airFdDutyList.push({ airman, note: 'Air Fd Duty' });
       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
         const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
         dutyOffList.push({ airman, note: offName });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'AIRFIELD_DUTY', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
         const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
         dutyOnList.push({ airman, note: dutyDisplay });
       } else {
-        const customKey = dutyCode || 'OTHER DISPOSAL';
+        let customKey = dutyCode === 'OTHERS' ? (item.notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
+        if (notes) {
+          // Sometimes notes holds the custom disposal name if it's entered in custom field
+          // but if it's a standard one, dutyName is better.
+          // In AssignDuty, custom disposal stores the name in notes.
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'SICK_REPORT', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+             customKey = notes;
+          }
+        }
         if (!customDisposalsMap[customKey]) customDisposalsMap[customKey] = [];
         const safeNotes = notes && !notesLower.includes('imported') ? notes : undefined;
         customDisposalsMap[customKey].push({ airman, note: safeNotes });
@@ -591,7 +573,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
               {/* DOCUMENT TOP HEADER */}
               <div className="relative mb-3 text-center flex items-center justify-between" style={{ fontFamily: 'Arial, sans-serif' }}>
                 <div className="w-16 h-16 flex items-center justify-center shrink-0">
-                  <Logo155UASU className="w-14 h-16" />
+                  <Logo155UASU className="h-16 w-16" />
                 </div>
                 <div className="flex-1 text-center">
                   <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
@@ -1107,7 +1089,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
                       </td>
 
-                      {/* 3rd Column: 21% -> ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C */}
+                                            {/* 3rd & 4th Column: Disposals (Dynamically Split) */}
                       <td
                         style={{
                           width: '21%',
@@ -1116,113 +1098,21 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                           paddingRight: '12px',
                         }}
                       >
-                        {tdyList.length > 0 && (
-                          <div className="mb-3.5">
+                        {otherDisposals.slice(0, Math.ceil(otherDisposals.length / 2)).map((cat, cIdx) => (
+                          <div key={cIdx} className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              ATT/TDY/DETT
+                              {cat.title}
                             </div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {tdyList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {receptionList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              RECEPTION
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {receptionList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {airFdDutyList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              AIR FD DUTY
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {airFdDutyList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {adminOrderList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              ADMIN ORDER
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {adminOrderList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {classTrgList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              CLASS/TRG
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {classTrgList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {drillCatCList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              DRILL CAT-C
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {drillCatCList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {otherDisposals.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              {otherDisposals[0].title}
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {otherDisposals[0].airmen.map((a, aIdx) => (
+                              {cat.airmen.map((a, aIdx) => (
                                 <li key={aIdx} className="whitespace-nowrap truncate">
-                                  {aIdx + 1}. {a.rank} {formatAirmanName(a.name)}
+                                  {aIdx + 1}. {a.rank} {a.name.split(' ').pop()}
                                 </li>
                               ))}
                             </ol>
                           </div>
-                        )}
+                        ))}
                       </td>
-
-                      {/* 4th Column: 22% -> DUTY ON, DUTY OFF, GAMES, ABSENT */}
                       <td
                         style={{
                           width: '22%',
@@ -1240,14 +1130,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                                 const noteText = item.note || 'GD';
                                 return (
                                   <li key={idx} className="whitespace-nowrap truncate">
-                                    {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)} - {noteText}
+                                    {idx + 1}. {item.airman.rank} {item.airman.name.split(' ').pop()} - {noteText}
                                   </li>
                                 );
                               })}
                             </ol>
                           </div>
                         )}
-
                         {documentType !== 'PT' && dutyOffList.length > 0 && (
                           <div className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
@@ -1263,62 +1152,29 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                                 }
                                 return (
                                   <li key={idx} className="whitespace-nowrap truncate">
-                                    {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)} - {dNote}
+                                    {idx + 1}. {item.airman.rank} {item.airman.name.split(' ').pop()} - {dNote}
                                   </li>
                                 );
                               })}
                             </ol>
                           </div>
                         )}
-
-                        {gamesList.length > 0 && (
-                          <div className="mb-3.5">
+                        {otherDisposals.slice(Math.ceil(otherDisposals.length / 2)).map((cat, cIdx) => (
+                          <div key={cIdx} className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              GAMES
+                              {cat.title}
                             </div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {gamesList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+                              {cat.airmen.map((a, aIdx) => (
+                                <li key={aIdx} className="whitespace-nowrap truncate">
+                                  {aIdx + 1}. {a.rank} {a.name.split(' ').pop()}
                                 </li>
                               ))}
                             </ol>
                           </div>
-                        )}
-
-                        {absentList.length > 0 && (
-                          <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              ABSENT
-                            </div>
-                            <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                              {absentList.map((item, idx) => (
-                                <li key={idx} className="whitespace-nowrap truncate">
-                                  {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-
-                        {otherDisposals.length > 1 &&
-                          otherDisposals.slice(1).map((cat, cIdx) => (
-                            <div key={cIdx} className="mb-3.5">
-                              <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                                {cat.title}
-                              </div>
-                              <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
-                                {cat.airmen.map((a, aIdx) => (
-                                  <li key={aIdx} className="whitespace-nowrap truncate">
-                                    {aIdx + 1}. {a.rank} {formatAirmanName(a.name)}
-                                  </li>
-                                ))}
-                              </ol>
-                            </div>
-                          ))}
+                        ))}
                       </td>
                     </tr>
-
                     {/* SPACER ROW BETWEEN 1ST & 2ND ROWS: Ample room for manual / digital signatures */}
                     {!isMultiDay && (
                       <tr style={{ height: '36px' }}>

@@ -7,6 +7,12 @@ export interface DutyRatioTable {
   dutyCode: DutyCategoryCode;
   shiftLabel?: string; // e.g. 'Morning', 'Afternoon', 'Night'
   totalRequiredMonth: number;
+  totalRequiredDaily?: number;
+  flightTargets?: {
+    Mechanics?: number;
+    Avionics?: number;
+    GCS?: number;
+  };
   data: {
     Mechanics: number[]; // Array of 31 numbers (index 0 = day 1, index 30 = day 31)
     Avionics: number[];
@@ -22,6 +28,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     title: 'BASE SECURITY DUTY',
     dutyCode: 'GD',
     totalRequiredMonth: 88,
+    totalRequiredDaily: 3,
     data: {
       Mechanics: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
       Avionics:  [1,1,1,0,1,1,1,0,0,0,1,1,1,1,1,0,0,0,1,1,0,1,0,0,1,1,1,0,1,1,1],
@@ -36,6 +43,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     title: 'BASE TASKFORCE DUTY',
     dutyCode: 'BTF',
     totalRequiredMonth: 22,
+    totalRequiredDaily: 1,
     data: {
       Mechanics: [0,0,1,1,0,0,1,1,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0],
       Avionics:  [1,1,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -50,6 +58,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     title: 'NAZIRPARA TARKFORCE DUTY',
     dutyCode: 'NTF',
     totalRequiredMonth: 40,
+    totalRequiredDaily: 1,
     data: {
       Mechanics: [1,1,0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,1,1,0,0,1],
       Avionics:  [0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1],
@@ -65,6 +74,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     dutyCode: 'IDAC',
     shiftLabel: 'Morning',
     totalRequiredMonth: 31,
+    totalRequiredDaily: 1,
     data: {
       Mechanics: [1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0],
       Avionics:  [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,1,0,0,0,1,0],
@@ -80,6 +90,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     dutyCode: 'IDAC',
     shiftLabel: 'Afternoon',
     totalRequiredMonth: 31,
+    totalRequiredDaily: 1,
     data: {
       Mechanics: [0,1,0,1,0,1,1,1,1,0,0,0,0,0,1,1,1,0,0,0,1,0,0,0,1,1,0,0,1,0,0],
       Avionics:  [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,1,0,0,1,1],
@@ -95,6 +106,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     dutyCode: 'IDAC',
     shiftLabel: 'Night',
     totalRequiredMonth: 62,
+    totalRequiredDaily: 2,
     data: {
       Mechanics: [0,1,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1],
       Avionics:  [0,0,1,0,0,1,1,1,0,0,0,0,0,1,1,1,1,0,0,0,1,1,0,1,1,1,1,0,0,1,1],
@@ -109,6 +121,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     title: 'AIRFIELD DUTY',
     dutyCode: 'AIRPORT',
     totalRequiredMonth: 93,
+    totalRequiredDaily: 3,
     data: {
       Mechanics: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       Avionics:  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -123,6 +136,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     title: 'HALISHAHAR TASKFIRCE DUTY',
     dutyCode: 'HALISHAHAR',
     totalRequiredMonth: 7,
+    totalRequiredDaily: 1,
     data: {
       Mechanics: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       Avionics:  [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],

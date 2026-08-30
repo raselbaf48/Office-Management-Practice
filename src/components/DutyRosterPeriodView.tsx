@@ -188,56 +188,86 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
   // 2. BASE TASKFORCE (BTF)
   // 3. NAZIRPARA TASKFORCE (NTF)
   const buildSectionItems = (dutyFilter: (code: string) => boolean): RosterExportItem[] => {
-    // Map airmanId -> list of active dates and day numbers
-    const airmanRecordMap = new Map<
-      string,
-      { airman: Airman; dates: string[]; days: number[]; earliestDate: string }
-    >();
-
-    activeDates.forEach((dStr) => {
-      const dayNum = parseInt(dStr.split('-')[2], 10);
+    // Collect all duty assignments matching filter in the active dates
+    const assignmentsByDate = new Map<string, DutyAssignment[]>();
+    activeDates.forEach(dStr => {
       const dayAss = assignments.filter((a) => a.date === dStr && dutyFilter(a.dutyCode));
-
-      dayAss.forEach((ass) => {
-        const airman = airmen.find((a) => a.id === ass.airmanId);
-        if (!airman) return;
-
-        const record = airmanRecordMap.get(airman.id) || {
-          airman,
-          dates: [],
-          days: [],
-          earliestDate: dStr,
-        };
-        record.dates.push(dStr);
-        record.days.push(dayNum);
-        if (dStr < record.earliestDate) {
-          record.earliestDate = dStr;
-        }
-        airmanRecordMap.set(airman.id, record);
-      });
+      assignmentsByDate.set(dStr, dayAss);
     });
 
-    // Sort by earliest duty date ascending (dt age jar tar nam age asbe)
-    const sortedRecords = Array.from(airmanRecordMap.values()).sort((a, b) => {
-      if (a.earliestDate !== b.earliestDate) {
-        return a.earliestDate.localeCompare(b.earliestDate);
+    // Extract all unique airmen involved
+    const involvedAirmenIds = new Set<string>();
+    assignmentsByDate.forEach(assList => {
+      assList.forEach(a => involvedAirmenIds.add(a.airmanId));
+    });
+
+    // Create blocks of consecutive duties for each airman
+    interface DutyBlock {
+      airman: Airman;
+      startDate: string;
+      endDate: string;
+      dates: string[];
+    }
+    const allBlocks: DutyBlock[] = [];
+
+    involvedAirmenIds.forEach(airmanId => {
+      const airman = airmen.find(a => a.id === airmanId);
+      if (!airman) return;
+
+      // get dates this airman has duty, sorted chronologically
+      const airmanDates = activeDates.filter(dStr => {
+        const dayAss = assignmentsByDate.get(dStr);
+        return dayAss && dayAss.some(a => a.airmanId === airmanId);
+      });
+
+      if (airmanDates.length === 0) return;
+
+      let currentBlock: DutyBlock = { airman, startDate: airmanDates[0], endDate: airmanDates[0], dates: [airmanDates[0]] };
+      
+      for (let i = 1; i < airmanDates.length; i++) {
+        const prevDate = new Date(airmanDates[i - 1]);
+        const currDate = new Date(airmanDates[i]);
+        const diffDays = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24));
+        
+        if (diffDays === 1) {
+          // Consecutive
+          currentBlock.endDate = airmanDates[i];
+          currentBlock.dates.push(airmanDates[i]);
+        } else {
+          // Break in sequence -> push old block, start new
+          allBlocks.push(currentBlock);
+          currentBlock = { airman, startDate: airmanDates[i], endDate: airmanDates[i], dates: [airmanDates[i]] };
+        }
       }
-      return a.dates[0].localeCompare(b.dates[0]);
+      allBlocks.push(currentBlock);
+    });
+
+    // Sort all blocks primarily by start date, then by rank seniority
+    allBlocks.sort((a, b) => {
+      return a.startDate.localeCompare(b.startDate);
     });
 
     const output: RosterExportItem[] = [];
     let serCounter = 1;
 
-    sortedRecords.forEach(({ airman, days }) => {
-      const dateRangeStr = compressConsecutiveDays(days);
+    allBlocks.forEach(block => {
+      const getDayNum = (dStr: string) => parseInt(dStr.split('-')[2], 10);
+      const startDay = getDayNum(block.startDate);
+      const endDay = getDayNum(block.endDate);
+      
+      let dateRangeStr = `${startDay}`;
+      if (startDay !== endDay) {
+         dateRangeStr = `${startDay}-${endDay}`;
+      }
+
       output.push({
         serNo: String(serCounter).padStart(2, '0'),
-        bdNo: airman.bdNo.replace('BD/', ''),
-        rank: airman.rank,
-        name: airman.name,
-        trade: airman.trade,
-        block: airman.addressBlock || 'L/O',
-        mobileNo: airman.mobileNo || '-',
+        bdNo: block.airman.bdNo.replace('BD/', ''),
+        rank: block.airman.rank,
+        name: block.airman.name,
+        trade: block.airman.trade,
+        block: block.airman.addressBlock || 'L/O',
+        mobileNo: block.airman.mobileNo || '-',
         dateStr: dateRangeStr,
         section: '155 UASU',
       });
@@ -559,7 +589,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
           {/* Document Header */}
           <div className="text-center pb-4 border-b border-slate-300">
             <div className="flex justify-center mb-2">
-              <Logo155UASU className="w-12 h-14" />
+              <Logo155UASU className="h-14 w-14" />
             </div>
             <h2 className="text-base sm:text-lg font-black uppercase tracking-wider underline">
               BASE DUTIES: AIRMEN
@@ -673,7 +703,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
           {/* Document Header */}
           <div className="text-center pb-5 border-b border-slate-300">
             <div className="flex justify-center mb-2">
-              <Logo155UASU className="w-12 h-14" />
+              <Logo155UASU className="h-14 w-14" />
             </div>
             <h2 className="text-base sm:text-lg font-bold uppercase tracking-wide underline text-slate-950">
               DUTY ROSTER : 155 UASU BAF

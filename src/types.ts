@@ -10,7 +10,9 @@ export type DutyCategoryCode =
   | 'AIRPORT'      // Airport Duty
   | 'IDAC'         // IDAC Duty (Morning / Afternoon / Night)
   | 'IDA'          // Legacy alias for IDAC
-  | 'TDY'          // Tdy/Att
+  | 'TDY'          // Temporary Duty
+  | 'ATT'          // Attachment
+  | 'DETT'         // Detachment
   | 'LEAVE'        // Leave
   | 'BAKE_N_BITE'  // Bake N Bite
   | 'DUTY_OFF'     // Duty Off
@@ -21,7 +23,6 @@ export type DutyCategoryCode =
   | 'DRILL_CAT_C'  // Drill Cat-C
   | 'ADMIN_ORDER'  // Admin Order
   | 'CLASS_TRG'    // Class / Training
-  | 'AIRFIELD_DUTY'// Airfield Duty
   | 'RECEPTION'    // K/O & Reception
   | 'GAMES'        // G/H & Games
   | 'ABSENT';      // Absent

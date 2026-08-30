@@ -253,49 +253,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const settingItems: Array<{
     id: SettingSection;
     title: string;
-    subtitle: string;
     icon: React.ReactNode;
     badge?: string;
   }> = [
     {
       id: 'appearance',
-      title: 'Theme & Appearance',
-      subtitle: 'Light / Dark / System adaptive color schemes',
+      title: 'Theme',
       icon: <Sun className="w-5 h-5" />,
       badge: currentTheme.toUpperCase()
     },
     {
-      id: 'logo',
-      title: 'Unit Crest & Branding',
-      subtitle: 'Upload custom squadron crest or restore official BAF logo',
-      icon: <ImageIcon className="w-5 h-5" />,
-      badge: customLogo ? 'Custom' : 'Default'
-    },
-    {
       id: 'users',
-      title: 'User Login Access & Details',
-      subtitle: 'Manage authorized BD numbers, access status (Active/Suspended), and 1st Login ID (474455)',
+      title: 'User Login Access',
       icon: <ShieldCheck className="w-5 h-5" />,
       badge: `${detailedUsersList.length} Users`
     },
     {
       id: 'security',
-      title: 'Admin Passcode & Security',
-      subtitle: 'Configure 4-digit master access passcode and authorization',
+      title: 'Change Password',
       icon: <KeyRound className="w-5 h-5" />,
       badge: role === 'ADMIN' ? 'Admin Active' : 'Protected'
     },
     {
       id: 'history',
-      title: 'User Login History',
-      subtitle: 'Audit log of all BD numbers accessing the system with timestamps',
+      title: 'Login History',
       icon: <History className="w-5 h-5" />,
       badge: `${loginHistory.length} Logged`
     },
     {
       id: 'database',
-      title: 'Database Backup & Restore',
-      subtitle: 'Download complete system JSON snapshot or restore from file',
+      title: 'Backup & Restore',
       icon: <Database className="w-5 h-5" />
     }
   ];
@@ -366,9 +353,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {item.subtitle}
-                      </p>
+                      
                     </div>
                   </div>
 
@@ -462,66 +447,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               </div>
                             )}
                           </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 2. LOGO & BRANDING */}
-                    {item.id === 'logo' && (
-                      <div className="space-y-4">
-                        {logoSuccess && (
-                          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-bold flex items-center space-x-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                            <span>{logoSuccess}</span>
-                          </div>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-                          {/* Current Logo Preview */}
-                          <div className="flex flex-col items-center space-y-2">
-                            <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-center shadow-xs">
-                              <Logo155UASU className="w-16 h-16" customLogoUrl={customLogo} />
-                            </div>
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                              {customLogo ? 'Custom Crest' : 'Official Crest'}
-                            </span>
-                          </div>
-
-                          {/* Upload Actions */}
-                          <div className="flex-1 space-y-3 text-center sm:text-left">
-                            <div>
-                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                                Update Unit Crest Logo
-                              </h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Select any image (PNG, JPG, SVG) from your device. It will automatically apply across headers, footers, and official views.
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                              <label className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer">
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>Upload New Picture</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleLogoUpload}
-                                  className="hidden"
-                                />
-                              </label>
-
-                              {customLogo && (
-                                <button
-                                  type="button"
-                                  onClick={handleResetLogo}
-                                  className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl transition-colors flex items-center space-x-1.5 cursor-pointer"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                  <span>Restore Default Crest</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     )}
@@ -891,19 +816,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* 5. DATABASE BACKUP & RESTORE */}
                     {item.id === 'database' && (
                       <div className="space-y-4">
-                        {/* Cloudflare D1 Cloud Database Info */}
+                        {/* Firebase Cloud Database Info */}
                         <div className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-3">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
                               <div className="flex items-center space-x-2 text-sm font-bold text-emerald-950 dark:text-emerald-300">
                                 <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                <span>Cloudflare D1 Serverless SQL Database</span>
+                                <span>Firebase Realtime Database</span>
                                 <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-mono uppercase tracking-wider">
                                   Native Cloud
                                 </span>
                               </div>
                               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                                High-speed real-time persistence powered by Cloudflare Pages & D1 SQL database (<span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">baf-office-db</span>).
+                                High-speed real-time persistence powered by Firebase (<span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">baf-office-db</span>).
                               </p>
                             </div>
 
@@ -911,13 +836,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  localDb.syncFromD1();
-                                  alert('Cloudflare D1 sync triggered!');
+                                  localDb.syncFromFirebase();
+                                  alert('Firebase sync triggered!');
                                 }}
                                 className="px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                               >
                                 <RefreshCw className="w-3.5 h-3.5" />
-                                <span>Sync D1 Now</span>
+                                <span>Sync Firebase Now</span>
                               </button>
                             </div>
                           </div>

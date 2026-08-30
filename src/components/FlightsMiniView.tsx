@@ -160,7 +160,7 @@ export const FlightsMiniView: React.FC<FlightsMiniViewProps> = ({
                 onClick={() => onSelectFlight(fl)}
                 className="mt-5 w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-emerald-600 dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-800 dark:text-slate-200 hover:text-white dark:hover:text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow-xs"
               >
-                <span>View {fl} Nominal Roll</span>
+                <span>View Airmen</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>

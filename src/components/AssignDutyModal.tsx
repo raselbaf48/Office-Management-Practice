@@ -204,8 +204,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const isAirmanAssignedToActiveDuty = (airmanId: string) => {
     return assignmentsList.some((a) => {
       if (a.airmanId !== airmanId) return false;
-      if (activeDutyCode === 'AIRFIELD_DUTY' || activeDutyCode === 'AIRPORT') {
-        return a.dutyCode === 'AIRFIELD_DUTY' || a.dutyCode === 'AIRPORT';
+      if (activeDutyCode === 'ATT' || activeDutyCode === 'AIRPORT') {
+        return a.dutyCode === 'ATT' || a.dutyCode === 'AIRPORT';
       }
       if (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') {
         return (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift === activeIdaShift;
@@ -223,8 +223,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       if (activeFlight !== 'All' && airman.flightName !== activeFlight) return;
 
       const isMatch =
-        (dutyCode === 'AIRFIELD_DUTY' || dutyCode === 'AIRPORT')
-          ? assignment.dutyCode === 'AIRFIELD_DUTY' || assignment.dutyCode === 'AIRPORT'
+        (dutyCode === 'ATT' || dutyCode === 'AIRPORT')
+          ? assignment.dutyCode === 'ATT' || assignment.dutyCode === 'AIRPORT'
           : (dutyCode === 'IDAC' || dutyCode === 'IDA')
           ? (assignment.dutyCode === 'IDAC' || assignment.dutyCode === 'IDA') && (!shift || assignment.idaShift === shift)
           : assignment.dutyCode === dutyCode;
@@ -279,8 +279,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           setAssignmentsList((prev) => {
             return prev.filter((a) => {
               if (a.airmanId !== airman.id) return true;
-              if (activeDutyCode === 'AIRFIELD_DUTY' || activeDutyCode === 'AIRPORT') {
-                return a.dutyCode !== 'AIRFIELD_DUTY' && a.dutyCode !== 'AIRPORT';
+              if (activeDutyCode === 'ATT' || activeDutyCode === 'AIRPORT') {
+                return a.dutyCode !== 'ATT' && a.dutyCode !== 'AIRPORT';
               }
               if (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') {
                 return !((a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift === activeIdaShift);
@@ -308,8 +308,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           if (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') {
             return (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift === activeIdaShift;
           }
-          if (activeDutyCode === 'AIRFIELD_DUTY' || activeDutyCode === 'AIRPORT') {
-            return a.dutyCode === 'AIRFIELD_DUTY' || a.dutyCode === 'AIRPORT';
+          if (activeDutyCode === 'ATT' || activeDutyCode === 'AIRPORT') {
+            return a.dutyCode === 'ATT' || a.dutyCode === 'AIRPORT';
           }
           return a.dutyCode === activeDutyCode;
         });
@@ -426,7 +426,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       if (halishahar) return { label: 'Halishahar', type: 'HALISHAHAR', isFixed: true };
 
       // Other operational duties
-      const airport = airmanAssignments.find((a) => a.dutyCode === 'AIRPORT' || a.dutyCode === 'AIRFIELD_DUTY');
+      const airport = airmanAssignments.find((a) => a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT');
       if (airport) return { label: 'Airport', type: 'AIRPORT', isFixed: false };
 
       const gd = airmanAssignments.find((a) => a.dutyCode === 'GD');
@@ -443,19 +443,54 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       }
 
       const firstDuty = airmanAssignments[0];
-      const name = DUTY_TYPE_MAP.get(firstDuty.dutyCode as any)?.name || firstDuty.dutyCode;
+      let name = DUTY_TYPE_MAP.get(firstDuty.dutyCode as any)?.name || firstDuty.dutyCode;
+
+      if (firstDuty.dutyCode === 'DUTY_OFF') {
+        if (prevAssignments.length > 0) {
+          const yestAss = prevAssignments[0];
+          let offShort = 'Duty Off';
+          if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
+          else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
+          else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
+          else if (yestAss.dutyCode === 'AIRPORT' || yestAss.dutyCode === 'ATT') offShort = 'Airport Off';
+          else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
+          else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
+          else if (yestAss.notes?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+          else offShort = `${yestAss.dutyCode} Off`;
+
+          offShort = offShort.replace(/DUTY_OFF/g, 'Duty').replace(/Off Off/g, 'Off').replace(/Duty Off Off/g, 'Duty Off');
+          name = offShort;
+        } else {
+          name = firstDuty.previousDutyName || firstDuty.notes || 'Duty Off';
+        }
+      }
+
       return { label: name, type: firstDuty.dutyCode, isFixed: false };
     }
 
-    // 2. Check if person performed Night Duty yesterday (Night Off today)
+    // 2. Check if person performed Heavy/Night Duty yesterday (Night Off today)
     if (prevAssignments.length > 0) {
-      const prevNightIdac = prevAssignments.find((a) => (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift === 'Night');
-      if (prevNightIdac) {
-        return { label: 'IDAC Nt Off', type: 'NIGHT_OFF', isFixed: false };
-      }
-      const prevGd = prevAssignments.find((a) => a.dutyCode === 'GD');
-      if (prevGd) {
-        return { label: 'GD Nt Off', type: 'NIGHT_OFF', isFixed: false };
+      const yestAss = prevAssignments[0];
+      const isHeavy =
+        ['GD', 'BTF', 'NTF', 'AIRPORT', 'ATT', 'HALISHAHAR'].includes(yestAss.dutyCode) ||
+        ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') ||
+        (yestAss.dutyCode === 'DUTY_OFF') ||
+        (yestAss.notes || '').toLowerCase().includes('idac');
+
+      if (isHeavy) {
+        let offShort = 'Duty Off';
+        if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
+        else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
+        else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
+        else if (yestAss.dutyCode === 'AIRPORT' || yestAss.dutyCode === 'ATT') offShort = 'Airport Off';
+        else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
+        else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
+        else if ((yestAss.notes || '').toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+        else if (yestAss.dutyCode === 'DUTY_OFF') offShort = yestAss.previousDutyName || yestAss.notes || 'Duty Off';
+        else offShort = `${yestAss.dutyCode} Off`;
+
+        offShort = offShort.replace(/DUTY_OFF/g, 'Duty').replace(/Off Off/g, 'Off').replace(/Duty Off Off/g, 'Duty Off');
+        return { label: offShort, type: 'NIGHT_OFF', isFixed: false };
       }
     }
 
@@ -483,7 +518,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         }
 
         // For soldier duties (non-IDAC), exclude Warrant Officers
-        if (['GD', 'AIRPORT', 'AIRFIELD_DUTY', 'BTF', 'NTF', 'HALISHAHAR', 'BAKE_N_BITE'].includes(activeDutyCode)) {
+        if (['GD', 'AIRPORT', 'ATT', 'BTF', 'NTF', 'HALISHAHAR', 'BAKE_N_BITE'].includes(activeDutyCode)) {
           if (isWO) return false;
         }
 
@@ -528,7 +563,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         if (!isAAvailable && isBAvailable) return 1;
 
         // Priority for Airport in Avionics: Sgt Mustakim
-        if (activeDutyCode === 'AIRFIELD_DUTY' || activeDutyCode === 'AIRPORT') {
+        if (activeDutyCode === 'ATT' || activeDutyCode === 'AIRPORT') {
           const isAMustakim = a.name.toLowerCase().includes('mustakim') || a.bdNo === '469598';
           const isBMustakim = b.name.toLowerCase().includes('mustakim') || b.bdNo === '469598';
           if (isAMustakim && !isBMustakim) return -1;

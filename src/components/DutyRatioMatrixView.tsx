@@ -39,11 +39,13 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   const [matrix, setMatrix] = useState<DutyRatioTable[]>(() => getStoredDutyMatrix());
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>('');
-  const [selectedFlightFilter, setSelectedFlightFilter] = useState<FlightName | 'All'>('All');
+  const [selectedFlightFilter, setSelectedFlightFilter] = useState<FlightName | 'Overall'>('Overall');
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'Overall' | 'Mechanics' | 'Avionics' | 'GCS'>('Overall');
 
   const daysArray = Array.from({ length: 31 }, (_, i) => i + 1);
-  const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
+  const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS'];
 
   // Flight name short codes
   const flightShortMap: Record<FlightName, string> = {
@@ -139,13 +141,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   };
 
   // Grand totals calculation
-  const totalSlotsOverall = matrix.reduce((grandSum, table) => {
-    return (
-      grandSum +
-      flights.reduce((fSum, fl) => {
-        return fSum + table.data[fl].reduce((dSum, count) => dSum + count, 0);
-      }, 0)
-    );
+  const totalSlotsOverall = matrix.reduce((sum, table) => {
+    if (selectedFlightFilter === 'Overall') return sum + (table.totalRequiredMonth || 0);
+    return sum + (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS'] || 0);
   }, 0);
 
   const flightTotalsOverall: Record<FlightName, number> = {
@@ -186,6 +184,15 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
+          {role === 'ADMIN' && (
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              title="Duty Targets Settings"
+            >
+              <Sliders className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => exportDutyRatioDocx(matrix)}
@@ -274,7 +281,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
           <div className="text-[10px] text-indigo-300/80 mt-0.5">Scale 155 UASU BAF</div>
         </div>
 
-        {flights.map((fl) => (
+        {flights.filter(fl => selectedFlightFilter === 'Overall' || selectedFlightFilter === fl).map((fl) => (
           <div
             key={fl}
             className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
@@ -360,18 +367,19 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                     <span className="font-mono font-black text-sm tracking-wider">
                       {tableIdx + 1}. {table.title}
                     </span>
-                    <span className="text-[11px] opacity-85 px-2 py-0.5 rounded-md bg-black/20 font-bold">
-                      Code: {table.dutyCode}
-                    </span>
+                    
                   </div>
 
                   <div className="flex items-center space-x-3">
                     <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-lg">
-                      Month Total: <strong className="font-mono">{tableTotal}</strong>
+                      Month Total: <strong className="font-mono">
+                        {selectedFlightFilter === 'Overall' 
+                          ? (table.totalRequiredMonth || 0) 
+                          : (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS'] || 0)}
+                      </strong>
                     </span>
                   </div>
                 </div>
-
                 {/* Table Body (Days 1 to 31) */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-center border-collapse">
@@ -392,7 +400,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {flights
-                        .filter((fl) => selectedFlightFilter === 'All' || selectedFlightFilter === fl)
+                        .filter((fl) => selectedFlightFilter === 'Overall' || selectedFlightFilter === fl)
                         .map((flight) => {
                           const rowSum = table.data[flight].reduce((a, b) => a + b, 0);
 
@@ -497,6 +505,97 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             );
           })}
       </div>
+
+      
+      {/* Duty Targets Settings Modal */}
+      {isSettingsOpen && role === 'ADMIN' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                <Sliders className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Duty Targets Settings</h3>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="px-5 pt-3 flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 overflow-x-auto hide-scrollbar">
+              {['Overall', 'Mechanics', 'Avionics', 'GCS'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setSettingsTab(tab as any)}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
+                    settingsTab === tab 
+                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' 
+                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  {tab} Targets
+                </button>
+              ))}
+            </div>
+            
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              <p className="text-[11px] text-slate-500 mb-2">
+                Configure the Monthly Target for <strong>{settingsTab}</strong>. 
+                {settingsTab === 'Overall' ? ' This updates the grand total in the header.' : ' This updates the target when filtering by this flight.'}
+              </p>
+              
+              {matrix.map((table, tIdx) => (
+                <div key={table.id} className="grid grid-cols-12 gap-3 items-center p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="col-span-12 sm:col-span-8">
+                    <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{table.title}</div>
+                    <div className="text-[10px] text-slate-500">Code: {table.dutyCode} {table.shiftLabel ? `(${table.shiftLabel})` : ''}</div>
+                  </div>
+                  <div className="col-span-12 sm:col-span-4">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                      {settingsTab === 'Overall' ? 'Overall Monthly Target' : `${settingsTab} Target`}
+                    </label>
+                    <input
+                      type="number"
+                      value={settingsTab === 'Overall' ? (table.totalRequiredMonth || 0) : (table.flightTargets?.[settingsTab as 'Mechanics' | 'Avionics' | 'GCS'] || 0)}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        const newMatrix = [...matrix];
+                        if (settingsTab === 'Overall') {
+                          newMatrix[tIdx].totalRequiredMonth = val;
+                        } else {
+                          const fTarget = settingsTab as 'Mechanics' | 'Avionics' | 'GCS';
+                          newMatrix[tIdx].flightTargets = {
+                            ...(newMatrix[tIdx].flightTargets || {}),
+                            [fTarget]: val
+                          };
+                        }
+                        setMatrix(newMatrix);
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+              <button
+                onClick={() => {
+                  saveDutyMatrix(matrix);
+                  setIsSaved(true);
+                  setTimeout(() => setIsSaved(false), 2500);
+                  setIsSettingsOpen(false);
+                }}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center space-x-2"
+              >
+                <span>Save & Apply Targets</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import Ratio Modal */}
       <ImportDutyRatioModal

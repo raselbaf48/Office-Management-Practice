@@ -120,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between h-16 px-3.5 bg-[#052818] border-b border-[#0d4f31] shrink-0">
           <div className="flex items-center space-x-2.5 overflow-hidden">
             <div className="shrink-0 drop-shadow-md">
-              <Logo155UASU className="w-9 h-11" />
+              <Logo155UASU className="h-11 w-11" />
             </div>
             {!collapsed && (
               <div className="leading-tight truncate">
@@ -280,14 +280,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
 
-              {/* SECTION 3: WORKFORCE & LEAVE */}
+              {/* SECTION 3: REGISTERS */}
               <div>
                 {!collapsed && (
                   <button
                     onClick={() => toggleSection('workforce')}
                     className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-black uppercase tracking-widest text-emerald-200/50 hover:text-emerald-100 transition-colors"
                   >
-                    <span>WORKFORCE</span>
+                    <span>REGISTERS</span>
                     {openSections.workforce ? (
                       <ChevronDown className="w-3.5 h-3.5" />
                     ) : (
@@ -329,18 +329,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'tdy-register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">TDY Register</span>}
                     </button>
+{/* Monthly Duty Register */}
+                        <button
+                          onClick={() => handleSelectTab('register')}
+                          className={`w-full flex items-center ${
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
+                          } rounded-xl text-xs font-bold transition-all duration-150 ${
+                            activeTab === 'register'
+                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          }`}
+                          title="Duty Register"
+                        >
+                          <div className="flex items-center truncate">
+                            <Calendar className={`w-4 h-4 shrink-0 ${activeTab === 'register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                            {!collapsed && <span className="ml-3 truncate">Duty Register</span>}
+                          </div>
+                          {conflictCount > 0 && (
+                            <span className="w-5 h-5 bg-amber-500 text-slate-950 text-[10px] font-black rounded-full flex items-center justify-center shadow-xs animate-pulse">
+                              {conflictCount}
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Duty Ratio (BAF 155 Scale) */}
+                        <button
+                          onClick={() => handleSelectTab('duty-ratio')}
+                          className={`w-full flex items-center ${
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                          } rounded-xl text-xs font-bold transition-all duration-150 ${
+                            activeTab === 'duty-ratio'
+                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          }`}
+                          title="Duty Ratio (BAF 155 UASU)"
+                        >
+                          <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                          {!collapsed && <span className="ml-3 truncate">Duty Ratio</span>}
+                        </button>
+
+                        
                   </div>
                 )}
               </div>
+            </>
+          )}
 
-              {/* SECTION 4: SCHEDULE MANAGEMENT */}
-              <div>
-                {!collapsed && (
+          {/* SECTION 4: ROSTER (Visible to all, some items restricted) */}
+          <div>
+            {!collapsed && (
                   <button
                     onClick={() => toggleSection('schedule')}
                     className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-black uppercase tracking-widest text-emerald-200/50 hover:text-emerald-100 transition-colors"
                   >
-                    <span>SCHEDULE MANAGEMENT</span>
+                    <span>ROSTER</span>
                     {openSections.schedule ? (
                       <ChevronDown className="w-3.5 h-3.5" />
                     ) : (
@@ -351,7 +393,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {(collapsed || openSections.schedule) && (
                   <div className="mt-1 space-y-1">
-                    {/* IDA Center Duty (Added Above Monthly Duty Register) */}
+                    {/* IDA Center Duty (Visible to all) */}
                     <button
                       onClick={() => handleSelectTab('ida-center')}
                       className={`w-full flex items-center ${
@@ -367,30 +409,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {!collapsed && <span className="ml-3 truncate">IDA Center Duty</span>}
                     </button>
 
-                    {/* Monthly Duty Register */}
-                    <button
-                      onClick={() => handleSelectTab('register')}
-                      className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
-                      } rounded-xl text-xs font-bold transition-all duration-150 ${
-                        activeTab === 'register'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
-                      }`}
-                      title="Monthly Duty Register"
-                    >
-                      <div className="flex items-center truncate">
-                        <Calendar className={`w-4 h-4 shrink-0 ${activeTab === 'register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                        {!collapsed && <span className="ml-3 truncate">Monthly Duty Register</span>}
-                      </div>
-                      {conflictCount > 0 && (
-                        <span className="w-5 h-5 bg-amber-500 text-slate-950 text-[10px] font-black rounded-full flex items-center justify-center shadow-xs animate-pulse">
-                          {conflictCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Duty Roster Period */}
+                    {/* Duty Roster Period (Visible to all) */}
                     <button
                       onClick={() => handleSelectTab('duty-roster')}
                       className={`w-full flex items-center ${
@@ -406,68 +425,66 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {!collapsed && <span className="ml-3 truncate">Duty Roster</span>}
                     </button>
 
-                    {/* Duty Ratio (BAF 155 Scale) */}
-                    <button
-                      onClick={() => handleSelectTab('duty-ratio')}
-                      className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
-                      } rounded-xl text-xs font-bold transition-all duration-150 ${
-                        activeTab === 'duty-ratio'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
-                      }`}
-                      title="Duty Ratio (BAF 155 UASU)"
-                    >
-                      <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                      {!collapsed && <span className="ml-3 truncate">Duty Ratio</span>}
-                    </button>
-
-                    {/* Duty Analytics & Working Hours */}
-                    <button
-                      onClick={() => handleSelectTab('analytics')}
-                      className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
-                      } rounded-xl text-xs font-bold transition-all duration-150 ${
-                        activeTab === 'analytics'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
-                      }`}
-                      title="Duty Analytics & Load Balance"
-                    >
-                      <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                      {!collapsed && <span className="ml-3 truncate">Duty Analytics & Hours</span>}
-                    </button>
-
-                    {/* Duty Conflicts */}
-                    <button
-                      onClick={() => handleSelectTab('conflicts')}
-                      className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
-                      } rounded-xl text-xs font-bold transition-all duration-150 ${
-                        activeTab === 'conflicts'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
-                      }`}
-                      title="Conflict Monitor & Rules"
-                    >
-                      <div className="flex items-center truncate">
-                        <ShieldAlert className={`w-4 h-4 shrink-0 ${activeTab === 'conflicts' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                        {!collapsed && <span className="ml-3 truncate">Conflict Monitor</span>}
-                      </div>
-                      {conflictCount > 0 && !collapsed && (
-                        <span className="px-1.5 py-0.5 text-[9px] bg-red-600 text-white rounded-md font-bold">
-                          {conflictCount} Alert
-                        </span>
-                      )}
-                    </button>
+                    {/* Admin only items */}
+                    {role === 'ADMIN' && (
+                      <></>
+                    )}
                   </div>
                 )}
               </div>
-            </>
-          )}
+          {/* SECTION 5: ANALYSIS & CONFLICTS */}
+          <div>
+            {!collapsed && (
+              <div className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-black uppercase tracking-widest text-emerald-200/50 mt-4">
+                <span>ANALYSIS</span>
+              </div>
+            )}
+            <div className="mt-1 space-y-1">
+              {/* Duty Analytics & Working Hours */}
+                        <button
+                          onClick={() => handleSelectTab('analytics')}
+                          className={`w-full flex items-center ${
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                          } rounded-xl text-xs font-bold transition-all duration-150 ${
+                            activeTab === 'analytics'
+                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          }`}
+                          title="Duty Analytics & Load Balance"
+                        >
+                          <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                          {!collapsed && <span className="ml-3 truncate">Duty Analysis</span>}
+                        </button>
+
+                        
+              {/* Duty Conflicts */}
+                        <button
+                          onClick={() => handleSelectTab('conflicts')}
+                          className={`w-full flex items-center ${
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
+                          } rounded-xl text-xs font-bold transition-all duration-150 ${
+                            activeTab === 'conflicts'
+                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          }`}
+                          title="Conflict Monitor & Rules"
+                        >
+                          <div className="flex items-center truncate">
+                            <ShieldAlert className={`w-4 h-4 shrink-0 ${activeTab === 'conflicts' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                            {!collapsed && <span className="ml-3 truncate">Conflict Monitor</span>}
+                          </div>
+                          {conflictCount > 0 && !collapsed && (
+                            <span className="px-1.5 py-0.5 text-[9px] bg-red-600 text-white rounded-md font-bold">
+                              {conflictCount} Alert
+                            </span>
+                          )}
+                        </button>
+            </div>
+          </div>
         </div>
 
         {/* User Session Profile & Admin Mode Toggle */}
+
         {userSession && !collapsed && (
           <div className="px-3 py-2.5 bg-[#052818] border-t border-[#0d4f31] shrink-0 space-y-2">
             <div className="flex items-center justify-between">
@@ -497,36 +514,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
 
-            {/* Admin Switcher in Sidebar */}
-            {role === 'ADMIN' ? (
-              <div className="flex items-center justify-between px-2.5 py-1.5 bg-emerald-900/60 border border-emerald-500/40 rounded-xl">
-                <div className="flex items-center space-x-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[11px] font-black text-emerald-200">Admin Mode Active</span>
-                </div>
-                {onLogoutAdmin && (
-                  <button
-                    type="button"
-                    onClick={onLogoutAdmin}
-                    className="text-[10px] text-emerald-300 hover:text-amber-300 underline font-semibold cursor-pointer"
-                  >
-                    Airman View
-                  </button>
-                )}
-              </div>
-            ) : (
-              onOpenAdminLogin && (
-                <button
-                  type="button"
-                  onClick={onOpenAdminLogin}
-                  className="w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  title="Enter Master Passcode for Admin privileges"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Admin Passcode</span>
-                </button>
-              )
-            )}
+            
           </div>
         )}
 
@@ -551,7 +539,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="px-3 py-2 bg-[#042013] border-t border-[#093c24] shrink-0">
           {!collapsed ? (
             <div className="flex items-center justify-between text-[11px] text-emerald-300/60">
-              <span className="font-semibold truncate">155 UASU • BAF Base ZH</span>
+              <span className="font-semibold truncate">155 UASU BAF • BAF BASE ZHR</span>
               <span className="text-[10px] text-emerald-400/50 font-mono">v2.5</span>
             </div>
           ) : (
