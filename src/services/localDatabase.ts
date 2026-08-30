@@ -118,6 +118,16 @@ export class LocalDatabaseEngine {
       const data = await getDbFromFirebase();
       if (data) {
         firebaseConnected = true;
+        
+        const localTime = new Date(this.db.lastUpdated || 0).getTime();
+        const fbTime = new Date(data.lastUpdated || 0).getTime();
+
+        // If local is newer, push to Firebase instead of pulling
+        if (localTime > fbTime) {
+           this.saveToFirebase(this.db);
+           return true;
+        }
+
         let hasUpdates = false;
         if (data.airmen && Array.isArray(data.airmen) && data.airmen.length > 0) {
           this.db.airmen = data.airmen;
@@ -136,6 +146,7 @@ export class LocalDatabaseEngine {
           hasUpdates = true;
         }
         if (hasUpdates) {
+          this.db.lastUpdated = data.lastUpdated || new Date().toISOString();
           this.saveToStorage(this.db, false, false);
           window.dispatchEvent(new CustomEvent('baf_state_updated', { detail: { source: 'd1Sync' } }));
         }
