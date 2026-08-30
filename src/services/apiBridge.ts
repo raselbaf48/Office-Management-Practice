@@ -26,6 +26,19 @@ export function installApiInterceptor() {
 
         // If the server responded with valid JSON and not 404/500/HTML
         if (networkResponse.ok && contentType.includes('application/json')) {
+          const urlObj = new URL(urlStr, window.location.origin);
+          if (urlObj.pathname === '/api/sync-google-sheet') {
+            try {
+              const clone = networkResponse.clone();
+              const data = await clone.json();
+              if (data && data.airmen) {
+                // Perform a bulk merge into localDb
+                localDb.bulkAddAirmen(data.airmen);
+              }
+            } catch (err) {
+              console.error('Error parsing sync-google-sheet response in interceptor:', err);
+            }
+          }
           return networkResponse;
         }
       } catch (networkErr) {
