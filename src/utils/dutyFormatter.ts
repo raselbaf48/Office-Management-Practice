@@ -37,23 +37,25 @@ export function formatDutyOnShortName(
   ) {
     const shift = (idaShift || '').toLowerCase();
     
-    // Check for Night shift ("Nt") first
+    // Explicit exact shift match first
+    if (shift === 'night') return 'IDAC "Nt"';
+    if (shift === 'afternoon') return 'IDAC "B"';
+    if (shift === 'morning') return 'IDAC "A"';
+    
+    // Check for Night shift ("Nt")
     if (
-      shift === 'night' ||
       notesLower.includes('night') ||
       notesLower.includes('"nt"') ||
       notesLower.includes(' nt') ||
       notesLower.includes('shift c') ||
       notesLower.includes('"c"') ||
-      nameLower.includes('night') ||
-      nameLower.includes('nt')
+      nameLower.includes('night')
     ) {
       return 'IDAC "Nt"';
     }
 
     // Check for Afternoon ("B")
     if (
-      shift === 'afternoon' ||
       notesLower.includes('afternoon') ||
       notesLower.includes('aft') ||
       notesLower.includes('"b"') ||
@@ -65,7 +67,6 @@ export function formatDutyOnShortName(
 
     // Check for Morning ("A")
     if (
-      shift === 'morning' ||
       notesLower.includes('morning') ||
       notesLower.includes('morn') ||
       notesLower.includes('"a"') ||
@@ -75,9 +76,7 @@ export function formatDutyOnShortName(
       return 'IDAC "A"';
     }
 
-    if (idaShift === 'Night') return 'IDAC "Nt"';
-    if (idaShift === 'Afternoon') return 'IDAC "B"';
-    return 'IDAC "A"';
+    return 'IDAC "A"'; // Fallback for IDAC
   }
 
   // 2. NTF (Najirpara Taskforce)

@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useMemo } from 'react';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
 import { X, Search, ShieldCheck, UserCheck, ChevronLeft, Save, AlertCircle } from 'lucide-react';
 import { getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
@@ -25,13 +27,11 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   // Single Add Admin Mode States
   const [isAddAdminMode, setIsAddAdminMode] = useState(false);
   const [addAdminBd, setAddAdminBd] = useState('');
-  const [addAdminPass, setAddAdminPass] = useState('');
-  const [addAdminFlight, setAddAdminFlight] = useState('ALL');
-  const [addAdminSearch, setAddAdminSearch] = useState('');
+  const [addAdminPass, setAddAdminPass] = useState('1124');
 
   const mergedUsers = useMemo(() => {
     return nominalAirmen.map((airman, index) => {
-      const cleanBd = airman.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
+      const cleanBd = airman.bdNo.trim().replace(/^BD\\/?/i, '').replace(/\\s+/g, '').toLowerCase();
       const detailed = detailedUsers.find(d => d.bdNo.toLowerCase() === cleanBd);
       
       const isDefaultOwner = cleanBd === '474455';
@@ -65,19 +65,6 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
       u.airman.name.toLowerCase().includes(query) ||
       u.airman.rank.toLowerCase().includes(query)
     );
-  });
-
-  // For Add Admin specific filtering
-  const candidateUsers = mergedUsers.filter(u => u.role === 'USER' && !u.isDefaultOwner);
-  const flightsForFilter = Array.from(new Set(candidateUsers.map(u => u.airman.flightName || 'Unknown'))).sort();
-  const displayedCandidates = candidateUsers.filter(u => {
-    const matchFlt = addAdminFlight === 'ALL' || u.airman.flightName === addAdminFlight;
-    const searchLower = addAdminSearch.toLowerCase();
-    const matchSearch = !addAdminSearch || 
-                        u.airman.name.toLowerCase().includes(searchLower) || 
-                        u.airman.rank.toLowerCase().includes(searchLower) ||
-                        u.cleanBd.includes(searchLower);
-    return matchFlt && matchSearch;
   });
 
   const [selectedUser, setSelectedUser] = useState<typeof mergedUsers[0] | null>(null);
@@ -127,7 +114,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
     const existingIdx = updatedDetailedUsers.findIndex(d => d.bdNo.toLowerCase() === selectedUser.cleanBd);
     
     const newDetail: DetailedUserLogin = {
-      id: selectedUser.detailed?.id || `detail-${selectedUser.cleanBd}-${Date.now()}`,
+      id: selectedUser.detailed?.id || \`detail-\${selectedUser.cleanBd}-\${Date.now()}\`,
       airmanId: selectedUser.airman.id,
       bdNo: selectedUser.cleanBd,
       rank: selectedUser.airman.rank,
@@ -175,7 +162,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
       updatedDetailedUsers[existingIdx].adminPass = addAdminPass;
     } else {
       updatedDetailedUsers.push({
-        id: `detail-${addAdminBd}-${Date.now()}`,
+        id: \`detail-\${addAdminBd}-\${Date.now()}\`,
         airmanId: userSource.airman.id,
         bdNo: addAdminBd,
         rank: userSource.airman.rank,
@@ -196,7 +183,6 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
     setDetailedUsers(updatedDetailedUsers);
     setIsAddAdminMode(false);
     setAddAdminBd('');
-    setAddAdminPass('');
     setErrorMsg('');
   };
 
@@ -227,7 +213,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                 {selectedUser 
-                  ? `BD/${selectedUser.cleanBd} - ${selectedUser.airman.rank} ${selectedUser.airman.name}` 
+                  ? \`BD/\${selectedUser.cleanBd} - \${selectedUser.airman.rank} \${selectedUser.airman.name}\` 
                   : isAddAdminMode 
                   ? 'Promote a single user to Admin' 
                   : 'Manage roles, passwords, and access for all nominal airmen'}
@@ -247,50 +233,23 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
           <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center">
             <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl space-y-6">
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select User</label>
-                
-                {/* Search & Filter */}
-                <div className="flex space-x-2">
-                  <select 
-                     value={addAdminFlight} 
-                     onChange={e => { setAddAdminFlight(e.target.value); setAddAdminBd(''); setErrorMsg(''); }}
-                     className="w-1/3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none text-xs font-bold text-slate-700 dark:text-slate-300 focus:border-emerald-500"
-                  >
-                     <option value="ALL">All Flt</option>
-                     {flightsForFilter.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <div className="relative w-2/3">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                     <input 
-                        type="text" 
-                        placeholder="Search name..."
-                        value={addAdminSearch}
-                        onChange={e => { setAddAdminSearch(e.target.value); setAddAdminBd(''); setErrorMsg(''); }}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-xs font-bold text-slate-700 dark:text-slate-300 focus:border-emerald-500"
-                     />
-                  </div>
-                </div>
-
-                {/* List Box */}
-                <div className="h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 p-2 space-y-1">
-                  {displayedCandidates.length === 0 ? (
-                    <div className="text-center text-slate-400 text-sm py-4">No users found</div>
-                  ) : (
-                    displayedCandidates.map(u => (
-                      <button
-                        key={u.cleanBd}
-                        onClick={() => { setAddAdminBd(u.cleanBd); setErrorMsg(''); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition-colors ${addAdminBd === u.cleanBd ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-                      >
-                        {u.airman.rank} {u.airman.name}
-                      </button>
-                    ))
-                  )}
-                </div>
+                <select
+                  value={addAdminBd}
+                  onChange={(e) => { setAddAdminBd(e.target.value); setErrorMsg(''); }}
+                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 font-bold text-slate-900 dark:text-white"
+                >
+                  <option value="" disabled>-- Choose a user --</option>
+                  {mergedUsers.filter(u => u.role === 'USER' && !u.isDefaultOwner).map(u => (
+                    <option key={u.cleanBd} value={u.cleanBd}>
+                      BD/{u.cleanBd} - {u.airman.rank} {u.airman.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin Passcode</label>
                 <input
                   type="text"
@@ -317,7 +276,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                 </button>
                 <button
                   onClick={handleAddAdminSubmit}
-                  disabled={!addAdminBd || !addAdminPass.trim()}
+                  disabled={!addAdminBd || !addAdminPass}
                   className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold transition-colors shadow-sm"
                 >
                   Promote to Admin
@@ -352,20 +311,20 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                   <button
                     onClick={handleDemote}
                     disabled={selectedUser.isDefaultOwner}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'USER' ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} ${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={\`flex-1 py-3 px-4 rounded-xl font-bold transition-all border \${editRole === 'USER' ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} \${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}\`}
                   >
                     Normal User
                   </button>
                   <button
                     onClick={() => handlePromote('ADMIN')}
                     disabled={selectedUser.isDefaultOwner}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'ADMIN' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} ${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={\`flex-1 py-3 px-4 rounded-xl font-bold transition-all border \${editRole === 'ADMIN' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} \${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}\`}
                   >
                     Promote to Admin
                   </button>
                   <button
                     onClick={() => handlePromote('SUPER_ADMIN')}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'SUPER_ADMIN' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                    className={\`flex-1 py-3 px-4 rounded-xl font-bold transition-all border \${editRole === 'SUPER_ADMIN' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}\`}
                   >
                     {selectedUser.isDefaultOwner ? 'System Owner' : 'Super Admin'}
                   </button>
@@ -459,25 +418,25 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-auto overflow-x-auto hide-scrollbar">
                   <button 
                     onClick={() => setRoleFilter('ALL')}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    className={\`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap \${roleFilter === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}\`}
                   >
                     All Users
                   </button>
                   <button 
                     onClick={() => setRoleFilter('USER')}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'USER' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    className={\`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap \${roleFilter === 'USER' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}\`}
                   >
                     Normal
                   </button>
                   <button 
                     onClick={() => setRoleFilter('ADMIN')}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'ADMIN' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    className={\`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap \${roleFilter === 'ADMIN' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}\`}
                   >
                     Admin
                   </button>
                   <button 
                     onClick={() => setRoleFilter('SUPER_ADMIN')}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'SUPER_ADMIN' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    className={\`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap \${roleFilter === 'SUPER_ADMIN' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}\`}
                   >
                     Super Admin
                   </button>
@@ -487,14 +446,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
               {/* Add Single Admin Button */}
               {isOwner && (
                 <button
-                  onClick={() => {
-                    setIsAddAdminMode(true);
-                    setAddAdminBd('');
-                    setAddAdminPass('');
-                    setAddAdminFlight('ALL');
-                    setAddAdminSearch('');
-                    setErrorMsg('');
-                  }}
+                  onClick={() => setIsAddAdminMode(true)}
                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap"
                 >
                   + Add Admin
@@ -527,7 +479,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                         onClick={() => {
                           if (isOwner) openProfile(user);
                         }}
-                        className={`transition-colors ${isOwner ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}`}
+                        className={\`transition-colors \${isOwner ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}\`}
                       >
                         <td className="px-4 py-3 font-mono text-slate-500">{user.serNo}</td>
                         <td className="px-4 py-3 font-mono font-black text-slate-900 dark:text-white">
@@ -540,22 +492,22 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                         
                         {/* ROLE */}
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                          <span className={\`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider \${
                             user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
                             user.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
                             'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                          }`}>
+                          }\`}>
                             {user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.role === 'ADMIN' ? 'Admin' : 'Normal User'}
                           </span>
                         </td>
 
                         {/* STATUS */}
                         <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            <span className={\`px-2 py-0.5 rounded-full text-[10px] font-black uppercase \${
                               user.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' :
                               user.status === 'SUSPENDED' ? 'text-amber-600 dark:text-amber-400' :
                               'text-rose-600 dark:text-rose-400'
-                            }`}>
+                            }\`}>
                               {user.status}
                             </span>
                         </td>
@@ -571,3 +523,6 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
     </div>
   );
 };
+`
+
+fs.writeFileSync('src/components/UserLoginDetailModal.tsx', code);

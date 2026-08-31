@@ -717,6 +717,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
       {/* Flight Duty Ratio Configurator Modal */}
       {showRatioModal && (
         <FlightDutyRatioModal
+          airmen={airmen}
           date={selectedDate}
           onClose={() => setShowRatioModal(false)}
           onRatiosUpdated={() => setRatioRefreshTrigger((prev) => prev + 1)}

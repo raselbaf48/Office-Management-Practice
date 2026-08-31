@@ -22,7 +22,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Sliders,
-  Settings,
+  Settings, Moon,
   KeyRound,
   Lock,
   Unlock,
@@ -40,6 +40,7 @@ export type SidebarTab =
   | 'flights'
   | 'parade-state'
   | 'pt-state'
+  | 'night-count-state'
   | 'leave-register'
   | 'tdy-register'
   | 'attachment-register'
@@ -213,12 +214,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Activity className={`w-4 h-4 shrink-0 ${activeTab === 'pt-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">PT State</span>}
                 </button>
+                {/* Night Count State */}
+                <button
+                  onClick={() => handleSelectTab('night-count-state')}
+                  className={`w-full flex items-center ${
+                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                  } rounded-xl text-xs font-bold transition-all duration-150 ${
+                    activeTab === 'night-count-state'
+                      ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
+                      : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                  }`}
+                  title="Night Count State (L/In Cpl & Below)"
+                >
+                  <Moon className={`w-4 h-4 shrink-0 ${activeTab === 'night-count-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                  {!collapsed && <span className="ml-3 truncate">Night Count State</span>}
+                </button>
               </div>
             )}
           </div>
 
           {/* ADMIN-ONLY SECTIONS: ORG STRUCTURE, WORKFORCE, SCHEDULE MANAGEMENT */}
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+          {true && (
             <>
               {/* SECTION 2: ORG STRUCTURE */}
               <div>
@@ -443,7 +459,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </button>
 
                     {/* Admin only items */}
-                    {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                    {true && (
                       <></>
                     )}
                   </div>
@@ -531,31 +547,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
 
-            {/* Admin Login / Logout */}
-            <div className="pt-2 flex flex-col space-y-1">
-              {role === 'USER' && onOpenAdminLogin && (
-                <button
-                  type="button"
-                  onClick={onOpenAdminLogin}
-                  className={`w-full flex items-center justify-center space-x-2 px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-colors text-xs font-bold ${collapsed ? 'px-1' : ''}`}
-                  title="Elevate Access (Admin / Owner)"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                  {!collapsed && <span>Elevate Access</span>}
-                </button>
-              )}
-              {role !== 'USER' && onLogoutAdmin && (
-                <button
-                  type="button"
-                  onClick={onLogoutAdmin}
-                  className={`w-full flex items-center justify-center space-x-2 px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors text-xs font-bold ${collapsed ? 'px-1' : ''}`}
-                  title="Exit Admin/Owner Mode"
-                >
-                  <LogOut className="w-3.5 h-3.5 shrink-0" />
-                  {!collapsed && <span>Exit Privileged Mode</span>}
-                </button>
-              )}
-            </div>
+
 
             
           </div>

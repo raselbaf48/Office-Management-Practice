@@ -250,11 +250,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
     if (pList.length > 0) {
       pList.forEach((item) => {
-        const { dutyCode, statusCategory, notes } = item;
+        const { dutyCode, statusCategory, notes, idaShift } = item;
         const codeUpper = (dutyCode || '').toUpperCase();
         const notesLower = (notes || '').toLowerCase();
+        
+        const isPtIdacA = documentType === 'PT' && codeUpper === 'IDAC' && idaShift === 'Morning';
 
-        if (codeUpper === 'ON_PARADE' || statusCategory === 'PARADE') {
+        if (codeUpper === 'ON_PARADE' || statusCategory === 'PARADE' || isPtIdacA) {
           // Available on Parade / PT
         } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
           leaveCount++;
@@ -372,9 +374,21 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       const { airman, dutyCode, statusCategory, idaShift, notes } = item;
       const codeUpper = (dutyCode || '').toUpperCase();
       const notesLower = (notes || '').toLowerCase();
+      
+      const isPtIdacA = documentType === 'PT' && codeUpper === 'IDAC' && idaShift === 'Morning';
 
-      if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE') {
+      if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE' || isPtIdacA) {
         onPtList.push({ airman, note: '' });
+      } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
+        leaveList.push({ airman, note: '' });
+      } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
+        essnList.push({ airman, note: 'ESSN' });
+      } else if (['CMH', 'HOSPITAL'].includes(codeUpper) || notesLower.includes('cmh')) {
+        cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
+      } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
+        sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
+      } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
+        bakeBiteList.push({ airman, note: 'Bake & Bite' });
       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
         const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
         dutyOffList.push({ airman, note: offName });

@@ -1133,6 +1133,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       {/* Flight Duty Ratio Modal */}
       {showRatioModal && (
         <FlightDutyRatioModal
+          airmen={airmen}
           isOpen={showRatioModal}
           onClose={() => setShowRatioModal(false)}
           selectedDate={fromDate}

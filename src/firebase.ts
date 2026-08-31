@@ -7,6 +7,21 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 
+function removeUndefinedValues(obj: any): any {
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedValues);
+  }
+  const result: any = {};
+  for (const key of Object.keys(obj)) {
+    if (obj[key] !== undefined) {
+      result[key] = removeUndefinedValues(obj[key]);
+    }
+  }
+  return result;
+}
+
 export async function saveDbToFirebase(dbData: any) {
   try {
     const extraSettings: Record<string, string> = {};
@@ -22,10 +37,12 @@ export async function saveDbToFirebase(dbData: any) {
       }
     }
     
-    await setDoc(doc(db, 'baf_155_uasu_v2_db', 'main'), {
+    const cleanData = removeUndefinedValues({
       ...dbData,
       extraSettings
     });
+
+    await setDoc(doc(db, 'baf_155_uasu_v2_db', 'main'), cleanData);
     return true;
   } catch (error) {
     console.error('Error saving to Firebase:', error);

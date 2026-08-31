@@ -46,7 +46,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   const [settingsTab, setSettingsTab] = useState<'Overall' | 'Mechanics' | 'Avionics' | 'GCS' | null>(null);
 
   const daysArray = Array.from({ length: 31 }, (_, i) => i + 1);
-  const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS'];
+  const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
 
   // Flight name short codes
   const flightShortMap: Record<FlightName, string> = {
@@ -144,7 +144,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   // Grand totals calculation
   const totalSlotsOverall = matrix.reduce((sum, table) => {
     if (selectedFlightFilter === 'Overall') return sum + (table.totalRequiredMonth || 0);
-    return sum + (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS'] || 0);
+    return sum + (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS' | 'Admin'] || 0);
   }, 0);
 
   const flightTotalsOverall: Record<FlightName, number> = {
@@ -376,7 +376,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                       Month Total: <strong className="font-mono">
                         {selectedFlightFilter === 'Overall' 
                           ? (table.totalRequiredMonth || 0) 
-                          : (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS'] || 0)}
+                          : (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS' | 'Admin'] || 0)}
                       </strong>
                     </span>
                   </div>

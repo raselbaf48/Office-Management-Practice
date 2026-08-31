@@ -904,14 +904,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                 <span>Assign Duty Range</span>
               </button>
 
-              <button
-                onClick={handleClearDatabase}
-                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all active:scale-95"
-                title="Erase all duty records in database"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                <span>Erase Duty DB</span>
-              </button>
+              
             </div>
           )}
         </div>
@@ -2003,6 +1996,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
       {/* Flight Duty Ratio Configurator Modal */}
       {showRatioModal && (
         <FlightDutyRatioModal
+          airmen={airmen}
           date={bulkFromDate || `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`}
           onClose={() => setShowRatioModal(false)}
           onRatiosUpdated={() => setRatioRefreshTrigger((prev) => prev + 1)}

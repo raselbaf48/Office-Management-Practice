@@ -94,6 +94,7 @@ function getYesterdayDateStr(dateStr: string): string {
 export class LocalDatabaseEngine {
   private db: LocalStorageDB;
   private isFirebaseSyncing: boolean = false;
+  private saveTimeout: any = null;
 
   constructor() {
     this.db = this.loadInitialLocalState();
@@ -171,22 +172,30 @@ export class LocalDatabaseEngine {
    */
   private async saveToFirebase(dbToSave: LocalStorageDB): Promise<void> {
     if (typeof window === 'undefined') return;
-    try {
-      const success = await saveDbToFirebase({
-        airmen: dbToSave.airmen,
-        assignments: dbToSave.assignments,
-        adminPasscode: dbToSave.adminPasscode,
-        activityHistory: dbToSave.activityHistory,
-        lastUpdated: dbToSave.lastUpdated,
-      });
-      if (success) {
-        firebaseConnected = true;
-        firebaseLastSyncTime = new Date().toLocaleTimeString();
-        broadcastSyncState();
-      }
-    } catch {
-      // Non-critical fallback
+    
+    // Debounce to prevent multiple rapid writes and quota exhaustion
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
     }
+    
+    this.saveTimeout = setTimeout(async () => {
+      try {
+        const success = await saveDbToFirebase({
+          airmen: dbToSave.airmen,
+          assignments: dbToSave.assignments,
+          adminPasscode: dbToSave.adminPasscode,
+          activityHistory: dbToSave.activityHistory,
+          lastUpdated: dbToSave.lastUpdated,
+        });
+        if (success) {
+          firebaseConnected = true;
+          firebaseLastSyncTime = new Date().toLocaleTimeString();
+          broadcastSyncState();
+        }
+      } catch (e) {
+        // console.error('Firebase save error in background', e);
+      }
+    }, 2000);
   }
 
   private loadInitialLocalState(): LocalStorageDB {
@@ -271,7 +280,7 @@ export class LocalDatabaseEngine {
     };
     this.db.activityHistory.unshift(item);
     if (this.db.activityHistory.length > 100) {
-      this.db.activityHistory = this.db.activityHistory.slice(0, 100);
+      // this.db.activityHistory = this.db.activityHistory.slice(0, 100);
     }
   }
 
@@ -950,6 +959,10 @@ export class LocalDatabaseEngine {
           dutyName = 'Absent';
           statusCategory = 'ABSENT';
         }
+        else if (codeStr === 'OTHERS') {
+          dutyName = ass.notes || 'Other Disposal';
+          statusCategory = 'OTHERS';
+        }
 
         const safeNotes = (ass.notes || '').toLowerCase().includes('imported') ? '' : (ass.notes || '');
 
@@ -1491,7 +1504,7 @@ export class LocalDatabaseEngine {
 
     this.db.importHistory.unshift(newBatch);
     if (this.db.importHistory.length > 50) {
-      this.db.importHistory = this.db.importHistory.slice(0, 50);
+      // this.db.importHistory = this.db.importHistory.slice(0, 50);
     }
 
     this.recordActivity({

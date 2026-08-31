@@ -233,10 +233,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const sections = [
     { id: 'appearance', label: 'Theme & Appearance', icon: <Palette className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
-    { id: 'logo', label: 'Unit Crest / Logo', icon: <ImageIcon className="w-5 h-5" />, color: 'text-rose-500 bg-rose-100 dark:bg-rose-950 dark:text-rose-400' },
+    ...(role === 'SUPER_ADMIN' ? [{ id: 'logo', label: 'Unit Crest / Logo', icon: <ImageIcon className="w-5 h-5" />, color: 'text-rose-500 bg-rose-100 dark:bg-rose-950 dark:text-rose-400' }] : []),
     ...(role === 'SUPER_ADMIN' ? [{ id: 'users', label: 'User Management', icon: <ShieldCheck className="w-5 h-5" />, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' }] : []),
     { id: 'security', label: 'Security & Passcode', icon: <Lock className="w-5 h-5" />, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950 dark:text-amber-400' },
-    { id: 'database', label: 'Database Backup', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' },
+    ...(role === 'SUPER_ADMIN' ? [{ id: 'database', label: 'Database Backup', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' }] : []),
     ...(role === 'SUPER_ADMIN' ? [{ id: 'history', label: 'Login History', icon: <History className="w-5 h-5" />, color: 'text-sky-500 bg-sky-100 dark:bg-sky-950 dark:text-sky-400' }] : []),
   ];
 

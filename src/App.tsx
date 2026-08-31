@@ -8,6 +8,7 @@ import { Sidebar, SidebarTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { DashboardParadeState } from './components/DashboardParadeState';
 import { ParadeStateFormattedView } from './components/ParadeStateFormattedView';
+import { NightCountStateView } from './components/NightCountStateView';
 import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
 import { LeaveRegisterView } from './components/LeaveRegisterView';
@@ -97,15 +98,7 @@ export default function App() {
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     sessionStorage.setItem('baf_user_role', newRole);
-    if (
-      newRole === 'USER' &&
-      activeTab !== 'overview' &&
-      activeTab !== 'parade-state' &&
-      activeTab !== 'pt-state' &&
-      activeTab !== 'ida-center'
-    ) {
-      setActiveTab('overview');
-    }
+    
   };
 
   const handleUserLogout = () => {
@@ -114,19 +107,7 @@ export default function App() {
     handleRoleChange('USER');
   };
 
-  // Restrict access for non-admin viewers: allow Dashboard, Parade State, PT State, and IDA Center Duty
-  useEffect(() => {
-    if (
-      role === 'USER' &&
-      activeTab !== 'overview' &&
-      activeTab !== 'parade-state' &&
-      activeTab !== 'pt-state' &&
-      activeTab !== 'ida-center' &&
-      activeTab !== 'duty-roster'
-    ) {
-      setActiveTab('overview');
-    }
-  }, [role, activeTab]);
+  
 
   const handleManualDarkModeToggle = (dark: boolean) => {
     setThemePreference(dark ? 'dark' : 'light');
@@ -381,6 +362,8 @@ export default function App() {
           role={role}
           userSession={userSession}
                               onLogoutUser={handleUserLogout}
+          onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
+          onLogoutAdmin={() => handleRoleChange('USER')}
         />
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
@@ -427,6 +410,16 @@ export default function App() {
             />
           )}
 
+          
+          {activeTab === 'night-count-state' && (
+            <NightCountStateView
+              role={role}
+              airmen={airmen}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+            />
+          )}
           {activeTab === 'nominal' && (
             <NominalRoll
               airmen={airmen}
@@ -596,6 +589,7 @@ export default function App() {
       {/* System Settings Modal (Theme, Passcode, Import History, Backup) */}
       <AdminPasscodeModal
         isOpen={isAdminLoginModalOpen}
+        airmen={airmen}
         onClose={() => setIsAdminLoginModalOpen(false)}
         onSuccess={(newRole) => {
           handleRoleChange(newRole);
