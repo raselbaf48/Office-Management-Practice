@@ -303,6 +303,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
   // Quick Preset Handlers (Calculated relative to selected fromDate)
   const handleSetPreset = (type: 'today' | '7days' | '15days' | 'month') => {
+    setActivePreset(type);
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -1029,7 +1030,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <span>155 UASU BAF • {isPtDocument ? 'Daily PT State' : 'Daily Parade State'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
-            {isPtDocument ? 'Daily PT State' : 'Parade State Document'}
+            {isPtDocument ? 'PT State' : 'Parade State'}
           </h1>
         </div>
 
@@ -1038,18 +1039,39 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           {isPtDocument ? (
             /* PT STATE: SINGLE DATE + FLIGHT FILTER */
             <div className="flex items-center space-x-2">
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
-                <span className="text-slate-500 font-semibold">Date:</span>
-                <DateNavigator
-                  
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setToDate(e.target.value);
-                    setSelectedDate(e.target.value);
-                  }}
-                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-                />
+                            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                <button
+                  onClick={() => handleSetPreset('today')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    activePreset === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => handleSetPreset('7days')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  7 Days
+                </button>
+                <button
+                  onClick={() => handleSetPreset('15days')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  15 Days
+                </button>
+                <button
+                  onClick={() => handleSetPreset('month')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Month
+                </button>
               </div>
 
               {/* Flight Selector */}
@@ -1116,7 +1138,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 <DateNavigator
                   
                   value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
+                  onChange={(e) => { setToDate(e.target.value); setActivePreset('custom'); }}
                   className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
                 />
               </div>
@@ -1249,7 +1271,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             </div>
 
             <div className="overflow-x-auto my-3">
-              <table className="w-full text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
+              <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
                 <thead>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
                     <th className="border border-slate-800 p-1.5" rowSpan={2}>Date</th>
@@ -1573,7 +1595,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               <div className="flex flex-wrap items-start justify-between gap-6">
                 {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
                 <div className="min-w-[240px] flex-shrink-0">
-                  <h3 className="font-bold underline text-slate-900 mb-1.5 uppercase tracking-wide">
+                  <h3 className="font-bold underline text-slate-900 mb-1.5 capitalize tracking-wide">
                     {isPtDocument ? 'On PT' : 'On Parade'}
                   </h3>
 
@@ -1622,35 +1644,35 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {leaveList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Leave</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Leave</h3>
                           {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
                         </div>
                       )}
 
                       {dutyOnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Duty On</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty On</h3>
                           {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
                         </div>
                       )}
 
                       {!isPtDocument && dutyOffList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Duty Off</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty Off</h3>
                           {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
                         </div>
                       )}
 
                       {bakeBiteList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Bake & Bite</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Bake & Bite</h3>
                           {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
                         </div>
                       )}
 
                       {essnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
                             ESSN
                           </h3>
                           {renderDisposalAirmenList(essnList, 'ESSN', 'ESSN')}
@@ -1664,7 +1686,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {cmhList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
                             CMH
                           </h3>
                           {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
@@ -1673,21 +1695,21 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
                       {sickReportList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Sick Report</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Sick Report</h3>
                           {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
                         </div>
                       )}
 
                       {tdyList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Det/Tdy</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Det/Tdy</h3>
                           {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
                         </div>
                       )}
 
                       {receptionList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Reception</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Reception</h3>
                           {renderDisposalAirmenList(receptionList, 'RECEPTION', 'Reception')}
                         </div>
                       )}
@@ -1701,35 +1723,35 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
                       {adminOrderList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Admin Order</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Admin Order</h3>
                           {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
                         </div>
                       )}
 
                       {classTrgList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Class / Trg</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Class / Trg</h3>
                           {renderDisposalAirmenList(classTrgList, 'CLASS_TRG', 'Class / TRG')}
                         </div>
                       )}
 
                       {drillCatCList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Drill Cat-C</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Drill Cat-C</h3>
                           {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
                         </div>
                       )}
 
                       {gamesList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">G/H & Games</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">G/H & Games</h3>
                           {renderDisposalAirmenList(gamesList, 'GAMES', 'G/H & Games')}
                         </div>
                       )}
 
                       {absentList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Absent</h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Absent</h3>
                           {renderDisposalAirmenList(absentList, 'ABSENT', 'Absent')}
                         </div>
                       )}
@@ -1739,7 +1761,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         if (!airmenList || airmenList.length === 0) return null;
                         return (
                           <div key={catName}>
-                            <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
+                            <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
                               {catName}
                             </h3>
                             {renderDisposalAirmenList(airmenList, 'OTHERS', catName)}

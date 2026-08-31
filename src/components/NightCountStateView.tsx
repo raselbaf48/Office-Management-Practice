@@ -175,6 +175,27 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   }, [showAddDisposalModal, disposalFromDate]);
 
   // Format Date: e.g. "14 Aug 26"
+  const getPdfTitle = () => {
+    const formattedDate = formatDateShort(selectedDate);
+    return `Night Count State - 155 UASU BAF (${formattedDate})`;
+  };
+
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = getPdfTitle();
+    
+    const handleBeforePrint = () => {
+      document.title = getPdfTitle();
+    };
+    
+    window.addEventListener('beforeprint', handleBeforePrint);
+    
+    return () => {
+      document.title = originalTitle;
+      window.removeEventListener('beforeprint', handleBeforePrint);
+    };
+  }, [selectedDate]);
+
   const formatDateShort = (dStr: string) => {
     if (!dStr) return '';
     const parts = dStr.split('-');
@@ -568,7 +589,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   };
 
   const handleDownloadDocx = () => {
-    window.print();
+    document.title = getPdfTitle(); window.print();
   };
   // Compute Flight Stats for Single-Day Summary Matrix
   const getFlightStats = (fl: FlightName | 'Overall') => {
@@ -1047,32 +1068,32 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             
           <div className="overflow-x-auto border border-black mb-8">
-            <table className="w-full text-center border-collapse text-[11px] text-black table-fixed">
+            <table className="w-full min-w-[700px] print:min-w-0 text-center border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-bottom font-bold w-[120px]">Sqn/Unit</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
-                  <th className="p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
+                  <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
+                  <th className="p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
                 </tr>
               </thead>
               <tbody>
@@ -1154,7 +1175,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
             <div
-              className="hidden flex justify-between items-end pt-1 text-black text-xs"
+              className="flex justify-between items-end pt-1 text-black text-xs min-w-[700px] print:min-w-0"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
               {/* LEFT SIGNATURE BLOCK (Prepared By) */}
@@ -1202,32 +1223,32 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             {/* SUMMARY MATRIX TABLE: EXACT SINGLE-ROW FORMAT FOR SELECTED FLIGHT / OVERALL */}
             
           <div className="overflow-x-auto border border-black mb-8">
-            <table className="w-full text-center border-collapse text-[11px] text-black table-fixed">
+            <table className="w-full min-w-[700px] print:min-w-0 text-center border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-bottom font-bold w-[120px]">Sqn/Unit</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
-                  <th className="p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
+                  <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
+                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
+                  <th className="p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
                 </tr>
               </thead>
               <tbody>
@@ -1314,7 +1335,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               className="mt-2 pt-1 text-[11px]"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
-              <div className="flex flex-wrap items-start justify-between gap-6">
+              <div className="flex flex-wrap items-start justify-between gap-6 min-w-[700px] print:min-w-0">
                 {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
                 <div className="min-w-[240px] flex-shrink-0">
                   <h3 className="font-bold underline text-black mb-1.5">
@@ -1501,7 +1522,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             {/* OFFICIAL SIGNATURE FOOTER */}
             <div
-              className="hidden flex justify-between items-end pt-1 text-black text-xs"
+              className="flex justify-between items-end pt-1 text-black text-xs min-w-[700px] print:min-w-0"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
               {/* LEFT SIGNATURE BLOCK (Prepared By) */}

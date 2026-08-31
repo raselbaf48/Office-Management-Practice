@@ -1,14 +1,12 @@
 import os
-import re
 
 file_path = 'src/components/Sidebar.tsx'
 with open(file_path, 'r') as f:
-    code = f.read()
+    content = f.read()
 
-# Remove {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-code = code.replace("{(role === 'ADMIN' || role === 'SUPER_ADMIN') && (", "{true && (")
+content = content.replace("title=\"Daily Parade State (Official Format)\"", "title=\"Daily Parade State\"")
+content = content.replace("title=\"Daily PT State (Physical Training Report)\"", "title=\"Daily PT State\"")
 
 with open(file_path, 'w') as f:
-    f.write(code)
-
-print("Sidebar restrictions removed")
+    f.write(content)
+print("Sidebar fixed")

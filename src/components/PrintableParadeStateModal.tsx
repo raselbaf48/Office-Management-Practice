@@ -612,7 +612,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                 </div>
               ) : (
                 <div className="overflow-x-auto my-3">
-                  <table className="w-full text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
+                  <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
                     <thead>
                       <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
                         <th className="border border-slate-800 p-1.5" rowSpan={2}>Date</th>
@@ -727,7 +727,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                   <div className="w-full" style={{ height: '0.6in' }} />
 
                   {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
-                  <table className="w-full border-none" style={{ fontFamily: 'Arial, sans-serif' }}>
+                  <table className="w-full min-w-[700px] print:min-w-0 border-none" style={{ fontFamily: 'Arial, sans-serif' }}>
                     <tbody>
                       <tr>
                         <td className="w-1/2 align-top text-left pl-2 border-none">
@@ -1039,7 +1039,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       >
                         {leaveList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Leave</div>
+                            <div className="font-bold underline capitalize mb-1.5 text-[11px]">Leave</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {leaveList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1052,7 +1052,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                         {bakeBiteList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Bake & Bite</div>
+                            <div className="font-bold underline capitalize mb-1.5 text-[11px]">Bake & Bite</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {bakeBiteList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1095,7 +1095,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                         {sickReportList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Sick Report</div>
+                            <div className="font-bold underline capitalize mb-1.5 text-[11px]">Sick Report</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {sickReportList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1140,7 +1140,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       >
                         {dutyOnList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Duty On</div>
+                            <div className="font-bold underline capitalize mb-1.5 text-[11px]">Duty On</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOnList.map((item, idx) => {
                                 const noteText = item.note || 'GD';
@@ -1155,7 +1155,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
                         {documentType !== 'PT' && dutyOffList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Duty Off</div>
+                            <div className="font-bold underline capitalize mb-1.5 text-[11px]">Duty Off</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOffList.map((item, idx) => {
                                 let dNote = item.note || 'GD Off';
