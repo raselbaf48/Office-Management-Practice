@@ -40,7 +40,7 @@ export interface ParsedAirmanRow {
   warnings: string[];
 }
 
-const VALID_RANKS: Rank[] = ['MWO', 'SWO', 'WO', 'SGT', 'CPL', 'LAC', 'AC'];
+const VALID_RANKS: Rank[] = ['MWO', 'SWO', 'WO', 'Sgt', 'Cpl', 'LAC', 'AC-1', 'AC-2'];
 const VALID_FLIGHTS: FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
 
 export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
@@ -66,8 +66,8 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
     const trimmed = raw.trim().toUpperCase();
     const found = VALID_RANKS.find((r) => r.toUpperCase() === trimmed);
     if (found) return { rank: found, valid: true };
-    if (trimmed === 'SERGEANT') return { rank: 'SGT', valid: true };
-    if (trimmed === 'CORPORAL') return { rank: 'CPL', valid: true };
+    if (trimmed === 'SERGEANT') return { rank: 'Sgt', valid: true };
+    if (trimmed === 'CORPORAL') return { rank: 'Cpl', valid: true };
     if (trimmed === 'LEADING AIRMAN') return { rank: 'LAC', valid: true };
     return { rank: 'LAC', valid: false };
   };
@@ -119,7 +119,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
       // Rank validation
       const rankCheck = normalizeRank(row.rank);
       if (!rankCheck.valid) {
-        errors.push(`Invalid rank "${row.rank}". Allowed: MWO, SWO, WO, SGT, CPL, LAC, AC`);
+        errors.push(`Invalid rank "${row.rank}". Allowed: MWO, SWO, WO, Sgt, Cpl, LAC, AC-1, AC-2`);
       }
 
       // Flight validation
@@ -174,7 +174,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
         rawBd = `BD/${rawBd}`;
       }
       const rawTrade = getVal(tradeIdx, 'General Tech');
-      const rawAddress = getVal(addressIdx, "Airmen's Mess");
+      const rawAddress = getVal(addressIdx, "");
       const rawMobile = getVal(mobileIdx, '01');
       const rawFlight = getVal(flightIdx, 'Admin');
       const rawRemarks = getVal(remarksIdx, '');
@@ -275,7 +275,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
   const handleDownloadSample = () => {
     const headers = ['Rank', 'Name', 'BD No', 'Trade', 'Address Block', 'Mobile No', 'Flight Name', 'Remarks'];
     const sampleRows = [
-      ['SGT', 'Sazzad Hossain', 'BD/478546', 'Avionic Tech', "Sgt's Mess Block 05", '01712345678', 'Avionics', 'UAV Operator'],
+      ['Sgt', 'Sazzad Hossain', 'BD/478546', 'Avionic Tech', "Sgt's Mess Block 05", '01712345678', 'Avionics', 'UAV Operator'],
       ['CPL', 'Russel Ahmed', 'BD/489123', 'Mech Tech', "Airmen's Mess Block 08", '01812345678', 'Mechanics', 'Engine Tech'],
       ['LAC', 'Anowar Hossain', 'BD/495678', 'GCST', 'Svc Qtr D-14', '01912345678', 'GCS', 'Shift IC'],
       ['AC', 'Rakib Hasan', 'BD/498901', 'Admin Tech', 'Outside Base: Agrabad', '01612345678', 'Admin', 'Admin Clerk'],
@@ -311,7 +311,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
           name: r.name.trim(),
           bdNo: cleanBd,
           trade: r.trade.trim() || 'General Tech',
-          addressBlock: r.addressBlock.trim() || "Airmen's Mess",
+          addressBlock: r.addressBlock.trim(),
           mobileNo: r.mobileNo.trim() || '01700000000',
           flightName: flightObj.flight,
           remarks: r.remarks.trim() || 'Bulk Imported',

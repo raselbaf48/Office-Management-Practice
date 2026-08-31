@@ -1,4 +1,10 @@
-import { Airman, Rank } from '../types';
+import os
+
+file_path = 'src/utils/seniority.ts'
+with open(file_path, 'r') as f:
+    content = f.read()
+
+new_content = """import { Airman, Rank } from '../types';
 
 export const RANK_SENIORITY: Record<Rank, number> = {
   MWO: 1,
@@ -37,3 +43,9 @@ export function sortAirmenBySeniority(airmen: Airman[]): Airman[] {
     return (a.serNo || 0) - (b.serNo || 0);
   });
 }
+"""
+
+with open(file_path, 'w') as f:
+    f.write(new_content)
+
+print("Seniority fixed")

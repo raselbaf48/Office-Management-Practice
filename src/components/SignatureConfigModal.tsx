@@ -12,7 +12,7 @@ export interface SignatureDetails {
 
 export const DEFAULT_PREPARED_BY: SignatureDetails = {
   name: 'MD NAHID HASAN KHAN',
-  rank: 'SGT',
+  rank: 'Sgt',
   designation: 'UWO',
   unit: '155 UASU BAF',
   signDigitally: false,

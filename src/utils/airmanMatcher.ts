@@ -16,7 +16,8 @@ export function detectRankFromText(rawText: string): string | null {
   if (/\b(?:sgt|sergeant)\b/i.test(lower)) return 'Sgt';
   if (/\b(?:cpl|corporal)\b/i.test(lower)) return 'Cpl';
   if (/\b(?:lac|leading\s*aircraftman|l\s*a\s*c)\b/i.test(lower)) return 'LAC';
-  if (/\b(?:ac|aircraftman|a\s*c)\b/i.test(lower)) return 'AC';
+  if (/\b(?:ac-1|ac 1|ac1)\b/i.test(lower)) return 'AC-1';
+  if (/\b(?:ac-2|ac 2|ac2|ac|aircraftman|a\s*c)\b/i.test(lower)) return 'AC-2';
 
   return null;
 }
@@ -29,7 +30,7 @@ export function cleanAirmanNameFromText(rawText: string): string {
   return rawText
     .replace(/^[0-9]+[.\-)]\s*/, '') // remove leading serial/number e.g. "1. "
     .replace(/\b(?:bd\/?|)(\d{5,7})\b/gi, '') // remove BD numbers
-    .replace(/\b(?:mwo|swo|flt\s*sgt|f\/sgt|wo|sgt|cpl|lac|ac)\b/gi, '') // remove rank acronyms
+    .replace(/\b(?:mwo|swo|flt\s*sgt|f\/sgt|wo|sgt|cpl|lac|ac-1|ac-2|ac1|ac2|ac)\b/gi, '') // remove rank acronyms
     .replace(/\b(?:master\s*warrant\s*officer|senior\s*warrant\s*officer|flight\s*sergeant|warrant\s*officer|sergeant|corporal|leading\s*aircraftman|aircraftman)\b/gi, '')
     .replace(/\b(?:avi|mech|gcs|admin)\s*(?:flt|flight)?\b/gi, '') // remove flight names
     .replace(/\((?:Morning|Afternoon|Night|CL|AL|Leave|Off|GD|BTF|NTF|IDAC|TDY|Bakery|CMH|Airport)\)/gi, '') // remove parenthetical tags
@@ -48,10 +49,11 @@ function normalizeRank(rank: string): string {
   if (r === 'SWO' || r === 'SENIORWARRA') return 'SWO';
   if (r === 'FLTSGT' || r === 'FS' || r === 'FLIGHTSERG') return 'FLT SGT';
   if (r === 'WO' || r === 'WARRANTOFF') return 'WO';
-  if (r === 'SGT' || r === 'SERGEANT') return 'SGT';
-  if (r === 'CPL' || r === 'CORPORAL') return 'CPL';
+  if (r === 'SGT' || r === 'SERGEANT') return 'Sgt';
+  if (r === 'CPL' || r === 'CORPORAL') return 'Cpl';
   if (r === 'LAC' || r === 'LEADINGAIR') return 'LAC';
-  if (r === 'AC' || r === 'AIRCRAFTMA') return 'AC';
+  if (r === 'AC-1' || r === 'AC1') return 'AC-1';
+  if (r === 'AC-2' || r === 'AC2' || r === 'AC' || r === 'AIRCRAFTMA') return 'AC-2';
   return r;
 }
 

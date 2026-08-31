@@ -33,7 +33,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       case 'pt-state':
         return { category: 'PT STATE', title: 'Daily PT State (Physical Training Report)' };
       case 'night-count-state':
-        return { category: 'NIGHT COUNT STATE', title: 'Night Count State (L/In Cpl & Below)' };
+        return { category: 'NIGHT COUNT STATE', title: 'Night Count State (Airmen)' };
       case 'nominal':
         return { category: 'ORG STRUCTURE', title: 'Nominal Roll (Seniority Order)' };
       case 'flights':

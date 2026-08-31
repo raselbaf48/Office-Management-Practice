@@ -86,7 +86,8 @@ export const getRankSeniorityWeight = (rankStr?: string): number => {
   if (upper.includes('SGT') || upper.includes('SERGEANT')) return 4;
   if (upper.includes('CPL') || upper.includes('CORPORAL')) return 5;
   if (upper.includes('LAC')) return 6;
-  if (upper.includes('AC')) return 7;
+  if (upper.includes('AC-1') || upper.includes('AC1')) return 7;
+  if (upper.includes('AC')) return 8;
   return 50;
 };
 

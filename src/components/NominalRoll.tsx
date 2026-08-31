@@ -65,7 +65,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
     'Admin',
   ];
 
-  const ranksList: (Rank | 'All')[] = ['All', 'MWO', 'SWO', 'WO', 'SGT', 'CPL', 'LAC', 'AC'];
+  const ranksList: (Rank | 'All')[] = ['All', 'MWO', 'SWO', 'WO', 'Sgt', 'Cpl', 'LAC', 'AC-1', 'AC-2'];
 
   // Sort airmen strictly by BAF Seniority
   const sortedAirmen = sortAirmenBySeniority(airmen);

@@ -44,7 +44,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const [rightSig, setRightSig] = useState<SignatureDetails>(getSavedAuthorizedBy);
 
   const [leftSigName, setLeftSigName] = useState(initialPrep.name || 'MD NAHID HASAN KHAN');
-  const [leftSigRank, setLeftSigRank] = useState(initialPrep.rank || 'SGT');
+  const [leftSigRank, setLeftSigRank] = useState(initialPrep.rank || 'Sgt');
   const [leftSigDesig, setLeftSigDesig] = useState(initialPrep.designation || 'UWO');
 
   const [rightSigName, setRightSigName] = useState(initialAuth.name || 'MAHIM RAAD SADAT');
@@ -351,7 +351,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const dutyOffList: { airman: Airman; note?: string }[] = [];
   const bakeBiteList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
-  const airFdDutyList: { airman: Airman; note?: string }[] = [];
+  
   const essnList: { airman: Airman; note?: string }[] = [];
   const cmhList: { airman: Airman; note?: string }[] = [];
   const sickReportList: { airman: Airman; note?: string }[] = [];
@@ -836,13 +836,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          ESSN
-                        </div>
+                            ESSN
+                          </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          CMH
-                        </div>
+                            CMH
+                          </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
@@ -993,7 +993,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         }}
                       >
                         <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                          {documentType === 'PT' ? 'ON PT' : 'ON PARADE'}
+                          {documentType === 'PT' ? 'On PT' : 'On Parade'}
                         </div>
                         {onPtList.length > 0 ? (
                           <div className="flex items-start space-x-1 w-full">
@@ -1039,9 +1039,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       >
                         {leaveList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              LEAVE
-                            </div>
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Leave</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {leaveList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1054,9 +1052,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                         {bakeBiteList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              BAKE & BITE
-                            </div>
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Bake & Bite</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {bakeBiteList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1070,8 +1066,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         {essnList.length > 0 && (
                           <div className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              ESSN
-                            </div>
+                            ESSN
+                          </div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {essnList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1085,8 +1081,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         {cmhList.length > 0 && (
                           <div className="mb-3.5">
                             <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              CMH
-                            </div>
+                            CMH
+                          </div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {cmhList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1099,9 +1095,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                         {sickReportList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              SICK REPORT
-                            </div>
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Sick Report</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {sickReportList.map((item, idx) => (
                                 <li key={idx} className="whitespace-nowrap truncate">
@@ -1146,9 +1140,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       >
                         {dutyOnList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              DUTY ON
-                            </div>
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Duty On</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOnList.map((item, idx) => {
                                 const noteText = item.note || 'GD';
@@ -1163,9 +1155,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         )}
                         {documentType !== 'PT' && dutyOffList.length > 0 && (
                           <div className="mb-3.5">
-                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">
-                              DUTY OFF
-                            </div>
+                            <div className="font-bold underline uppercase mb-1.5 text-[11px]">Duty Off</div>
                             <ol className="space-y-0.5 font-normal leading-tight text-[11px]">
                               {dutyOffList.map((item, idx) => {
                                 let dNote = item.note || 'GD Off';

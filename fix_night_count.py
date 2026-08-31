@@ -1,15 +1,35 @@
 import os
-import re
 
-file_path = 'src/components/NightCountStateView.tsx'
-with open(file_path, 'r') as f:
-    code = f.read()
+files = ['src/components/NightCountStateView.tsx', 'src/components/PrintableNightCountModal.tsx']
+for file_path in files:
+    if not os.path.exists(file_path): continue
+    with open(file_path, 'r') as f:
+        code = f.read()
 
-# Change all role restrictions in NightCountStateView to allow USER to edit too
-code = re.sub(r"\(role === 'ADMIN' \|\| role === 'SUPER_ADMIN'\)", "true", code)
-code = re.sub(r"role === 'ADMIN' \|\| role === 'SUPER_ADMIN'", "true", code)
+    # 1. Update Title
+    code = code.replace(
+        "isPtDocument ? 'NIGHT COUNT STATE : L/IN CPL & BELOW' : 'NIGHT COUNT STATE : L/IN CPL & BELOW'",
+        "isPtDocument ? 'NIGHT COUNT STATE : AIRMEN' : 'NIGHT COUNT STATE : AIRMEN'"
+    )
 
-with open(file_path, 'w') as f:
-    f.write(code)
+    # 2. Update Column Width and Rotation for Sqn/Unit
+    code = code.replace(
+        """<th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sqn/Unit</th>""",
+        """<th className="border-r border-black p-2 align-bottom font-bold w-[120px]">Sqn/Unit</th>"""
+    )
+    code = code.replace(
+        """<td className="border-r border-black p-2 font-bold whitespace-nowrap">155 UASU BAF</td>""",
+        """<td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px]">155 UASU BAF</td>"""
+    )
+    
+    # 3. Merge airFdDutyList into dutyOnList
+    # First, let's change airFdDutyList.push to dutyOnList.push
+    code = code.replace(
+        "airFdDutyList.push({ airman, note: 'Air Fd Duty' });",
+        "dutyOnList.push({ airman, note: 'Air Fd Duty' });"
+    )
 
-print("NightCountStateView role restrictions removed")
+    with open(file_path, 'w') as f:
+        f.write(code)
+
+print("Updates applied part 1")

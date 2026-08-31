@@ -1,6 +1,6 @@
 export type FlightName = 'Avionics' | 'Mechanics' | 'GCS' | 'Admin';
 
-export type Rank = 'MWO' | 'SWO' | 'WO' | 'SGT' | 'Sgt' | 'CPL' | 'Cpl' | 'LAC' | 'AC';
+export type Rank = 'MWO' | 'SWO' | 'WO' | 'Sgt' | 'Cpl' | 'LAC' | 'AC-1' | 'AC-2';
 
 export type DutyCategoryCode = 
   | 'GD'           // Base Security Duty

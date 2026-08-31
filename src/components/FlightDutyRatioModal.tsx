@@ -86,7 +86,7 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
       const f = a.flightName;
       if (!FLIGHTS.includes(f)) return;
       
-      const isSgtAndBelow = ['SGT', 'CPL', 'LAC', 'AC'].includes(r);
+      const isSgtAndBelow = ['Sgt', 'Cpl', 'LAC', 'AC-1', 'AC-2'].includes(r);
       const isCplAndBelow = ['CPL', 'LAC', 'AC'].includes(r);
       
       if (isSgtAndBelow) {

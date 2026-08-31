@@ -29,14 +29,14 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
   const [validationError, setValidationError] = useState<string>('');
 
   // Address Selection States: L/In vs L/Out
-  const [livingType, setLivingType] = useState<'L_IN' | 'L_OUT'>(() => {
+  const [livingType, setLivingType] = useState<'L_IN' | 'L_OUT' | null>(() => {
     if (airmanToEdit?.addressBlock) {
       const lower = airmanToEdit.addressBlock.toLowerCase();
-      if (lower.includes('qtr') || lower.includes('quarter') || lower.includes('outside')) {
+      if (lower.includes('qtr') || lower.includes('quarter') || lower.includes('outside') || lower.includes('maizpara')) {
         return 'L_OUT';
       }
     }
-    return 'L_IN';
+    return null;
   });
 
   // L/In specific state
@@ -51,7 +51,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
 
   // L/Out specific states
   const [livingOutType, setLivingOutType] = useState<'QUARTER' | 'OUTSIDE_BASE'>(() => {
-    if (airmanToEdit?.addressBlock && airmanToEdit.addressBlock.toLowerCase().includes('outside')) {
+    if (airmanToEdit?.addressBlock && (airmanToEdit.addressBlock.toLowerCase().includes('outside') || airmanToEdit.addressBlock.toLowerCase().includes('maizpara'))) {
       return 'OUTSIDE_BASE';
     }
     return 'QUARTER';
@@ -69,17 +69,17 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
   });
 
   const [outsideAddress, setOutsideAddress] = useState<string>(() => {
-    if (airmanToEdit?.addressBlock && airmanToEdit.addressBlock.toLowerCase().includes('outside')) {
+    if (airmanToEdit?.addressBlock && (airmanToEdit.addressBlock.toLowerCase().includes('outside') || airmanToEdit.addressBlock.toLowerCase().includes('maizpara'))) {
       return airmanToEdit.addressBlock.replace(/Outside\s*Base[:\s]*/gi, '').trim();
     }
     return '';
   });
 
   const isSgtOrAbove = (r: Rank) => {
-    return ['MWO', 'SWO', 'WO', 'SGT', 'Sgt'].includes(r);
+    return ['MWO', 'SWO', 'WO', 'Sgt'].includes(r);
   };
 
-  const ranksList: Rank[] = ['MWO', 'SWO', 'WO', 'SGT', 'CPL', 'LAC', 'AC'];
+  const ranksList: Rank[] = ['MWO', 'SWO', 'WO', 'Sgt', 'Cpl', 'LAC', 'AC-1', 'AC-2'];
 
   const computeFinalAddress = (): string => {
     if (livingType === 'L_IN') {
@@ -113,6 +113,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
     if (!trade.trim()) return setValidationError('Please enter a Trade');
     if (!mobileNo.trim() || mobileNo.trim() === '01') return setValidationError('Please enter a valid Mobile Number');
     
+    if (!livingType) return setValidationError('Please select Living Status (L/In or L/Out)');
     if (livingType === 'L_IN' && !blockNo.trim()) return setValidationError('Please enter Block No for Live-In address');
     if (livingType === 'L_OUT') {
       if (livingOutType === 'QUARTER' && !svcQtrNo.trim()) return setValidationError('Please enter Service Quarter Number');

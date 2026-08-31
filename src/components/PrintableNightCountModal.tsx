@@ -578,7 +578,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||
@@ -593,7 +593,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const a = item.airman;
     if (!['CPL', 'Cpl', 'LAC', 'AC'].includes(a.rank)) return false;
     const block = (a.addressBlock || '').toLowerCase();
-    if (block.includes('qtr') || block.includes('quarter') || block.includes('outside')) return false;
+    if (block.includes('qtr') || block.includes('quarter') || block.includes('outside') || block.includes('maizpara')) return false;
     return true;
   });
     const pList = fl === 'Overall' ? rawPersonnel : rawPersonnel.filter((p) => p.airman.flightName === fl);
@@ -718,7 +718,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||
@@ -739,7 +739,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
   const drillCatCList: { airman: Airman; note?: string }[] = [];
   const tdyList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
-  const airFdDutyList: { airman: Airman; note?: string }[] = [];
+  
   const adminOrderList: { airman: Airman; note?: string }[] = [];
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const dutyOnList: { airman: Airman; note?: string }[] = [];
@@ -755,7 +755,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||
@@ -799,7 +799,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
       } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
         receptionList.push({ airman, note: 'Reception' });
       } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
-        airFdDutyList.push({ airman, note: 'Air Fd Duty' });
+        dutyOnList.push({ airman, note: 'Air Fd Duty' });
       } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
         adminOrderList.push({ airman, note: 'Admin Order' });
       } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
@@ -999,7 +999,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
                 <h1 className="font-bold tracking-wide text-black underline inline-block text-base uppercase">
-                  {isPtDocument ? 'NIGHT COUNT STATE : L/IN CPL & BELOW' : 'NIGHT COUNT STATE : L/IN CPL & BELOW'}
+                  {isPtDocument ? 'NIGHT COUNT STATE : AIRMEN' : 'NIGHT COUNT STATE : AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-black mt-0.5 underline inline-block text-sm uppercase">
@@ -1016,7 +1016,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
             <table className="w-full text-center border-collapse text-[11px] text-black table-fixed">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-bottom font-bold w-[120px]">Sqn/Unit</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
@@ -1053,7 +1053,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||
@@ -1084,7 +1084,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
 
                   return (
                     <tr className="bg-white">
-                      <td className="border-r border-black p-2 font-bold whitespace-nowrap">155 UASU BAF</td>
+                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px]">155 UASU BAF</td>
                       <td className="border-r border-black p-1">{stats.totalStr || '-'}</td>
                       <td className="border-r border-black p-1">{stats.detTdyCount || '-'}</td>
                       <td className="border-r border-black p-1">{stats.effStr || '-'}</td>
@@ -1153,7 +1153,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
                 <h1 className="font-bold tracking-wide text-black underline inline-block text-base uppercase">
-                  {isPtDocument ? 'NIGHT COUNT STATE : L/IN CPL & BELOW' : 'NIGHT COUNT STATE : L/IN CPL & BELOW'}
+                  {isPtDocument ? 'NIGHT COUNT STATE : AIRMEN' : 'NIGHT COUNT STATE : AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-black mt-0.5 underline inline-block text-sm uppercase">
@@ -1171,7 +1171,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
             <table className="w-full text-center border-collapse text-[11px] text-black table-fixed">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-bottom font-bold w-[120px]">Sqn/Unit</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
                   <th className="border-r border-black p-2 align-bottom font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
@@ -1208,7 +1208,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||
@@ -1239,7 +1239,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
 
                   return (
                     <tr className="bg-white">
-                      <td className="border-r border-black p-2 font-bold whitespace-nowrap">155 UASU BAF</td>
+                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px]">155 UASU BAF</td>
                       <td className="border-r border-black p-1">{stats.totalStr || '-'}</td>
                       <td className="border-r border-black p-1">{stats.detTdyCount || '-'}</td>
                       <td className="border-r border-black p-1">{stats.effStr || '-'}</td>
@@ -1283,8 +1283,8 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
               <div className="flex flex-wrap items-start justify-between gap-6">
                 {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
                 <div className="min-w-[240px] flex-shrink-0">
-                  <h3 className="font-bold underline text-black mb-1.5 uppercase tracking-wide">
-                    {isPtDocument ? 'ON PT' : 'ON PARADE'}
+                  <h3 className="font-bold underline text-black mb-1.5">
+                    {isPtDocument ? 'On PT' : 'On Parade'}
                   </h3>
 
                   {onPtList.length > 0 ? (
@@ -1332,43 +1332,35 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                     <div className="w-48 flex flex-col space-y-3">
                       {leaveList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            LEAVE
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Leave</h3>
                           {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
                         </div>
                       )}
 
                       {dutyOnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            DUTY ON
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Duty On</h3>
                           {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
                         </div>
                       )}
 
                       {!isPtDocument && dutyOffList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            DUTY OFF
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Duty Off</h3>
                           {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
                         </div>
                       )}
 
                       {bakeBiteList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            BAKE & BITE
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Bake & Bite</h3>
                           {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
                         </div>
                       )}
 
                       {essnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
+                          <h3 className="font-bold underline text-black mb-1">
                             ESSN
                           </h3>
                           {renderDisposalAirmenList(essnList, 'ESSN', 'ESSN')}
@@ -1382,7 +1374,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                     <div className="w-48 flex flex-col space-y-3">
                       {cmhList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
+                          <h3 className="font-bold underline text-black mb-1">
                             CMH
                           </h3>
                           {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
@@ -1391,27 +1383,21 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
 
                       {sickReportList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            SICK REPORT
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Sick Report</h3>
                           {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
                         </div>
                       )}
 
                       {tdyList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            ATT/TDY/DETT
-                          </h3>
-                          {renderDisposalAirmenList(tdyList, 'TDY', 'ATT / TDY / DETT')}
+                          <h3 className="font-bold underline text-black mb-1">Det/Tdy</h3>
+                          {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
                         </div>
                       )}
 
                       {receptionList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            RECEPTION
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Reception</h3>
                           {renderDisposalAirmenList(receptionList, 'RECEPTION', 'Reception')}
                         </div>
                       )}
@@ -1419,58 +1405,41 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                   )}
 
                   {/* DISPOSAL COL C */}
-                  {(airFdDutyList.length > 0 || adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                  {(adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
-                      {airFdDutyList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            AIR FD DUTY
-                          </h3>
-                          {renderDisposalAirmenList(airFdDutyList, 'ATT', 'Air Fd Duty')}
-                        </div>
-                      )}
+                      
 
                       {adminOrderList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            ADMIN ORDER
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Admin Order</h3>
                           {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
                         </div>
                       )}
 
                       {classTrgList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            CLASS / TRG
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Class / Trg</h3>
                           {renderDisposalAirmenList(classTrgList, 'CLASS_TRG', 'Class / TRG')}
                         </div>
                       )}
 
                       {drillCatCList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            DRILL CAT-C
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Drill Cat-C</h3>
                           {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
                         </div>
                       )}
 
                       {gamesList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            G/H & GAMES
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">G/H & Games</h3>
                           {renderDisposalAirmenList(gamesList, 'GAMES', 'G/H & Games')}
                         </div>
                       )}
 
                       {absentList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
-                            ABSENT
-                          </h3>
+                          <h3 className="font-bold underline text-black mb-1">Absent</h3>
                           {renderDisposalAirmenList(absentList, 'ABSENT', 'Absent')}
                         </div>
                       )}
@@ -1480,7 +1449,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                         if (!airmenList || airmenList.length === 0) return null;
                         return (
                           <div key={catName}>
-                            <h3 className="font-bold underline text-black mb-1 uppercase tracking-wide">
+                            <h3 className="font-bold underline text-black mb-1">
                               {catName}
                             </h3>
                             {renderDisposalAirmenList(airmenList, 'OTHERS', catName)}
@@ -1757,7 +1726,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     const block = (a.addressBlock || '').toLowerCase();
     const isLOut = block.includes('qtr') || 
                    block.includes('quarter') || 
-                   block.includes('outside') ||
+                   block.includes('outside') || block.includes('maizpara') ||
                    block.includes('l/o') ||
                    block.includes('l/out') ||
                    block.includes('living out') ||

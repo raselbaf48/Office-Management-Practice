@@ -688,7 +688,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         reception: receptionList.map((i) => i.airman),
         dutyOn: dutyOnList,
         dutyOff: dutyOffList,
-        airFdDuty: airFdDutyList.map((i) => i.airman),
+        airFdDuty: [], // Merged into Duty On
         essn: essnList.map((i) => i.airman),
         cmh: cmhList.map((i) => i.airman),
         sickReport: sickReportList.map((i) => i.airman),
@@ -830,7 +830,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const drillCatCList: { airman: Airman; note?: string }[] = [];
   const tdyList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
-  const airFdDutyList: { airman: Airman; note?: string }[] = [];
+  
   const adminOrderList: { airman: Airman; note?: string }[] = [];
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const dutyOnList: { airman: Airman; note?: string }[] = [];
@@ -874,7 +874,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
         receptionList.push({ airman, note: 'Reception' });
       } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
-        airFdDutyList.push({ airman, note: 'Air Fd Duty' });
+        dutyOnList.push({ airman, note: 'Air Fd Duty' });
       } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
         adminOrderList.push({ airman, note: 'Admin Order' });
       } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
@@ -1574,7 +1574,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
                 <div className="min-w-[240px] flex-shrink-0">
                   <h3 className="font-bold underline text-slate-900 mb-1.5 uppercase tracking-wide">
-                    {isPtDocument ? 'ON PT' : 'ON PARADE'}
+                    {isPtDocument ? 'On PT' : 'On Parade'}
                   </h3>
 
                   {onPtList.length > 0 ? (
@@ -1622,36 +1622,28 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {leaveList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            LEAVE
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Leave</h3>
                           {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
                         </div>
                       )}
 
                       {dutyOnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            DUTY ON
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Duty On</h3>
                           {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
                         </div>
                       )}
 
                       {!isPtDocument && dutyOffList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            DUTY OFF
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Duty Off</h3>
                           {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
                         </div>
                       )}
 
                       {bakeBiteList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            BAKE & BITE
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Bake & Bite</h3>
                           {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
                         </div>
                       )}
@@ -1681,27 +1673,21 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
                       {sickReportList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            SICK REPORT
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Sick Report</h3>
                           {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
                         </div>
                       )}
 
                       {tdyList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            ATT/TDY/DETT
-                          </h3>
-                          {renderDisposalAirmenList(tdyList, 'TDY', 'ATT / TDY / DETT')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Det/Tdy</h3>
+                          {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
                         </div>
                       )}
 
                       {receptionList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            RECEPTION
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Reception</h3>
                           {renderDisposalAirmenList(receptionList, 'RECEPTION', 'Reception')}
                         </div>
                       )}
@@ -1709,58 +1695,41 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   )}
 
                   {/* DISPOSAL COL C */}
-                  {(airFdDutyList.length > 0 || adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                  {(adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
-                      {airFdDutyList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            AIR FD DUTY
-                          </h3>
-                          {renderDisposalAirmenList(airFdDutyList, 'ATT', 'Air Fd Duty')}
-                        </div>
-                      )}
+                      
 
                       {adminOrderList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            ADMIN ORDER
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Admin Order</h3>
                           {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
                         </div>
                       )}
 
                       {classTrgList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            CLASS / TRG
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Class / Trg</h3>
                           {renderDisposalAirmenList(classTrgList, 'CLASS_TRG', 'Class / TRG')}
                         </div>
                       )}
 
                       {drillCatCList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            DRILL CAT-C
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Drill Cat-C</h3>
                           {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
                         </div>
                       )}
 
                       {gamesList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            G/H & GAMES
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">G/H & Games</h3>
                           {renderDisposalAirmenList(gamesList, 'GAMES', 'G/H & Games')}
                         </div>
                       )}
 
                       {absentList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">
-                            ABSENT
-                          </h3>
+                          <h3 className="font-bold underline text-slate-900 mb-1 uppercase tracking-wide">Absent</h3>
                           {renderDisposalAirmenList(absentList, 'ABSENT', 'Absent')}
                         </div>
                       )}

@@ -959,7 +959,7 @@ export async function exportParadeStateSingleDocx(
 
   // 2nd Row: 1st Column (Left Officer Sgt Nahid), 2nd & 3rd empty, Last column (Right Officer WO Shahin)
   const leftSigName = params.leftSig?.name || 'MD NAHID HASAN KHAN';
-  const leftSigRank = params.leftSig?.rank || 'SGT';
+  const leftSigRank = params.leftSig?.rank || 'Sgt';
   const leftSigDesig = params.leftSig?.desig || 'UWO';
 
   const rightSigName = params.rightSig?.name || 'MAHIM RAAD SADAT';
@@ -1263,7 +1263,7 @@ export async function exportParadeStateMultiDocx(
   );
 
   const lSigName = leftSig?.name || 'MD NAHID HASAN KHAN';
-  const lSigRank = leftSig?.rank || 'SGT';
+  const lSigRank = leftSig?.rank || 'Sgt';
   const lSigDesig = leftSig?.desig || 'UWO';
 
   const rSigName = rightSig?.name || 'MAHIM RAAD SADAT';
