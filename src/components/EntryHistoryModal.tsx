@@ -44,6 +44,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   const [editToDate, setEditToDate] = useState<string>('');
   const [editNotes, setEditNotes] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState<boolean>(false);
+  const [visibleCount, setVisibleCount] = useState<number>(10);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -157,7 +158,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   };
 
   // Limit strictly to the Last 10 entries as requested
-  const last10Entries = historyList.slice(0, 10);
+  const last10Entries = historyList.slice(0, visibleCount);
 
   const filteredHistory = last10Entries.filter((item) => {
     if (filterType === 'LEAVE' && item.dutyCode !== 'LEAVE') return false;
@@ -187,13 +188,13 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-2">
-                <span>Last Entries (Last 10 Records)</span>
+                <span>Last Entries (Last {visibleCount} Records)</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
-                  {last10Entries.length} of 10
+                  {last10Entries.length} of {historyList.length}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Last 10 assignments showing who was given which duty and exact from-date to to-date range.
+                Showing assignments with exact from-date to to-date ranges.
               </p>
             </div>
           </div>
@@ -493,11 +494,23 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
               );
             })
           )}
+          
+          {visibleCount < historyList.length && (
+            <div className="flex justify-center mt-4 pb-2">
+              <button 
+                onClick={() => setVisibleCount(prev => prev + 10)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-lg transition-colors border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer"
+              >
+                Load earlier history
+              </button>
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 shrink-0">
-          <span>Showing the most recent 10 log entries</span>
+          <span>Showing {Math.min(visibleCount, historyList.length)} of {historyList.length} log entries</span>
           <button
             type="button"
             onClick={onClose}

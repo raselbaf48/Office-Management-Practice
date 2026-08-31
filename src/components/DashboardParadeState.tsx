@@ -250,7 +250,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 font-bold tracking-wider">
               Total Str
             </span>
             <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 transition-colors">
@@ -281,7 +281,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-900/50 hover:border-emerald-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 font-bold tracking-wider">
               On Parade
             </span>
             <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-200 transition-colors">
@@ -312,7 +312,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-amber-200/80 dark:border-amber-900/50 hover:border-amber-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 font-bold tracking-wider">
               On Duty
             </span>
             <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:bg-amber-200 transition-colors">
@@ -343,7 +343,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-indigo-200/80 dark:border-indigo-900/50 hover:border-indigo-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 font-bold tracking-wider">
               Duty Off
             </span>
             <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-200 transition-colors">
@@ -374,7 +374,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-purple-200/80 dark:border-purple-900/50 hover:border-purple-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 font-bold tracking-wider">
               On Leave
             </span>
             <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:bg-purple-200 transition-colors">
@@ -405,7 +405,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-cyan-200/80 dark:border-cyan-900/50 hover:border-cyan-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 font-bold tracking-wider">
               TDY
             </span>
             <div className="w-7 h-7 rounded-lg bg-cyan-100 dark:bg-cyan-950/60 flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:bg-cyan-200 transition-colors">
@@ -436,7 +436,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           className="bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/50 hover:border-rose-500 rounded-xl p-3.5 shadow-xs cursor-pointer hover:shadow-md transition-all group active:scale-[0.98]"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 font-bold tracking-wider">
               Bake N Bite
             </span>
             <div className="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:bg-rose-200 transition-colors">

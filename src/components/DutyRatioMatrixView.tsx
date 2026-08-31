@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { DutyRatioSettingsModal } from './DutyRatioSettingsModal';
+
 import {
   DutyRatioTable,
   getStoredDutyMatrix,
@@ -387,7 +389,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
                         <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700">
-                          Flight
+                          Date
                         </th>
                         {daysArray.map((d) => (
                           <th key={d} className="p-1 min-w-[28px] max-w-[32px] font-mono text-[11px]">
@@ -396,6 +398,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                         ))}
                         <th className="p-2 w-16 min-w-16 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700">
                           Total
+                        </th>
+                        <th className="p-2 w-24 min-w-24 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700">
+                          As Per Ratio
                         </th>
                       </tr>
                     </thead>
@@ -457,6 +462,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                               <td className="p-2 font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700">
                                 {rowSum}
                               </td>
+                              <td className="p-2 text-center font-mono text-slate-700 dark:text-slate-300 border-l border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800/50">
+                                {table.flightTargets?.[flight]?.toFixed(2) || '0.00'}
+                              </td>
                             </tr>
                           );
                         })}
@@ -498,6 +506,27 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                         <td className="p-2 font-mono font-black text-emerald-800 dark:text-emerald-300 bg-slate-200/90 dark:bg-slate-700/90 border-l border-slate-300 dark:border-slate-700 text-xs">
                           {tableTotal}
                         </td>
+                        <td className="border-l border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
+                        </td>
+                      </tr>
+                      {/* Daily Allotment Row */}
+                      <tr className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                        <td className="p-2 text-left font-black sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700">
+                          <span className="uppercase text-[11px] font-black tracking-wider text-slate-800 dark:text-slate-200">
+                            Daily Allotment
+                          </span>
+                        </td>
+                        {daysArray.map((dayNum, dayIdx) => {
+                          const dailySum = flights.reduce((sum, fl) => sum + (table.data[fl]?.[dayIdx] || 0), 0);
+                          return (
+                            <td key={dayNum} className="p-0.5 border border-slate-200 dark:border-slate-700/70 font-mono font-bold text-slate-700 dark:text-slate-300 text-center text-xs">
+                              <span className="inline-block py-1">{dailySum}</span>
+                            </td>
+                          );
+                        })}
+                        <td colSpan={2} className="p-2 font-mono font-black text-slate-800 dark:text-slate-200 border-l border-slate-300 dark:border-slate-700 text-xs text-center bg-slate-100/50 dark:bg-slate-800/50">
+                          {table.totalRequiredMonth || 0}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -509,103 +538,8 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
       
       {/* Duty Targets Settings Modal */}
-            {isSettingsOpen && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden sm:p-6 sm:justify-center sm:items-center animate-fadeIn">
-          <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md bg-slate-50 dark:bg-slate-950 sm:rounded-3xl sm:shadow-2xl flex flex-col overflow-hidden relative">
-            <div className="flex items-center px-4 py-3 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 shrink-0 border-b border-slate-200 dark:border-slate-800">
-              {settingsTab ? (
-                <button 
-                  onClick={() => setSettingsTab(null)} 
-                  className="mr-3 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setIsSettingsOpen(false)} 
-                  className="mr-3 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
-              <h2 className="text-lg font-semibold tracking-wide flex-1 pr-10">
-                {settingsTab ? `${settingsTab} Targets` : 'Duty Targets'}
-              </h2>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              {!settingsTab && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                  {['Overall', 'Mechanics', 'Avionics', 'GCS'].map((tab, idx, arr) => (
-                    <div key={tab} onClick={() => setSettingsTab(tab as any)} className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:bg-slate-100 ${idx !== arr.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}>
-                      <div className="flex items-center gap-4">
-                        <div className="p-2.5 rounded-xl text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400"><Layers className="w-5 h-5" /></div>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{tab} Targets</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {settingsTab && (
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-500 mb-2">
-                    Configure the Monthly Target for <strong>{settingsTab}</strong>. 
-                    {settingsTab === 'Overall' ? ' This updates the grand total in the header.' : ' This updates the target when filtering by this flight.'}
-                  </p>
-                  
-                  {Object.keys(matrix[0]?.data || {}).map(flight => {
-                    if (settingsTab !== 'Overall' && flight !== settingsTab) return null;
-                    return (
-                      <div key={flight} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">{flight}</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {matrix.map((table, tIdx) => (
-                            <div key={table.id}>
-                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                                {table.title}
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={table.targets?.[flight as FlightName] || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  const updated = [...matrix];
-                                  if (!updated[tIdx].targets) updated[tIdx].targets = {} as Record<FlightName, number>;
-                                  updated[tIdx].targets![flight as FlightName] = val;
-                                  setMatrix(updated);
-                                  setIsSaved(false);
-                                }}
-                                className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-slate-900 dark:text-white focus:border-emerald-500 outline-none"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  
-                  <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-                    <button
-                      onClick={() => {
-                        saveDutyMatrix(matrix);
-                        setIsSaved(true);
-                        setTimeout(() => setIsSaved(false), 2500);
-                        setSettingsTab(null);
-                      }}
-                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center space-x-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Save Changes</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {isSettingsOpen && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+        <DutyRatioSettingsModal onClose={() => setIsSettingsOpen(false)} />
       )}
     </div>
   );

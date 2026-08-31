@@ -1,3 +1,4 @@
+import { FlyingWingStateView } from './FlyingWingStateView';
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import {
@@ -42,6 +43,8 @@ import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
 import { getIdacShiftsForDateAndFlight } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { PrintableNightCountModal } from './PrintableNightCountModal';
+import { PrintableFlyingWingModal } from './PrintableFlyingWingModal';
+import { FlgWgHistoryModal } from './FlgWgHistoryModal';
 import {
   SignatureConfigModal,
   getSavedPreparedBy,
@@ -93,6 +96,11 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const [authorizedBy, setAuthorizedBy] = useState<SignatureDetails>(getSavedAuthorizedBy);
 
   // Single Airman Row Quick Edit Popover
+  const [activeTab, setActiveTab] = useState<'155 UASU BAF' | 'Flying Wing'>('155 UASU BAF');
+  const [showFlyingWingAdd, setShowFlyingWingAdd] = useState(false);
+  const [isFlgWgPrintOpen, setIsFlgWgPrintOpen] = useState(false);
+  const [showFlgWgHistory, setShowFlgWgHistory] = useState(false);
+  const [showFlyingWingPrep, setShowFlyingWingPrep] = useState(false);
   const [activeEditCell, setActiveEditCell] = useState<{
     airman: Airman;
     date: string;
@@ -996,13 +1004,44 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             </div>
           </div>
 
+          {/* History Button */}
+          <button
+            onClick={() => {
+              if (activeTab === 'Flying Wing') {
+                setShowFlgWgHistory(true);
+              } else {
+                alert('155 UASU BAF history is loaded by selecting previous dates or using the Multi-Day Export from the Overview tab.');
+              }
+            }}
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
+            title="View History"
+          >
+            <span>History</span>
+          </button>
+
+          {/* Prepared By Button (Flying Wing Only) */}
+          {activeTab === 'Flying Wing' && (
+            <button
+              onClick={() => setShowFlyingWingPrep(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
+              title="Edit Prepared By"
+            >
+              <PenTool className="w-4 h-4" />
+              <span>Prepared by</span>
+            </button>
+          )}
+
           {/* Add Disposal Button (Admin Only) */}
           {true && (
             <button
               onClick={() => {
-                setDisposalScope('ALL');
-                setDisposalDateMode('SINGLE');
-                setShowAddDisposalModal(true);
+                if (activeTab === 'Flying Wing') {
+                  setShowFlyingWingAdd(true);
+                } else {
+                  setDisposalScope('ALL');
+                  setDisposalDateMode('SINGLE');
+                  setShowAddDisposalModal(true);
+                }
               }}
               className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
               title="Add or update personnel disposal"
@@ -1014,8 +1053,14 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
           {/* Official Export Button */}
           <button
-            onClick={() => setIsInternalPrintOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900  hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer"
+            onClick={() => {
+              if (activeTab === 'Flying Wing') {
+                setIsFlgWgPrintOpen(true);
+              } else {
+                setIsInternalPrintOpen(true);
+              }
+            }}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer border border-slate-700"
             title="Download Official Document"
           >
             <Printer className="w-4 h-4" />
@@ -1030,11 +1075,49 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
           </button>
 </div>
       </div>
 
+      
+      {/* TABS FOR NIGHT COUNT */}
+      <div className="flex space-x-2 mb-4 no-print">
+        <button
+          onClick={() => setActiveTab('155 UASU BAF')}
+          className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === '155 UASU BAF' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+        >
+          155 UASU BAF
+        </button>
+        <button
+          onClick={() => setActiveTab('Flying Wing')}
+          className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'Flying Wing' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+        >
+          Flying Wing
+        </button>
+      </div>
+      {activeTab === 'Flying Wing' ? (
+        <div id="official-parade-document" className="bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto">
+          <FlyingWingStateView 
+            isAddModalOpen={showFlyingWingAdd}
+            onCloseAddModal={() => setShowFlyingWingAdd(false)}
+            onOpenAddModal={() => setShowFlyingWingAdd(true)}
+            isPrepModalOpen={showFlyingWingPrep}
+            onClosePrepModal={() => setShowFlyingWingPrep(false)}
+            date={fromDate} 
+            uasuStats={{
+              totalStr: getFlightStats('Overall').totalStr,
+              detTdy: getFlightStats('Overall').detTdyCount,
+              leave: getFlightStats('Overall').leaveCount,
+              edEx: getFlightStats('Overall').sickExCount,
+              cmh: getFlightStats('Overall').hospitalCount,
+              office: getFlightStats('Overall').othersCount,
+              baseAirfield: getFlightStats('Overall').airFdDutyCount,
+              driving: 0
+            }} 
+          />
+        </div>
+      ) : (
+      <>
       {/* OFFICIAL PARADE DOCUMENT SHEET (DISPLAYED ON SCREEN & IN PRINT) */}
       <div
         id="official-parade-document"
@@ -1058,7 +1141,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-black mt-0.5 underline inline-block text-sm uppercase">
-                  155 UASU BAF {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLIGHT)` : ''}
+                  {activeTab} {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLIGHT)` : ''}
                 </h2>
               </div>
               <div className="text-right font-normal text-black pr-1 text-xs mt-1">
@@ -1068,7 +1151,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             
           <div className="overflow-x-auto border border-black mb-8">
-            <table className="w-full min-w-[700px] print:min-w-0 text-center border-collapse text-[11px] text-black table-auto">
+            <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
                   <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
@@ -1139,28 +1222,28 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
                   return (
                     <tr className="bg-white">
-                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px]">155 UASU BAF</td>
-                      <td className="border-r border-black p-1">{stats.totalStr || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.detTdyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.effStr || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.leaveCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.essnCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.classTrgCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.detentionCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.sickExCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.drillCatCCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.hospitalCount || '-'}</td>
-                      <td className="border-r border-black p-1">{ucBoardCount || '-'}</td>
-                      <td className="border-r border-black p-1">{officeDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{aftNiFlgCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.guardDutyCount || stats.airFdDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{offDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.koReceptionCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.bakeBiteCount || '-'}</td>
-                      <td className="border-r border-black p-1">{drivingCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.gamesCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.totalOutPt || '-'}</td>
-                      <td className="border-r border-black p-1 font-bold">{stats.onPtParadeCount || '-'}</td>
+                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px] text-center align-middle">{activeTab}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.totalStr || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.detTdyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.effStr || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.leaveCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.essnCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.classTrgCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.detentionCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.sickExCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.drillCatCCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.hospitalCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{ucBoardCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{officeDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{aftNiFlgCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.guardDutyCount || stats.airFdDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{offDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.koReceptionCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.bakeBiteCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{drivingCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.gamesCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.totalOutPt || '-'}</td>
+                      <td className="border-r border-black p-1 font-bold align-middle text-center">{stats.onPtParadeCount || '-'}</td>
                       <td className="p-1"></td>
                     </tr>
                   );
@@ -1223,7 +1306,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             {/* SUMMARY MATRIX TABLE: EXACT SINGLE-ROW FORMAT FOR SELECTED FLIGHT / OVERALL */}
             
           <div className="overflow-x-auto border border-black mb-8">
-            <table className="w-full min-w-[700px] print:min-w-0 text-center border-collapse text-[11px] text-black table-auto">
+            <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
                   <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
@@ -1294,28 +1377,28 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
                   return (
                     <tr className="bg-white">
-                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px]">155 UASU BAF</td>
-                      <td className="border-r border-black p-1">{stats.totalStr || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.detTdyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.effStr || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.leaveCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.essnCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.classTrgCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.detentionCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.sickExCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.drillCatCCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.hospitalCount || '-'}</td>
-                      <td className="border-r border-black p-1">{ucBoardCount || '-'}</td>
-                      <td className="border-r border-black p-1">{officeDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{aftNiFlgCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.guardDutyCount || stats.airFdDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{offDutyCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.koReceptionCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.bakeBiteCount || '-'}</td>
-                      <td className="border-r border-black p-1">{drivingCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.gamesCount || '-'}</td>
-                      <td className="border-r border-black p-1">{stats.totalOutPt || '-'}</td>
-                      <td className="border-r border-black p-1 font-bold">{stats.onPtParadeCount || '-'}</td>
+                      <td className="border-r border-black p-2 font-bold whitespace-nowrap min-w-[120px] text-center align-middle">{activeTab}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.totalStr || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.detTdyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.effStr || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.leaveCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.essnCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.classTrgCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.detentionCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.sickExCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.drillCatCCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.hospitalCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{ucBoardCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{officeDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{aftNiFlgCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.guardDutyCount || stats.airFdDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{offDutyCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.koReceptionCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.bakeBiteCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{drivingCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.gamesCount || '-'}</td>
+                      <td className="border-r border-black p-1 align-middle text-center">{stats.totalOutPt || '-'}</td>
+                      <td className="border-r border-black p-1 font-bold align-middle text-center">{stats.onPtParadeCount || '-'}</td>
                       <td className="p-1"></td>
                     </tr>
                   );
@@ -1330,6 +1413,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               &nbsp;
             </div>
 
+            {activeTab === '155 UASU BAF' && (
+            <div className="bottom-disposals-wrapper">
             {/* 2ND TABLE / BOTTOM DISPOSAL SECTION */}
             <div
               className="mt-2 pt-1 text-[11px]"
@@ -1517,6 +1602,9 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               </div>
             </div>
 
+            </div>
+            )}
+
             {/* SPACER ROW: 0.9 INCH HEIGHT TO PROVIDE AMPLE SIGNATURE HEADROOM */}
             <div className="w-full" style={{ height: '0.9in' }} />
 
@@ -1568,6 +1656,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Row Edit Popover */}
       {activeEditCell && (
@@ -2186,6 +2276,34 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           setSelectedDate={setSelectedDate}
           airmen={airmen}
           onClose={() => setIsInternalPrintOpen(false)}
+        />
+      )}
+
+      {showFlgWgHistory && (
+        <FlgWgHistoryModal 
+          onClose={() => setShowFlgWgHistory(false)}
+          onSelectDate={(newDate) => {
+            setFromDate(newDate);
+            setToDate(newDate);
+            setSelectedDate(newDate);
+          }}
+        />
+      )}
+
+      {isFlgWgPrintOpen && (
+        <PrintableFlyingWingModal
+          date={fromDate}
+          uasuStats={{
+            totalStr: getFlightStats('Overall').totalStr,
+            detTdy: getFlightStats('Overall').detTdyCount,
+            leave: getFlightStats('Overall').leaveCount,
+            edEx: getFlightStats('Overall').sickExCount,
+            cmh: getFlightStats('Overall').hospitalCount,
+            office: getFlightStats('Overall').othersCount,
+            baseAirfield: getFlightStats('Overall').airFdDutyCount,
+            driving: 0
+          }}
+          onClose={() => setIsFlgWgPrintOpen(false)}
         />
       )}
 

@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { Logo155UASU } from './Logo155UASU';
 import { UserRole, ThemePreference, DetailedUserLogin, UserLoginStatus, UserLoginRole } from '../types';
-import { getLoginHistory, clearLoginHistory, UserLoginLog, getDetailedUsers, toggleUserLoginStatus, saveDetailedUsers, changeUserPassword, changeUserRole, getCurrentUserSession } from '../utils/authSession';
+import { subscribeToActiveUsers, subscribeToLoginHistory } from '../services/presenceService';
+import { getLoginHistory, clearLoginHistory, UserLoginLog, getDetailedUsers, toggleUserLoginStatus, saveDetailedUsers, changeUserPassword, changeAdminPassword, changeUserRole, getCurrentUserSession } from '../utils/authSession';
 import { localDb } from '../services/localDatabase';
 
 interface SettingsModalProps {
@@ -66,6 +67,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [logoSuccess, setLogoSuccess] = useState<string>('');
 
   // Security Tab State
+  const [adminCurrentPasscode, setAdminCurrentPasscode] = useState('');
+  const [adminNewPasscode, setAdminNewPasscode] = useState('');
+  const [adminConfirmPasscode, setAdminConfirmPasscode] = useState('');
+  const [adminPasscodeError, setAdminPasscodeError] = useState('');
+  const [adminPasscodeSuccess, setAdminPasscodeSuccess] = useState('');
+  const [isUpdatingAdminPasscode, setIsUpdatingAdminPasscode] = useState(false);
   const [currentPasscode, setCurrentPasscode] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
@@ -76,6 +83,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Login History State
   const [loginHistory, setLoginHistory] = useState<UserLoginLog[]>([]);
   const [historySearch, setHistorySearch] = useState<string>('');
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  const [realtimeHistory, setRealtimeHistory] = useState<any[]>([]);
 
   // Detailed Users State
   const [detailedUsersList, setDetailedUsersList] = useState<DetailedUserLogin[]>([]);
@@ -86,6 +95,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Database Backup State
   const [restoreStatus, setRestoreStatus] = useState<string>('');
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (role === 'SUPER_ADMIN') {
+      const unsubUsers = subscribeToActiveUsers((users) => {
+        setActiveUsers(users);
+      });
+      const unsubHistory = subscribeToLoginHistory((logs) => {
+        setRealtimeHistory(logs);
+      });
+      return () => {
+        unsubUsers();
+        unsubHistory();
+      };
+    }
+  }, [role]);
 
   useEffect(() => {
     if (isOpen) {
@@ -127,6 +151,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   
+
+  const handleUpdateAdminPasscode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminPasscodeError('');
+    setAdminPasscodeSuccess('');
+
+    if (!adminCurrentPasscode) {
+      setAdminPasscodeError('Please enter your current admin password.');
+      return;
+    }
+    if (!adminNewPasscode) {
+      setAdminPasscodeError('Please enter a new admin password.');
+      return;
+    }
+    if (adminNewPasscode !== adminConfirmPasscode) {
+      setAdminPasscodeError('New admin password and confirm password do not match.');
+      return;
+    }
+
+    setIsUpdatingAdminPasscode(true);
+    try {
+      const session = getCurrentUserSession();
+      if (!session) {
+        setAdminPasscodeError('You are not logged in.');
+        return;
+      }
+      
+      const res = changeAdminPassword(session.bdNo, adminCurrentPasscode, adminNewPasscode, false);
+      
+      if (res.success) {
+        setAdminPasscodeSuccess('Admin Password successfully updated!');
+        setAdminCurrentPasscode('');
+        setAdminNewPasscode('');
+        setAdminConfirmPasscode('');
+        setTimeout(() => {
+          onClose(); // Auto-close on success
+        }, 1000);
+      } else {
+        setAdminPasscodeError(res.message);
+      }
+    } catch (err: any) {
+      setAdminPasscodeError('Error updating admin password.');
+    } finally {
+      setIsUpdatingAdminPasscode(false);
+    }
+  };
+
   const handleUpdatePasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasscodeError('');
@@ -160,6 +231,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setCurrentPasscode('');
         setNewPasscode('');
         setConfirmPasscode('');
+        setTimeout(() => {
+          onClose();
+        }, 1000);
       } else {
         setPasscodeError(res.message);
       }
@@ -549,6 +623,79 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </button>
                 </form>
               </div>
+              {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4">
+                  <div className="flex items-center gap-3 mb-4 text-rose-600 dark:text-rose-400">
+                    <ShieldCheck className="w-5 h-5" />
+                    <h3 className="font-bold">Change Admin Password</h3>
+                  </div>
+                  <form onSubmit={handleUpdateAdminPasscode} className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Current Admin Password
+                      </label>
+                      <input
+                        type="password"
+                        value={adminCurrentPasscode}
+                        onChange={(e) => setAdminCurrentPasscode(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-rose-400"
+                        placeholder="****"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        New Admin Password
+                      </label>
+                      <input
+                        type="password"
+                        value={adminNewPasscode}
+                        onChange={(e) => setAdminNewPasscode(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-rose-400"
+                        placeholder="****"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Confirm New Admin Password
+                      </label>
+                      <input
+                        type="password"
+                        value={adminConfirmPasscode}
+                        onChange={(e) => setAdminConfirmPasscode(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-rose-400"
+                        placeholder="****"
+                      />
+                    </div>
+
+                    {adminPasscodeError && (
+                      <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-300 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                        {adminPasscodeError}
+                      </div>
+                    )}
+                    
+                    {adminPasscodeSuccess && (
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        {adminPasscodeSuccess}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isUpdatingAdminPasscode}
+                      className="w-full py-3 px-4 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isUpdatingAdminPasscode ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      <span>Update Admin Password</span>
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           )}
 
@@ -633,56 +780,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {/* Section: History */}
-          {activeSection === 'history' && role === 'SUPER_ADMIN' && (
-            <div className="space-y-4">
+                    {activeSection === 'history' && role === 'SUPER_ADMIN' && (
+            <div className="space-y-6">
+              
+              {/* Active Users Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  Currently Active Users ({activeUsers.length})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {activeUsers.length === 0 ? (
+                    <span className="text-xs text-slate-500 italic">No other active users</span>
+                  ) : (
+                    activeUsers.map(u => (
+                      <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{u.rank} {u.name} (BD/{u.bdNo})</span>
+                        <span className="text-[10px] text-slate-500">{u.role}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Realtime Login History Section */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex-1 flex items-center bg-white dark:bg-slate-800 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700 shadow-sm">
                   <Search className="w-4 h-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search logs..."
+                    placeholder="Search realtime logs..."
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
                     className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-white px-3 py-1 outline-none placeholder:text-slate-400"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm('Clear all login history logs?')) {
-                      clearLoginHistory();
-                      setLoginHistory([]);
-                    }
-                  }}
-                  className="p-2.5 bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-400 rounded-xl transition-colors cursor-pointer"
-                  title="Clear Logs"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700 max-h-[60vh] overflow-y-auto shadow-sm">
                 {(() => {
-                  const filtered = loginHistory.filter(log => {
+                  const filtered = realtimeHistory.filter(log => {
                     if (!historySearch.trim()) return true;
                     const q = historySearch.toLowerCase();
                     return (
-                      log.bdNo.toLowerCase().includes(q) ||
-                      log.name.toLowerCase().includes(q) ||
-                      log.rank.toLowerCase().includes(q) ||
-                      log.flightName.toLowerCase().includes(q)
+                      log.bdNo?.toLowerCase().includes(q) ||
+                      log.name?.toLowerCase().includes(q) ||
+                      log.rank?.toLowerCase().includes(q) ||
+                      log.flightName?.toLowerCase().includes(q)
                     );
                   });
-
                   if (filtered.length === 0) {
                     return (
                       <div className="p-8 text-center text-slate-500">
                         <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs font-bold">No login history found</p>
+                        <p className="text-xs font-bold">No realtime login history found</p>
                       </div>
                     );
                   }
-
                   return filtered.map(log => (
                     <div key={log.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors flex justify-between items-center">
                       <div>
@@ -693,14 +846,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           BD/{log.bdNo} • {log.flightName}
                         </div>
                         <div className="text-[10px] text-slate-400 mt-1 font-medium">
-                          {log.timeFormatted}
+                          {new Date(log.timestamp).toLocaleString()}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded text-[10px] text-slate-500">
-                          {log.deviceInfo.includes('Mobile') ? <Smartphone className="w-3 h-3 text-sky-500" /> : <Laptop className="w-3 h-3 text-slate-400" />}
-                          {log.deviceInfo}
-                        </span>
+                         <span className="text-xs font-bold text-slate-500">{log.role}</span>
                       </div>
                     </div>
                   ));
@@ -708,7 +858,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>

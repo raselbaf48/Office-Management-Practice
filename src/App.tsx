@@ -8,6 +8,7 @@ import { Sidebar, SidebarTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { DashboardParadeState } from './components/DashboardParadeState';
 import { ParadeStateFormattedView } from './components/ParadeStateFormattedView';
+import { updatePresence } from './services/presenceService';
 import { NightCountStateView } from './components/NightCountStateView';
 import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';

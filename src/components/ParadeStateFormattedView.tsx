@@ -79,6 +79,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [toDate, setToDate] = useState<string>(selectedDate);
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
+  // Force Avionics if PT State and Overall is selected
+  useEffect(() => {
+    if (isPtDocument && selectedFlight === 'Overall') {
+      setSelectedFlight('Avionics');
+    }
+  }, [isPtDocument, selectedFlight]);
+
   const [singleParadeData, setSingleParadeData] = useState<ParadeStateResponse | null>(null);
   const [multiDayStates, setMultiDayStates] = useState<Record<string, ParadeStateResponse>>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -135,6 +142,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [showRatioModal, setShowRatioModal] = useState<boolean>(false);
   const [ratioRefreshTrigger, setRatioRefreshTrigger] = useState<number>(0);
   const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
+  const [activePreset, setActivePreset] = useState<'today' | '7days' | '15days' | 'month' | 'custom'>('today');
 
   // Keep fromDate/toDate in sync when parent selectedDate updates
   useEffect(() => {
@@ -1025,9 +1033,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       {/* Top Controls Banner (Hidden during print) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4 print:hidden">
         <div>
-          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-black uppercase tracking-wider">
+          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-black font-bold tracking-wider">
             <Shield className="w-4 h-4" />
-            <span>155 UASU BAF • {isPtDocument ? 'Daily PT State' : 'Daily Parade State'}</span>
+            <span>155 UASU BAF • {isPtDocument ? 'PT State' : 'Daily Parade State'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
             {isPtDocument ? 'PT State' : 'Parade State'}
@@ -1036,10 +1044,10 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {isPtDocument ? (
-            /* PT STATE: SINGLE DATE + FLIGHT FILTER */
-            <div className="flex items-center space-x-2">
-                            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+          {isPtDocument ? null : (
+            <>
+              {/* Quick Date Presets */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                 <button
                   onClick={() => handleSetPreset('today')}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
@@ -1050,73 +1058,19 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 </button>
                 <button
                   onClick={() => handleSetPreset('7days')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
                 >
                   7 Days
                 </button>
                 <button
                   onClick={() => handleSetPreset('15days')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
                 >
                   15 Days
                 </button>
                 <button
                   onClick={() => handleSetPreset('month')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
-                >
-                  Month
-                </button>
-              </div>
-
-              {/* Flight Selector */}
-              <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <select
-                  value={selectedFlight}
-                  onChange={(e) => setSelectedFlight(e.target.value as any)}
-                  className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-                >
-                  <option value="Overall">Overall ({airmen.length})</option>
-                  <option value="Avionics">Avionics</option>
-                  <option value="Mechanics">Mechanics</option>
-                  <option value="GCS">GCS</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Quick Date Presets */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
-                <button
-                  onClick={() => handleSetPreset('today')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    !isMultiDay ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => handleSetPreset('7days')}
-                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
-                >
-                  7 Days
-                </button>
-                <button
-                  onClick={() => handleSetPreset('15days')}
-                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
-                >
-                  15 Days
-                </button>
-                <button
-                  onClick={() => handleSetPreset('month')}
-                  className="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-colors"
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
                 >
                   Month
                 </button>

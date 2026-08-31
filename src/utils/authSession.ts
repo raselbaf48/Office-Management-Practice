@@ -1,3 +1,4 @@
+import { logUserLogin, updatePresence } from '../services/presenceService';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
 
 export interface UserLoginLog {
@@ -383,6 +384,14 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
 
   // Record into history log in local storage & D1
   recordLoginLog(airman);
+  // Realtime Presence Sync
+  logUserLogin({
+    bdNo: airman.bdNo.replace(/^BD\/?/i, '').trim(),
+    name: airman.name,
+    rank: airman.rank,
+    flightName: airman.flightName,
+    role: assignedRole
+  });
 
   // Dispatch event
   window.dispatchEvent(new CustomEvent('baf_user_session_changed', { detail: session }));
@@ -395,6 +404,11 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
  */
 export const clearUserSession = (): void => {
   try {
+    
+    const session = getCurrentUserSession();
+    if (session) {
+      updatePresence(session.bdNo, true); // logout
+    }
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem('baf_user_role');
   } catch (e) {
@@ -491,6 +505,26 @@ export const changeUserPassword = (bdNo: string, currentPass: string, newPass: s
 /**
  * Change a user's role
  */
+export const changeAdminPassword = (bdNo: string, currentPass: string, newPass: string, isSuperAdmin: boolean = false): { success: boolean; message: string } => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const idx = current.findIndex((u) => u.bdNo.toLowerCase() === clean);
+  
+  if (idx === -1) {
+    return { success: false, message: 'User not found in system.' };
+  }
+
+  const expectedPass = current[idx].adminPass || (clean === '474455' ? '1124' : '');
+  
+  if (!isSuperAdmin && currentPass !== expectedPass) {
+    return { success: false, message: 'Current admin password is incorrect.' };
+  }
+
+  current[idx].adminPass = newPass;
+  saveDetailedUsers(current);
+  return { success: true, message: 'Admin Password updated successfully.' };
+};
+
 export const changeUserRole = (bdNo: string, newRole: UserLoginRole): DetailedUserLogin | null => {
   const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
   const current = getDetailedUsers();

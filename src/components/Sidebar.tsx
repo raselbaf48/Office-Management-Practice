@@ -395,10 +395,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
                               : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
                           }`}
-                          title="Duty Ratio (BAF 155 UASU)"
+                          title="Duty Ratio Matrix"
                         >
                           <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                          {!collapsed && <span className="ml-3 truncate">Duty Ratio</span>}
+                          {!collapsed && <span className="ml-3 truncate">Duty Ratio Matrix</span>}
                         </button>
 
                         
