@@ -486,7 +486,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       'ESSN',
       'CMH',
       'SICK_REPORT',
-      'DRILL_CAT_C',
+      'ADMIN_ORDER',
       'LEAVE',
       'BAKE_N_BITE',
       'RECEPTION',
@@ -662,7 +662,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           leaveCount++;
         } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
           detTdyCount++;
-        } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
+        } else if (codeUpper === 'RECEPTION' || codeUpper === 'CANTEEN' || notesLower.includes('reception') || notesLower.includes('k/o')) {
           koReceptionCount++;
         } else if (codeUpper === 'ESSN' || notesLower.includes('essn')) {
           essnCount++;
@@ -670,7 +670,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           hospitalCount++;
         } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
-        } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
         } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
           adminCommCount++;
@@ -764,11 +764,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const essnList: { airman: Airman; note?: string }[] = [];
   const cmhList: { airman: Airman; note?: string }[] = [];
   const sickReportList: { airman: Airman; note?: string }[] = [];
-  const drillCatCList: { airman: Airman; note?: string }[] = [];
+  const adminOrderList: { airman: Airman; note?: string }[] = [];
   const tdyList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
   
-  const adminOrderList: { airman: Airman; note?: string }[] = [];
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const dutyOnList: { airman: Airman; note?: string }[] = [];
   const dutyOffList: { airman: Airman; note?: string }[] = [];
@@ -820,11 +819,11 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
         cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
         sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
-      } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
-        drillCatCList.push({ airman, note: "Drill Cat 'C'" });
+      } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        adminOrderList.push({ airman, note: "Admin Order" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
-      } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
+      } else if (codeUpper === 'RECEPTION' || codeUpper === 'CANTEEN' || notesLower.includes('reception') || notesLower.includes('k/o')) {
         receptionList.push({ airman, note: 'Reception' });
       } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
         dutyOnList.push({ airman, note: 'Air Fd Duty' });
@@ -846,7 +845,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       } else {
         let customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
         if (notes) {
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) { 
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) { 
             customKey = notes; 
           }
         }
@@ -918,7 +917,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               }}
               className={`truncate group flex items-center justify-between ${
                 true
-                  ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
+                  ? 'cursor-pointer hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 px-1 rounded transition-colors'
                   : ''
               }`}
               title={true ? 'Click to edit, change or remove disposal' : undefined}
@@ -932,7 +931,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 ) : null}
               </span>
               {true && (
-                <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
+                <span className="opacity-0 group-hover:opacity-100 text-[10px] text-emerald-600 font-bold ml-1 shrink-0 print:hidden">
                   ✏️
                 </span>
               )}
@@ -977,7 +976,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       {/* Top Controls Banner (Hidden during print) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4 print:hidden">
         <div>
-          <div className="flex items-center space-x-2 text-emerald-700  text-xs font-black uppercase tracking-wider">
+          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-black uppercase tracking-wider">
             <Shield className="w-4 h-4" />
             <span>155 UASU BAF • Daily Night Count State</span>
           </div>
@@ -1096,7 +1095,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
         </button>
       </div>
       {activeTab === 'Flying Wing' ? (
-        <div id="official-parade-document" className="bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto">
+        <div id="official-parade-document" className={`bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto ${(isFlgWgPrintOpen || isInternalPrintOpen) ? 'print:hidden' : ''}`}>
           <FlyingWingStateView 
             isAddModalOpen={showFlyingWingAdd}
             onCloseAddModal={() => setShowFlyingWingAdd(false)}
@@ -1119,10 +1118,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       ) : (
       <>
       {/* OFFICIAL PARADE DOCUMENT SHEET (DISPLAYED ON SCREEN & IN PRINT) */}
-      <div
-        id="official-parade-document"
-        className="bg-white text-black border border-slate-300  rounded-2xl shadow-lg p-6 overflow-x-auto"
-      >
+      <div id="official-parade-document" className={`bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto ${(isFlgWgPrintOpen || isInternalPrintOpen) ? 'print:hidden' : ''}`}>
         {loading ? (
           <div className="py-20 text-center text-slate-400">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-emerald-500" />
@@ -1137,7 +1133,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
                 <h1 className="font-bold tracking-wide text-black underline inline-block text-base uppercase">
-                  {isPtDocument ? 'NIGHT COUNT STATE : AIRMEN' : 'NIGHT COUNT STATE : AIRMEN'}
+                  {isPtDocument ? 'NT COUNT STATE: AIRMEN' : 'NT COUNT STATE: AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-black mt-0.5 underline inline-block text-sm uppercase">
@@ -1154,29 +1150,32 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
-                  <th className="p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
+                  <th className="border-r border-black p-2 align-middle font-bold w-[120px] text-center">Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Total Str</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Det/Tdy</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Eff Str</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Leave</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Course</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Class/Exam</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">AWOL/Detention</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Sick report</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">ED/ EX PPGF</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">CMH/BNS/BSH/Qrnt</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">U/C, U/Board</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Office Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Aft/Ni flg/Ni Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">GD/TF/Airfield Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Off Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">K/O</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Mess/ Canteen /Bakery</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Driving</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Games /Guard of Honor</div></th>
+                  {Object.keys(customDisposalsMap).map(key => (
+                    <th key={key} className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">{key}</div></th>
+                  ))}
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Total Out Parade</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">On Parade</div></th>
+                  <th className="p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Remarks</div></th>
                 </tr>
               </thead>
               <tbody>
@@ -1242,9 +1241,13 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       <td className="border-r border-black p-1 align-middle text-center">{stats.bakeBiteCount || '-'}</td>
                       <td className="border-r border-black p-1 align-middle text-center">{drivingCount || '-'}</td>
                       <td className="border-r border-black p-1 align-middle text-center">{stats.gamesCount || '-'}</td>
+                      {Object.keys(customDisposalsMap).map(key => {
+                        const count = customDisposalsMap[key].length;
+                        return <td key={key} className="border-r border-black p-1 align-middle text-center">{count > 0 ? count : '-'}</td>;
+                      })}
                       <td className="border-r border-black p-1 align-middle text-center">{stats.totalOutPt || '-'}</td>
                       <td className="border-r border-black p-1 font-bold align-middle text-center">{stats.onPtParadeCount || '-'}</td>
-                      <td className="p-1"></td>
+                      <td className="p-1 text-center align-middle"></td>
                     </tr>
                   );
                 })()}
@@ -1257,6 +1260,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <div className="w-full" style={{ height: '0.6in' }} />
 
             {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
+            {activeTab !== '155 UASU BAF' && (
             <div
               className="flex justify-between items-end pt-1 text-black text-xs min-w-[700px] print:min-w-0"
               style={{ fontFamily: 'Arial, sans-serif' }}
@@ -1281,6 +1285,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 </div>
               </div>
             </div>
+            )}
           </div>
         ) : (
           /* ========================================================================= */
@@ -1291,7 +1296,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
                 <h1 className="font-bold tracking-wide text-black underline inline-block text-base uppercase">
-                  {isPtDocument ? 'NIGHT COUNT STATE : AIRMEN' : 'NIGHT COUNT STATE : AIRMEN'}
+                  {isPtDocument ? 'NT COUNT STATE: AIRMEN' : 'NT COUNT STATE: AIRMEN'}
                 </h1>
                 <br />
                 <h2 className="font-bold tracking-wide text-black mt-0.5 underline inline-block text-sm uppercase">
@@ -1309,29 +1314,32 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse text-[11px] text-black table-auto">
               <thead>
                 <tr className="border-b border-black bg-white">
-                  <th className="border-r border-black p-2 align-middle font-bold w-[120px]">Sqn/Unit</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Str</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Det/Tdy</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Eff Str</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Leave</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Course</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Class/Exam</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>AWOL/Detention</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Sick report</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ED/ EX PPGF</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CMH/BNS/BSH/Qrnt</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>U/C, U/Board</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Office Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Aft/Ni flg/Ni Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>GD/TF/Airfield Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Off Duty</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>K/O</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Mess/ Canteen /Bakery</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Driving</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Games /Guard of Honor</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Total Out Parade</th>
-                  <th className="border-r border-black p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>On Parade</th>
-                  <th className="p-2 align-middle font-bold" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Remarks</th>
+                  <th className="border-r border-black p-2 align-middle font-bold w-[120px] text-center">Sqn/Unit</th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Total Str</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Det/Tdy</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Eff Str</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Leave</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Course</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Class/Exam</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">AWOL/Detention</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Sick report</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">ED/ EX PPGF</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">CMH/BNS/BSH/Qrnt</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">U/C, U/Board</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Office Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Aft/Ni flg/Ni Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">GD/TF/Airfield Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Off Duty</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">K/O</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Mess/ Canteen /Bakery</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Driving</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Games /Guard of Honor</div></th>
+                  {Object.keys(customDisposalsMap).map(key => (
+                    <th key={key} className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">{key}</div></th>
+                  ))}
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Total Out Parade</div></th>
+                  <th className="border-r border-black p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">On Parade</div></th>
+                  <th className="p-2 align-middle font-bold text-center" ><div className="w-full h-36 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] leading-tight">Remarks</div></th>
                 </tr>
               </thead>
               <tbody>
@@ -1397,9 +1405,13 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       <td className="border-r border-black p-1 align-middle text-center">{stats.bakeBiteCount || '-'}</td>
                       <td className="border-r border-black p-1 align-middle text-center">{drivingCount || '-'}</td>
                       <td className="border-r border-black p-1 align-middle text-center">{stats.gamesCount || '-'}</td>
+                      {Object.keys(customDisposalsMap).map(key => {
+                        const count = customDisposalsMap[key].length;
+                        return <td key={key} className="border-r border-black p-1 align-middle text-center">{count > 0 ? count : '-'}</td>;
+                      })}
                       <td className="border-r border-black p-1 align-middle text-center">{stats.totalOutPt || '-'}</td>
                       <td className="border-r border-black p-1 font-bold align-middle text-center">{stats.onPtParadeCount || '-'}</td>
-                      <td className="p-1"></td>
+                      <td className="p-1 text-center align-middle"></td>
                     </tr>
                   );
                 })()}
@@ -1545,7 +1557,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   )}
 
                   {/* DISPOSAL COL C */}
-                  {(adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                  {(adminOrderList.length > 0 || classTrgList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
                       
 
@@ -1563,10 +1575,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                         </div>
                       )}
 
-                      {drillCatCList.length > 0 && (
+                      {adminOrderList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-black mb-1">Drill Cat-C</h3>
-                          {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
+                          <h3 className="font-bold underline text-black mb-1">Admin Order</h3>
+                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
                         </div>
                       )}
 
@@ -1609,6 +1621,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             <div className="w-full" style={{ height: '0.9in' }} />
 
             {/* OFFICIAL SIGNATURE FOOTER */}
+            {activeTab !== '155 UASU BAF' && (
             <div
               className="flex justify-between items-end pt-1 text-black text-xs min-w-[700px] print:min-w-0"
               style={{ fontFamily: 'Arial, sans-serif' }}
@@ -1653,6 +1666,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 </div>
               </div>
             </div>
+            )}
           </div>
         )}
       </div>
@@ -1678,18 +1692,18 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       {/* Add Disposal Modal */}
       {showAddDisposalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200  shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-200  pb-4">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2.5 rounded-xl bg-purple-100  text-purple-600  border border-purple-200 ">
+                <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
                   <UserPlus className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-black">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                     Add Personnel Disposal
                   </h2>
-                  <p className="text-xs text-slate-500  mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Assign non-routine disposals (ESSN, CMH, Sick Report, Drill Cat C, Leave, Bake & Bite, etc.).
                   </p>
                 </div>
@@ -1705,7 +1719,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             {/* Success Message */}
             {disposalSuccessMsg && (
-              <div className="p-3 bg-emerald-100 /90 text-emerald-900  rounded-xl border border-emerald-300  text-xs font-bold animate-fadeIn">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-950/90 text-emerald-900 dark:text-emerald-200 rounded-xl border border-emerald-300 dark:border-emerald-800 text-xs font-bold animate-fadeIn">
                 {disposalSuccessMsg}
               </div>
             )}
@@ -1713,34 +1727,26 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             {/* Form */}
             <form onSubmit={handleAddDisposalSubmit} className="space-y-4">
               {/* 1. Date Selection with Single/Multi Toggle */}
-              <div className="space-y-2 bg-slate-50 /50 p-3 rounded-xl border border-slate-200 ">
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 ">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     1. Select Date Range
                   </label>
-                  <div className="flex items-center space-x-1 bg-white  p-0.5 rounded-lg border border-slate-200  text-[11px] font-bold">
+                  <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold">
                     <button
                       type="button"
                       onClick={() => {
                         setDisposalDateMode('SINGLE');
                         setDisposalToDate(disposalFromDate);
                       }}
-                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                        disposalDateMode === 'SINGLE'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600  hover:text-black'
-                      }`}
+                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${disposalDateMode === 'SINGLE' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                     >
                       Single Date
                     </button>
                     <button
                       type="button"
                       onClick={() => setDisposalDateMode('MULTI')}
-                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                        disposalDateMode === 'MULTI'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600  hover:text-black'
-                      }`}
+                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${disposalDateMode === 'MULTI' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                     >
                       Multi Date
                     </button>
@@ -1756,14 +1762,14 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                         setDisposalFromDate(e.target.value);
                         setDisposalToDate(e.target.value);
                       }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white  text-black outline-none focus:border-purple-500 shadow-xs"
+                      className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 shadow-xs"
                       required
                     />
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">From Date:</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block mb-1">From Date:</span>
                       <DateNavigator
                         
                         value={disposalFromDate}
@@ -1773,18 +1779,18 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                             setDisposalToDate(e.target.value);
                           }
                         }}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white  text-black outline-none focus:border-purple-500 shadow-xs"
+                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 shadow-xs"
                         required
                       />
                     </div>
                     <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">To Date:</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block mb-1">To Date:</span>
                       <DateNavigator
                         
                         value={disposalToDate}
                         min={disposalFromDate}
                         onChange={(e) => setDisposalToDate(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white  text-black outline-none focus:border-purple-500 shadow-xs"
+                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 shadow-xs"
                         required
                       />
                     </div>
@@ -1794,14 +1800,14 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
               {/* 2. Select Disposal Category */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-800 ">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   2. Select Disposal Category
                 </label>
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
                   {[
                     { code: 'ESSN', label: 'ESSN (Essential)' },
                     { code: 'SICK_REPORT', label: 'Sick Report' },
-                    { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
+                    { code: 'ADMIN_ORDER', label: "Admin Order" },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = disposalCategory === cat.code;
@@ -1810,11 +1816,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                         key={cat.code}
                         type="button"
                         onClick={() => setDisposalCategory(cat.code)}
-                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${
-                          isSelected
-                            ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-50 /40 text-purple-900  shadow-xs'
-                            : 'bg-white  border-slate-200  text-slate-700  hover:border-slate-300'
-                        }`}
+                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100 shadow-xs' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}`}
                       >
                         {cat.label}
                       </button>
@@ -1824,8 +1826,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
                 {/* Custom Title Input if OTHERS */}
                 {disposalCategory === 'OTHERS' && (
-                  <div className="p-3 bg-amber-50 /40 border border-amber-200  rounded-xl space-y-1 animate-fadeIn">
-                    <label className="text-xs font-bold text-amber-900 ">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn">
+                    <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
                       Specify Custom Disposal Name
                     </label>
                     <input
@@ -1833,7 +1835,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
                       value={disposalCustomTitle}
                       onChange={(e) => setDisposalCustomTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300  bg-white  text-black outline-none focus:border-amber-500 shadow-xs"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-500 shadow-xs"
                       required
                     />
                   </div>
@@ -1843,7 +1845,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               {/* 3. Flight Filter & Airman Selection */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 ">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     3. Select Flight & Personnel
                   </label>
                 </div>
@@ -1855,8 +1857,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       onClick={() => setDisposalFlight(fl)}
                       className={`py-1 px-2 text-xs font-bold rounded-lg border text-center transition-all cursor-pointer ${
                         disposalFlight === fl
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                          : 'bg-white  text-slate-700  border-slate-300  hover:border-slate-400'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-emerald-500'
                       }`}
                     >
                       {fl}
@@ -1912,8 +1914,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick')) {
                       return { isOnParade: false, label: 'Sick Report', dutyCode: 'SICK_REPORT', notes, dutyName: 'Sick Report' };
                     }
-                    if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper)) {
-                      return { isOnParade: false, label: "Drill Cat 'C'", dutyCode: 'DRILL_CAT_C', notes, dutyName: "Drill Cat 'C'" };
+                    if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: "Admin Order", dutyCode: 'ADMIN_ORDER', notes, dutyName: "Admin Order" };
                     }
                     if (codeUpper === 'RECEPTION' || notesLower.includes('reception')) {
                       return { isOnParade: false, label: 'Reception / KO', dutyCode: 'RECEPTION', notes, dutyName: 'Reception / KO' };
@@ -1959,10 +1961,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     <div className="space-y-1.5">
                       {/* Selection Toolbar */}
                       <div className="flex items-center justify-between px-1 text-xs">
-                        <span className="text-slate-600  font-medium">
-                          Available: <strong className="text-emerald-700  font-bold">{availableOnParade.length}</strong> / {flightAirmen.length} in {disposalFlight}
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">
+                          Available: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{availableOnParade.length}</strong> / {flightAirmen.length} in {disposalFlight}
                           {selectedDisposalAirmenIds.length > 0 && (
-                            <span className="ml-2 font-bold text-purple-600 ">
+                            <span className="ml-2 font-bold text-emerald-600 dark:text-emerald-400">
                               ({selectedDisposalAirmenIds.length} Selected)
                             </span>
                           )}
@@ -1972,7 +1974,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                             type="button"
                             onClick={handleSelectAllFlightAvailable}
                             disabled={availableOnParade.length === 0}
-                            className="text-[11px] font-bold text-purple-600  hover:underline disabled:opacity-40 cursor-pointer"
+                            className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-40 cursor-pointer"
                           >
                             Select All Available
                           </button>
@@ -2003,11 +2005,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                               return (
                                 <label
                                   key={a.id}
-                                  className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none text-xs ${
-                                    isChecked
-                                      ? 'bg-purple-50 /40 border-purple-400 text-purple-950  font-bold shadow-xs'
-                                      : 'bg-white  border-slate-200  hover:border-purple-300 text-slate-800  font-medium'
-                                  }`}
+                                  className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none text-xs ${isChecked ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-700 text-emerald-950 dark:text-emerald-300 font-bold shadow-xs' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-800 dark:text-slate-200 font-medium'}`}
                                 >
                                   <div className="flex items-center space-x-2.5 min-w-0">
                                     <input
@@ -2020,13 +2018,13 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                                           setSelectedDisposalAirmenIds((prev) => [...prev, a.id]);
                                         }
                                       }}
-                                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
+                                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer border-slate-300 dark:border-slate-600 dark:bg-slate-800"
                                     />
                                     <span className="truncate">
-                                      <span className="font-bold text-black">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
+                                      <span className="font-bold">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
                                     </span>
                                   </div>
-                                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-emerald-100 text-emerald-800   border border-emerald-200  shrink-0 ml-2">
+                                  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
                                     On Parade
                                   </span>
                                 </label>
@@ -2037,15 +2035,15 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                             return (
                               <div
                                 key={a.id}
-                                className="flex items-center justify-between p-2 rounded-lg border border-slate-200/80  bg-slate-100/80 /60 text-xs select-none"
+                                className="flex items-center justify-between p-2 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
                               >
                                 <div className="flex items-center space-x-2.5 min-w-0">
-                                  <span className="truncate text-slate-700 ">
+                                  <span className="truncate text-slate-700 dark:text-slate-300">
                                     <span className="font-bold">{a.rank}</span> {a.name} ({a.trade})
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1.5 shrink-0 ml-2">
-                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-200 text-slate-700  ">
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 ">
                                     {statusLabel}
                                   </span>
                                   <button
@@ -2053,7 +2051,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                                     onClick={() => {
                                       openEditDisposal(a, statusInfo.dutyCode, statusInfo.dutyName, statusInfo.notes);
                                     }}
-                                    className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-100 text-purple-700 /60  hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors cursor-pointer flex items-center space-x-1"
+                                    className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300  hover:bg-emerald-200 dark:hover:bg-emerald-800 transition-colors cursor-pointer flex items-center space-x-1"
                                     title="Click to edit, change or remove disposal for this airman"
                                   >
                                     <span>✏️ Change</span>
@@ -2075,7 +2073,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   {selectedDisposalAirmenIds.length === 0 ? (
                     'Select personnel above'
                   ) : (
-                    <span className="text-purple-600 ">
+                    <span className="text-emerald-600 dark:text-emerald-400">
                       {selectedDisposalAirmenIds.length} personnel selected
                     </span>
                   )}
@@ -2091,7 +2089,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   <button
                     type="submit"
                     disabled={disposalLoading || selectedDisposalAirmenIds.length === 0}
-                    className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
+                    className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
                   >
                     {disposalLoading ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -2119,7 +2117,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200  space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200  pb-3">
               <div>
-                <h3 className="text-base font-black text-black flex items-center space-x-2">
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2">
                   <span>✏️ Edit / Change Disposal</span>
                 </h3>
                 <p className="text-xs font-semibold text-slate-500  mt-0.5">
@@ -2136,10 +2134,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
             <div className="space-y-4 text-xs">
               {/* Current Status Info */}
-              <div className="bg-purple-50 /40 p-3 rounded-xl border border-purple-200  flex items-center justify-between">
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] text-purple-700  font-semibold block">Current Assignment:</span>
-                  <span className="font-bold text-black text-xs">
+                  <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold block">Current Assignment:</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-xs">
                     {editDisposalModal.currentDutyName || editDisposalModal.currentDutyCode}
                     {editDisposalModal.notes && <span className="text-slate-500  ml-1">({editDisposalModal.notes})</span>}
                   </span>
@@ -2164,7 +2162,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     
                     value={editDisposalFromDate}
                     onChange={(e) => setEditDisposalFromDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white  text-black outline-none focus:border-purple-500 shadow-xs"
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 shadow-xs"
                   />
                 </div>
                 <div>
@@ -2176,14 +2174,14 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     value={editDisposalToDate}
                     min={editDisposalFromDate}
                     onChange={(e) => setEditDisposalToDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white  text-black outline-none focus:border-purple-500 shadow-xs"
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300  bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 shadow-xs"
                   />
                 </div>
               </div>
 
               {/* Change Category Selection */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-800 ">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   Change Disposal Category To:
                 </label>
                 <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
@@ -2191,7 +2189,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     { code: 'ON_PARADE', label: '✅ On Parade (Clear)' },
                     { code: 'ESSN', label: 'ESSN (Essential)' },
                     { code: 'SICK_REPORT', label: 'Sick Report' },
-                    { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
+                    { code: 'ADMIN_ORDER', label: "Admin Order" },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = editDisposalCategory === cat.code;
@@ -2200,11 +2198,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                         key={cat.code}
                         type="button"
                         onClick={() => setEditDisposalCategory(cat.code)}
-                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${
-                          isSelected
-                            ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-50 /40 text-purple-900  shadow-xs'
-                            : 'bg-white  border-slate-200  text-slate-700  hover:border-slate-300'
-                        }`}
+                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100 shadow-xs' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}`}
                       >
                         {cat.label}
                       </button>
@@ -2214,8 +2208,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
 
                 {/* Custom Title Input if OTHERS */}
                 {editDisposalCategory === 'OTHERS' && (
-                  <div className="p-3 bg-amber-50 /40 border border-amber-200  rounded-xl space-y-1 animate-fadeIn">
-                    <label className="text-xs font-bold text-amber-900 ">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn">
+                    <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
                       Specify Custom Disposal Name
                     </label>
                     <input
@@ -2223,7 +2217,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
                       value={editDisposalCustomTitle}
                       onChange={(e) => setEditDisposalCustomTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300  bg-white  text-black outline-none focus:border-amber-500 shadow-xs"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-500 shadow-xs"
                       required
                     />
                   </div>
@@ -2244,7 +2238,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 type="button"
                 onClick={handleSaveEditDisposal}
                 disabled={editDisposalLoading}
-                className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
+                className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
               >
                 {editDisposalLoading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />

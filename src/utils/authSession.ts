@@ -407,7 +407,7 @@ export const clearUserSession = (): void => {
     
     const session = getCurrentUserSession();
     if (session) {
-      updatePresence(session.bdNo, true); // logout
+      updatePresence(session.bdNo, true, ''); // logout
     }
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem('baf_user_role');

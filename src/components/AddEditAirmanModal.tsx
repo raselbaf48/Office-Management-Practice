@@ -20,9 +20,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
   const [code, setCode] = useState(airmanToEdit?.code || '');
   const [rank, setRank] = useState<Rank | ''>(airmanToEdit?.rank || '');
   const [trade, setTrade] = useState(airmanToEdit?.trade || '');
-    const [flightName, setFlightName] = useState<FlightName>(
-    airmanToEdit?.flightName || 'Avionics'
-  );
+    const [flightName, setFlightName] = useState<FlightName | ''>(airmanToEdit?.flightName || '');
   const [mobileNo, setMobileNo] = useState(airmanToEdit?.mobileNo || '');
   const [remarks, setRemarks] = useState(airmanToEdit?.remarks || '');
   const [validationError, setValidationError] = useState<string>('');
@@ -110,6 +108,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
     if (!bdNo.trim() || bdNo.trim() === 'BD/' || bdNo.trim() === 'BD') return setValidationError('Please enter a valid BD Number');
     if (!rank) return setValidationError('Please select a Rank');
     if (!trade.trim()) return setValidationError('Please enter a Trade');
+    if (!flightName) return setValidationError('Please select a Flight');
     if (!mobileNo.trim() || mobileNo.trim() === '01') return setValidationError('Please enter a valid Mobile Number');
     
     if (!livingType) return setValidationError('Please select Living Status (L/In or L/Out)');
@@ -181,8 +180,8 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
             </div>
           )}
 
-          {/* Name & BD No */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Name & BD No */}
+          <div className="flex flex-col gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Full Name <span className="text-red-500">*</span>
@@ -195,13 +194,13 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                   setName(e.target.value);
                   if (validationError) setValidationError('');
                 }}
-                placeholder="Rizwan Islam Rasel"
+                placeholder="Airman Name"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                BD Number <span className="text-red-500">*</span>
+                BD No <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -223,44 +222,49 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Rank <span className="text-red-500">*</span>
               </label>
-              <select
-                value={rank}
-                required
-                onChange={(e) => {
-                  setRank(e.target.value as Rank);
-                  if (validationError) setValidationError('');
-                }}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-              >
-                <option value="" disabled>Select Rank</option>
+              <div className="flex flex-wrap gap-1.5">
                 {ranksList.map((r) => (
-                  <option key={r} value={r}>
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      setRank(r as any);
+                      if (validationError) setValidationError('');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                      rank === r
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                    }`}
+                  >
                     {r}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Trade <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                list="trade-options"
-                value={trade}
-                required
-                onChange={(e) => {
-                  setTrade(e.target.value);
-                  if (validationError) setValidationError('');
-                }}
-                placeholder="Select or type Trade"
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              />
-              <datalist id="trade-options">
-                {['Afr Fitt', 'Eng Fitt', 'E&I Fitt', 'Radio Fitt', 'Armt Fitt', 'GS', 'Log Asst', 'Sec Asst (GD)', 'Sec Asst (Accts)', 'Admin Asst', 'ATCA'].map(t => (
-                  <option key={t} value={t} />
+              <div className="flex flex-wrap gap-1.5">
+                {['Afr Fitt', 'Eng Fitt', 'E&I Fitt', 'Radio Fitt', 'Armt Fitt', 'GS', 'Log Asst', 'Sec Asst (GD)', 'Sec Asst (Accts)', 'Admin Asst', 'ATCA'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setTrade(t);
+                      if (validationError) setValidationError('');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                      trade === t
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                    }`}
+                  >
+                    {t}
+                  </button>
                 ))}
-              </datalist>
+              </div>
             </div>
           </div>
 
@@ -272,9 +276,14 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
               </label>
               <select
                 value={flightName}
-                onChange={(e) => setFlightName(e.target.value as FlightName)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                required
+                onChange={(e) => {
+                  setFlightName(e.target.value as any);
+                  if (validationError) setValidationError('');
+                }}
+                className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-none cursor-pointer ${!flightName ? 'border-amber-400 bg-amber-50/40' : 'border-slate-300 dark:border-slate-700'}`}
               >
+                <option value="" disabled>-- Select Flight --</option>
                 <option value="Avionics">Avionics Flight</option>
                 <option value="Mechanics">Mechanics Flight</option>
                 <option value="GCS">GCS Flight</option>
@@ -318,7 +327,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                   livingType === 'L_IN'
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
+                    : !livingType ? 'bg-amber-50/40 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
                 }`}
               >
                 <Building2 className="w-3.5 h-3.5" />
@@ -331,7 +340,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                   livingType === 'L_OUT'
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
+                    : !livingType ? 'bg-amber-50/40 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
                 }`}
               >
                 <Home className="w-3.5 h-3.5" />
@@ -362,7 +371,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                   />
                 </div>
               </div>
-            ) : (
+            ) : livingType === 'L_OUT' ? (
               <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-2.5">
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">
@@ -424,7 +433,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Remarks */}

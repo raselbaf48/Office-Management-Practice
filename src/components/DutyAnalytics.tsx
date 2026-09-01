@@ -26,8 +26,8 @@ export const DutyAnalytics: React.FC<DutyAnalyticsProps> = ({ airmen, onViewProf
       const res = await fetch(`/api/analytics?month=${monthKey}`);
       if (res.ok) {
         const data = await res.json();
-        setStats(data.airmanStats || []);
-        setAlerts(data.conflictAlerts || []);
+        setStats(data.dutyStats || []);
+        setAlerts(data.conflicts || []);
         setTotals(data.totals || {});
       }
     } catch (err) {

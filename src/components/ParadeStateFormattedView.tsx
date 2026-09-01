@@ -79,12 +79,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [toDate, setToDate] = useState<string>(selectedDate);
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
-  // Force Avionics if PT State and Overall is selected
-  useEffect(() => {
-    if (isPtDocument && selectedFlight === 'Overall') {
-      setSelectedFlight('Avionics');
-    }
-  }, [isPtDocument, selectedFlight]);
+  
 
   const [singleParadeData, setSingleParadeData] = useState<ParadeStateResponse | null>(null);
   const [multiDayStates, setMultiDayStates] = useState<Record<string, ParadeStateResponse>>({});
@@ -466,7 +461,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       'ESSN',
       'CMH',
       'SICK_REPORT',
-      'DRILL_CAT_C',
+      'ADMIN_ORDER',
       'LEAVE',
       'BAKE_N_BITE',
       'RECEPTION',
@@ -701,7 +696,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         essn: essnList.map((i) => i.airman),
         cmh: cmhList.map((i) => i.airman),
         sickReport: sickReportList.map((i) => i.airman),
-        drillCatC: drillCatCList.map((i) => i.airman),
         adminOrder: adminOrderList.map((i) => i.airman),
         classTrg: classTrgList.map((i) => i.airman),
         games: gamesList.map((i) => i.airman),
@@ -725,7 +719,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
     let hospitalCount = 0;
     let sickExCount = 0;
     let koReceptionCount = 0;
-    let drillCatCCount = 0;
+    let canteenCount = 0;
+      let drillCatCCount = 0;
     let guardDutyCount = 0;
     let bakeBiteCount = 0;
     let floodCellCount = 0;
@@ -761,7 +756,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           hospitalCount++;
         } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
-        } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
         } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
           adminCommCount++;
@@ -812,7 +807,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       hospitalCount,
       sickExCount,
       koReceptionCount,
-      drillCatCCount,
+      canteenCount,
+        drillCatCCount,
       guardDutyCount,
       bakeBiteCount,
       floodCellCount,
@@ -836,15 +832,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const essnList: { airman: Airman; note?: string }[] = [];
   const cmhList: { airman: Airman; note?: string }[] = [];
   const sickReportList: { airman: Airman; note?: string }[] = [];
-  const drillCatCList: { airman: Airman; note?: string }[] = [];
+  const adminOrderList: { airman: Airman; note?: string }[] = [];
   const tdyList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
   
-  const adminOrderList: { airman: Airman; note?: string }[] = [];
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const dutyOnList: { airman: Airman; note?: string }[] = [];
   const dutyOffList: { airman: Airman; note?: string }[] = [];
-  const bakeBiteList: { airman: Airman; note?: string }[] = [];
+  const canteenList: { airman: Airman; note?: string }[] = [];
+      const bakeBiteList: { airman: Airman; note?: string }[] = [];
   const gamesList: { airman: Airman; note?: string }[] = [];
   const absentList: { airman: Airman; note?: string }[] = [];
   const customDisposalsMap: Record<string, { airman: Airman; note?: string }[]> = {};
@@ -874,8 +870,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
         sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
-      } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
-        drillCatCList.push({ airman, note: "Drill Cat 'C'" });
+      } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        adminOrderList.push({ airman, note: "Admin Order" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
       } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
@@ -902,7 +898,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         // Other dynamic custom disposal
         let customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
         if (notes) {
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
              customKey = notes;
           }
         }
@@ -1226,26 +1222,33 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
             <div className="overflow-x-auto my-3">
               <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
-                <thead>
+                {Object.keys(customDisposalsMap).map(key => (
+      <th key={key} className="border border-black p-0.5 align-middle text-center">
+        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+          {key}
+        </div>
+      </th>
+    ))}
+    <thead>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Date</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Day</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Base Security Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Base Taskforce Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Najirpara Taskforce Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Airfield Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Halishahar Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Bake N Bite</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Tdy</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Leave</th>
-                    <th className="border border-slate-800 p-1.5" colSpan={3}>IDA CENTER Duty</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>Duty Off</th>
-                    <th className="border border-slate-800 p-1.5" rowSpan={2}>{isPtDocument ? 'On PT' : 'On Parade'}</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Date</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Day</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Security Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Taskforce Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Bake N Bite</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Leave</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" colSpan={3}>IDA CENTER Duty</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Duty Off</th>
+                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>{isPtDocument ? 'On PT' : 'On Parade'}</th>
                   </tr>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-1">Morning</th>
-                    <th className="border border-slate-800 p-1">Afternoon</th>
-                    <th className="border border-slate-800 p-1">Night</th>
+                    <th className="border border-slate-800 p-1 text-center align-middle">Morning</th>
+                    <th className="border border-slate-800 p-1 text-center align-middle">Afternoon</th>
+                    <th className="border border-slate-800 p-1 text-center align-middle">Night</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1285,49 +1288,49 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                           isWeekend ? 'text-red-600 font-semibold' : 'text-slate-900'
                         }`}
                       >
-                        <td className="border border-slate-800 p-1.5 whitespace-nowrap font-bold text-center">
+                        <td className="border border-slate-800 p-1.5 whitespace-nowrap font-bold text-center align-middle">
                           {formatDateSuperShort(dStr)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 whitespace-nowrap text-center">
+                        <td className="border border-slate-800 p-1.5 whitespace-nowrap text-center align-middle">
                           {dayName}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(baseSec)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(btf)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(ntf)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(airfield)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(halishahar)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(bakeBite)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(tdy)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(leave)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaMorn)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaAft)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaNight)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(dutyOff)}
                         </td>
-                        <td className="border border-slate-800 p-1.5">
+                        <td className="border border-slate-800 p-1.5 text-center align-middle">
                           {renderAirmanColumnList(onParade)}
                         </td>
                       </tr>
@@ -1436,9 +1439,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
-                        Drill Cat-C
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Canteen</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
@@ -1456,9 +1457,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
-                        Admin Order
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Admin Order</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
@@ -1475,11 +1474,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         G/H & Games
                       </div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        {isPtDocument ? 'Total Out PT' : 'Total Out Parade'}
-                      </div>
-                    </th>
+                    
+                    {Object.keys(customDisposalsMap).map(key => (
+                      <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
+                        <div className="w-full h-28 h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                          {key}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{isPtDocument === 'PT' ? 'Total Out PT' : 'Total Out Parade'}</div></th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
                         {isPtDocument ? 'On PT' : 'On Parade'}
@@ -1507,28 +1510,38 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
                     return (
                       <tr className="font-bold text-slate-900 border-b-2 border-slate-900 bg-white">
-                        <td className="border border-slate-800 p-1.5 text-center font-black whitespace-nowrap">
+                        <td className="border border-slate-800 p-1.5 text-center font-black whitespace-nowrap align-middle">
                           {unitLabel}
                         </td>
-                        <td className="border border-slate-800 p-1">{stats.totalStr}</td>
-                        <td className="border border-slate-800 p-1">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.effStr}</td>
-                        <td className="border border-slate-800 p-1">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.adminCommCount > 0 ? stats.adminCommCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
-                        <td className="border border-slate-800 p-1">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 font-black bg-slate-100">{stats.totalOutPt}</td>
-                        <td className="border border-slate-800 p-1 font-black bg-slate-100">{stats.onPtParadeCount}</td>
-                        <td className="border border-slate-800 p-1">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center">-</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.totalStr}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.effStr}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
+                        {Object.keys(customDisposalsMap).map(key => {
+      const count = customDisposalsMap[key].length;
+      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
+    })}
+    
+                    {Object.keys(customDisposalsMap).map(key => {
+                      const count = customDisposalsMap[key].length;
+                      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
+                    })}
+                    <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
+    
+                        <td className="border border-slate-800 p-1 font-black bg-slate-100 text-center align-middle">{stats.onPtParadeCount}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">-</td>
                       </tr>
                     );
                   })()}
@@ -1617,7 +1630,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         </div>
                       )}
 
-                      {bakeBiteList.length > 0 && (
+                      {canteenList.length > 0 && (
+          <div>
+            <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Canteen</h3>
+            {renderDisposalAirmenList(canteenList, 'CANTEEN', 'Canteen')}
+          </div>
+        )}
+        {bakeBiteList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Bake & Bite</h3>
                           {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
@@ -1671,7 +1690,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   )}
 
                   {/* DISPOSAL COL C */}
-                  {(adminOrderList.length > 0 || classTrgList.length > 0 || drillCatCList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                  {(adminOrderList.length > 0 || classTrgList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
                       
 
@@ -1689,10 +1708,10 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         </div>
                       )}
 
-                      {drillCatCList.length > 0 && (
+                      {adminOrderList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Drill Cat-C</h3>
-                          {renderDisposalAirmenList(drillCatCList, 'DRILL_CAT_C', 'Drill Cat-C')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Admin Order</h3>
+                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
                         </div>
                       )}
 
@@ -1922,7 +1941,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   {[
                     { code: 'ESSN', label: 'ESSN (Essential)' },
                     { code: 'SICK_REPORT', label: 'Sick Report' },
-                    { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
+                    { code: 'ADMIN_ORDER', label: "Admin Order" },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = disposalCategory === cat.code;
@@ -2018,8 +2037,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick')) {
                       return { isOnParade: false, label: 'Sick Report', dutyCode: 'SICK_REPORT', notes, dutyName: 'Sick Report' };
                     }
-                    if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper)) {
-                      return { isOnParade: false, label: "Drill Cat 'C'", dutyCode: 'DRILL_CAT_C', notes, dutyName: "Drill Cat 'C'" };
+                    if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: "Admin Order", dutyCode: 'ADMIN_ORDER', notes, dutyName: "Admin Order" };
                     }
                     if (codeUpper === 'RECEPTION' || notesLower.includes('reception')) {
                       return { isOnParade: false, label: 'Reception / KO', dutyCode: 'RECEPTION', notes, dutyName: 'Reception / KO' };
@@ -2111,8 +2130,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                                   key={a.id}
                                   className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none text-xs ${
                                     isChecked
-                                      ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-400 text-purple-950 dark:text-purple-100 font-bold shadow-xs'
-                                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-purple-300 text-slate-800 dark:text-slate-200 font-medium'
+                                      ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-400 dark:border-purple-700 text-purple-950 dark:text-purple-300 font-bold shadow-xs'
+                                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-700 text-slate-800 dark:text-slate-200 font-medium'
                                   }`}
                                 >
                                   <div className="flex items-center space-x-2.5 min-w-0">
@@ -2126,7 +2145,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                                           setSelectedDisposalAirmenIds((prev) => [...prev, a.id]);
                                         }
                                       }}
-                                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
+                                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer border-slate-300 dark:border-slate-600 dark:bg-slate-800"
                                     />
                                     <span className="truncate">
                                       <span className="font-bold text-slate-900 dark:text-white">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
@@ -2297,7 +2316,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     { code: 'ON_PARADE', label: '✅ On Parade (Clear)' },
                     { code: 'ESSN', label: 'ESSN (Essential)' },
                     { code: 'SICK_REPORT', label: 'Sick Report' },
-                    { code: 'DRILL_CAT_C', label: "Drill Cat 'C'" },
+                    { code: 'ADMIN_ORDER', label: "Admin Order" },
                     { code: 'OTHERS', label: '✨ Other Custom' },
                   ].map((cat) => {
                     const isSelected = editDisposalCategory === cat.code;

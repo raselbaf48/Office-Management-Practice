@@ -97,7 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
 
   useEffect(() => {
-    if (role === 'SUPER_ADMIN') {
+    if (true) {
       const unsubUsers = subscribeToActiveUsers((users) => {
         setActiveUsers(users);
       });
@@ -795,7 +795,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ) : (
                     activeUsers.map(u => (
                       <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
-                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{u.rank} {u.name} (BD/{u.bdNo})</span>
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{u.rank} {u.name} (BD/{u.bdNo}) - {u.page || 'Dashboard'}</span>
                         <span className="text-[10px] text-slate-500">{u.role}</span>
                       </div>
                     ))

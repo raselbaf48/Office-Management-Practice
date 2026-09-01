@@ -29,8 +29,8 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   onSyncGoogleSheet,
 }) => {
   const [search, setSearch] = useState('');
-  const [flightFilter, setFlightFilter] = useState<FlightName | 'All'>('All');
-  const [rankFilter, setRankFilter] = useState<Rank | 'All'>('All');
+  const [flightFilter, setFlightFilter] = useState<FlightName | 'All' | ''>('All');
+  const [rankFilter, setRankFilter] = useState<Rank | 'All' | ''>('All');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -72,8 +72,8 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
 
   // Filter airmen
   const filteredAirmen = sortedAirmen.filter((airman) => {
-    const matchesFlight = flightFilter === 'All' || airman.flightName === flightFilter;
-    const matchesRank = rankFilter === 'All' || airman.rank === rankFilter;
+    const matchesFlight = flightFilter === '' ? true : (flightFilter === 'All' || airman.flightName === flightFilter);
+    const matchesRank = rankFilter === '' ? true : (rankFilter === 'All' || airman.rank === rankFilter);
     const q = search.toLowerCase();
     const matchesSearch =
       airman.name.toLowerCase().includes(q) ||
@@ -187,6 +187,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               onChange={(e) => setFlightFilter(e.target.value as any)}
               className="bg-transparent font-black outline-none text-slate-900 dark:text-slate-100 cursor-pointer"
             >
+              <option value="All">All Flights</option>
               {flightsList.map((fl) => (
                 <option key={fl} value={fl} className="bg-white dark:bg-slate-900">
                   {fl === 'All' ? 'All Flights (48)' : `${fl} Flight`}
@@ -203,6 +204,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               onChange={(e) => setRankFilter(e.target.value as any)}
               className="bg-transparent font-black outline-none text-slate-900 dark:text-slate-100 cursor-pointer"
             >
+              <option value="All">All Ranks</option>
               {ranksList.map((rk) => (
                 <option key={rk} value={rk} className="bg-white dark:bg-slate-900">
                   {rk === 'All' ? 'All Ranks' : rk}

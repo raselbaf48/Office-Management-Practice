@@ -22,7 +22,11 @@ function removeUndefinedValues(obj: any): any {
   return result;
 }
 
+let quotaExceeded = false;
+
 export async function saveDbToFirebase(dbData: any) {
+  if (quotaExceeded) return false;
+  
   try {
     const extraSettings: Record<string, string> = {};
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -44,8 +48,13 @@ export async function saveDbToFirebase(dbData: any) {
 
     await setDoc(doc(db, 'baf_155_uasu_v2_db', 'main'), cleanData);
     return true;
-  } catch (error) {
-    console.error('Error saving to Firebase:', error);
+  } catch (error: any) {
+    if (error?.message?.includes('Quota') || error?.message?.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+       quotaExceeded = true;
+       console.warn('Firebase quota exceeded. Cloud sync is disabled for this session.');
+    } else {
+       console.error('Error saving to Firebase:', error);
+    }
     return false;
   }
 }

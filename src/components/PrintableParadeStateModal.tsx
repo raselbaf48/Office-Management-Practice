@@ -236,7 +236,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
     let hospitalCount = 0;
     let sickExCount = 0;
     let koReceptionCount = 0;
-    let drillCatCCount = 0;
+    let canteenCount = 0;
+      let drillCatCCount = 0;
     let guardDutyCount = 0;
     let bakeBiteCount = 0;
     let floodCellCount = 0;
@@ -272,7 +273,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           hospitalCount++;
         } else if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
-        } else if (['DRILL_CAT_C', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
         } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
           adminCommCount++;
@@ -323,7 +324,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
       hospitalCount,
       sickExCount,
       koReceptionCount,
-      drillCatCCount,
+      canteenCount,
+        drillCatCCount,
       guardDutyCount,
       bakeBiteCount,
       floodCellCount,
@@ -349,13 +351,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   const tdyList: { airman: Airman; note?: string }[] = [];
   const dutyOnList: { airman: Airman; note?: string }[] = [];
   const dutyOffList: { airman: Airman; note?: string }[] = [];
-  const bakeBiteList: { airman: Airman; note?: string }[] = [];
+  const canteenList: { airman: Airman; note?: string }[] = [];
+      const bakeBiteList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
   
   const essnList: { airman: Airman; note?: string }[] = [];
   const cmhList: { airman: Airman; note?: string }[] = [];
   const sickReportList: { airman: Airman; note?: string }[] = [];
-  const drillCatCList: { airman: Airman; note?: string }[] = [];
   const adminOrderList: { airman: Airman; note?: string }[] = [];
   const classTrgList: { airman: Airman; note?: string }[] = [];
   const gamesList: { airman: Airman; note?: string }[] = [];
@@ -401,7 +403,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
           // Sometimes notes holds the custom disposal name if it's entered in custom field
           // but if it's a standard one, dutyName is better.
           // In AssignDuty, custom disposal stores the name in notes.
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'DRILL_CAT_C', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
              customKey = notes;
           }
         }
@@ -613,26 +615,33 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
               ) : (
                 <div className="overflow-x-auto my-3">
                   <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
-                    <thead>
+                    {Object.keys(customDisposalsMap).map(key => (
+      <th key={key} className="border border-black p-0.5 align-middle text-center">
+        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+          {key}
+        </div>
+      </th>
+    ))}
+    <thead>
                       <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Date</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Day</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Base Security Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Base Taskforce Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Najirpara Taskforce Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Airfield Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Halishahar Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Bake N Bite</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Tdy</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Leave</th>
-                        <th className="border border-slate-800 p-1.5" colSpan={3}>IDA CENTER Duty</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>Duty Off</th>
-                        <th className="border border-slate-800 p-1.5" rowSpan={2}>{documentType === 'PT' ? 'On PT' : 'On Parade'}</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Date</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Day</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Security Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Taskforce Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Bake N Bite</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Leave</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" colSpan={3}>IDA CENTER Duty</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Duty Off</th>
+                        <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>{documentType === 'PT' ? 'On PT' : 'On Parade'}</th>
                       </tr>
                       <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                        <th className="border border-slate-800 p-1">Morning</th>
-                        <th className="border border-slate-800 p-1">Afternoon</th>
-                        <th className="border border-slate-800 p-1">Night</th>
+                        <th className="border border-slate-800 p-1 text-center align-middle">Morning</th>
+                        <th className="border border-slate-800 p-1 text-center align-middle">Afternoon</th>
+                        <th className="border border-slate-800 p-1 text-center align-middle">Night</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -672,49 +681,49 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                               isWeekend ? 'text-red-600 font-semibold' : 'text-slate-900'
                             }`}
                           >
-                            <td className="border border-slate-800 p-1.5 whitespace-nowrap font-bold text-center">
+                            <td className="border border-slate-800 p-1.5 whitespace-nowrap font-bold text-center align-middle">
                               {formatDateSuperShort(dStr)}
                             </td>
-                            <td className="border border-slate-800 p-1.5 whitespace-nowrap text-center">
+                            <td className="border border-slate-800 p-1.5 whitespace-nowrap text-center align-middle">
                               {dayName}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(baseSec)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(btf)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(ntf)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(airfield)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(halishahar)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(bakeBite)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(tdy)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(leave)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(idaMorn)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(idaAft)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(idaNight)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(dutyOff)}
                             </td>
-                            <td className="border border-slate-800 p-1.5">
+                            <td className="border border-slate-800 p-1.5 text-center align-middle">
                               {renderAirmanColumnList(onParade)}
                             </td>
                           </tr>
@@ -730,7 +739,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                   <table className="w-full min-w-[700px] print:min-w-0 border-none" style={{ fontFamily: 'Arial, sans-serif' }}>
                     <tbody>
                       <tr>
-                        <td className="w-1/2 align-top text-left pl-2 border-none">
+                        <td className="w-1/2 align-top text-left pl-2 border-none text-center align-middle">
                           <div className="leading-tight space-y-[2px]">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {leftSigName}
@@ -740,7 +749,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                             <p className="font-normal text-black">155 UASU BAF</p>
                           </div>
                         </td>
-                        <td className="w-1/2 align-top text-right pr-2 border-none">
+                        <td className="w-1/2 align-top text-right pr-2 border-none text-center align-middle">
                           <div className="leading-tight space-y-[2px] inline-block text-left">
                             <p className="font-bold text-black uppercase tracking-wide">
                               {rightSigName}
@@ -814,107 +823,107 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                       <th className="border border-black p-0.5 align-middle text-center font-bold text-[10px]">
                         Unit
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Total str
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Det/ Tdy
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Eff str
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Leave
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                             ESSN
                           </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                             CMH
                           </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Sick Report
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Recep- tion
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Drill Cat-C
-                        </div>
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Canteen</div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Guard Duty
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Bake & Bite
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Flood Cell
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Admin Order
-                        </div>
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
+                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Admin Order</div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Deten- tion
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Class/ Trg
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Air Fd Duty
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center font-bold">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          {documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}
+                      
+                    {Object.keys(customDisposalsMap).map(key => (
+                      <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
+                        <div className="w-full h-28 h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                          {key}
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center font-bold">
+                    ))}
+                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}</div></th>
+                      <th className="border border-black p-0 align-bottom text-center font-bold align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {documentType === 'PT' ? 'On PT' : 'On Parade'}
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Games
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Absent
                         </div>
                       </th>
-                      <th className="border border-black p-0 align-bottom text-center">
+                      <th className="border border-black p-0 align-bottom text-center align-middle">
                         <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Rmk
                         </div>
@@ -928,30 +937,40 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
                       return (
                         <tr className="text-black border border-black bg-white text-[10px]">
-                          <td className="border border-black p-0.5 text-center font-bold whitespace-nowrap">
+                          <td className="border border-black p-0.5 text-center font-bold whitespace-nowrap align-middle">
                             {unitLabel}
                           </td>
-                          <td className="border border-black p-0.5">{stats.totalStr}</td>
-                          <td className="border border-black p-0.5">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.effStr}</td>
-                          <td className="border border-black p-0.5">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.floodCellCount > 0 ? stats.floodCellCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.adminCommCount > 0 ? stats.adminCommCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.detentionCount > 0 ? stats.detentionCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
-                          <td className="border border-black p-0.5 font-bold">{stats.totalOutPt}</td>
-                          <td className="border border-black p-0.5 font-bold">{stats.onPtParadeCount}</td>
-                          <td className="border border-black p-0.5">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
-                          <td className="border border-black p-0.5">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
-                          <td className="border border-black p-0.5 text-center">-</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.totalStr}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.effStr}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.floodCellCount > 0 ? stats.floodCellCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.detentionCount > 0 ? stats.detentionCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
+                          {Object.keys(customDisposalsMap).map(key => {
+      const count = customDisposalsMap[key].length;
+      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
+    })}
+    
+                    {Object.keys(customDisposalsMap).map(key => {
+                      const count = customDisposalsMap[key].length;
+                      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
+                    })}
+                    <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
+    
+                          <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.onPtParadeCount}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
+                          <td className="border border-black p-0.5 text-center align-middle">-</td>
                         </tr>
                       );
                     })()}

@@ -126,17 +126,10 @@ export const FlyingWingStateView: React.FC<FlyingWingStateViewProps> = ({
     const existing = displayData.find(d => d.unit === addForm.unit);
     const existingData = existing || { totalStr: 0, detTdy: 0, leave: 0, edExPpgf: 0, cmhBnsBsh: 0, officeDuty: 0, baseAirfieldDuty: 0, driving: 0 };
     
-    // Calculate new values by adding the form values to the existing values
+    // Use the absolute values from the form
     const updatedUnit = {
-      ...addForm,
-      totalStr: (existingData.totalStr || 0) + (addForm.totalStr || 0),
-      detTdy: (existingData.detTdy || 0) + (addForm.detTdy || 0),
-      leave: (existingData.leave || 0) + (addForm.leave || 0),
-      edExPpgf: (existingData.edExPpgf || 0) + (addForm.edExPpgf || 0),
-      cmhBnsBsh: (existingData.cmhBnsBsh || 0) + (addForm.cmhBnsBsh || 0),
-      officeDuty: (existingData.officeDuty || 0) + (addForm.officeDuty || 0),
-      baseAirfieldDuty: (existingData.baseAirfieldDuty || 0) + (addForm.baseAirfieldDuty || 0),
-      driving: (existingData.driving || 0) + (addForm.driving || 0),
+      ...existingData,
+      ...addForm
     };
 
     const newData = displayData.map(d => 
@@ -145,14 +138,14 @@ export const FlyingWingStateView: React.FC<FlyingWingStateViewProps> = ({
     
     // Save log
     let changes = [];
-    if (addForm.totalStr) changes.push(`Total Str +${addForm.totalStr}`);
-    if (addForm.detTdy) changes.push(`Det/Tdy +${addForm.detTdy}`);
-    if (addForm.leave) changes.push(`Leave +${addForm.leave}`);
-    if (addForm.edExPpgf) changes.push(`ED/EX +${addForm.edExPpgf}`);
-    if (addForm.cmhBnsBsh) changes.push(`CMH +${addForm.cmhBnsBsh}`);
-    if (addForm.officeDuty) changes.push(`Office +${addForm.officeDuty}`);
-    if (addForm.baseAirfieldDuty) changes.push(`Base/Airfield +${addForm.baseAirfieldDuty}`);
-    if (addForm.driving) changes.push(`Driving +${addForm.driving}`);
+    if (addForm.totalStr !== existingData.totalStr) changes.push(`Total Str: ${existingData.totalStr} ➔ ${addForm.totalStr}`);
+    if (addForm.detTdy !== existingData.detTdy) changes.push(`Det/Tdy: ${existingData.detTdy} ➔ ${addForm.detTdy}`);
+    if (addForm.leave !== existingData.leave) changes.push(`Leave: ${existingData.leave} ➔ ${addForm.leave}`);
+    if (addForm.edExPpgf !== existingData.edExPpgf) changes.push(`ED/EX: ${existingData.edExPpgf} ➔ ${addForm.edExPpgf}`);
+    if (addForm.cmhBnsBsh !== existingData.cmhBnsBsh) changes.push(`CMH: ${existingData.cmhBnsBsh} ➔ ${addForm.cmhBnsBsh}`);
+    if (addForm.officeDuty !== existingData.officeDuty) changes.push(`Office: ${existingData.officeDuty} ➔ ${addForm.officeDuty}`);
+    if (addForm.baseAirfieldDuty !== existingData.baseAirfieldDuty) changes.push(`Base/Airfield: ${existingData.baseAirfieldDuty} ➔ ${addForm.baseAirfieldDuty}`);
+    if (addForm.driving !== existingData.driving) changes.push(`Driving: ${existingData.driving} ➔ ${addForm.driving}`);
     
     if (changes.length > 0) {
       const logEntry = {
@@ -222,30 +215,30 @@ export const FlyingWingStateView: React.FC<FlyingWingStateViewProps> = ({
         <table className="w-full text-center border-collapse border border-black text-[11px]">
           <thead className="font-bold">
             <tr>
-              <th className="border border-black p-1 w-24">Sqn/Unit</th>
-              <th className="border border-black p-1 break-words w-8"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Total Str</div></th>
-              <th className="border border-black p-1 break-words w-8"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Det/Tdy</div></th>
-              <th className="border border-black p-1 break-words w-8"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Eff Str</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Leave</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Course</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Class/Exam</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">AWOL/Detention</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Sick report</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">ED/ EX PPGF</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">CMH/BNS/BSH/Qrnt</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">U/C, U/Board</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Office Duty</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Aft/Ni flg/Ni Duty/Flg</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">TF/Base/Airfield Duty</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Off Duty</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">K/O</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Mess/ Canteen /Bakery</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Driving</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">PT/Parade on Unit</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Games /Guard of Honor</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">Total Out PT/Parade</div></th>
-              <th className="border border-black p-1 break-words w-6"><div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto whitespace-nowrap">On PT / Parade(Forecast)</div></th>
-              <th className="border border-black p-1 w-16">Rmks</th>
+              <th className="border border-black p-1 w-24 align-middle text-center">Sqn/Unit</th>
+              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Str</div></th>
+              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Det/Tdy</div></th>
+              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Eff Str</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Leave</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Course</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Class/Exam</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">AWOL/Detention</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Sick report</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">ED/ EX PPGF</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">CMH/BNS/BSH/Qrnt</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">U/C, U/Board</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Office Duty</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Aft/Ni flg/Ni Duty/Flg</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">TF/Base/Airfield Duty</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Off Duty</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">K/O</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Mess/ Canteen /Bakery</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Driving</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">PT/Parade on Unit</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Games /Guard of Honor</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Out PT/Parade</div></th>
+              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">On PT / Parade(Forecast)</div></th>
+              <th className="border border-black p-1 w-16 align-middle text-center">Rmks</th>
             </tr>
           </thead>
           <tbody>
@@ -346,17 +339,36 @@ export const FlyingWingStateView: React.FC<FlyingWingStateViewProps> = ({
             <form onSubmit={handleAddSubmit} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-400 font-medium mb-1">Unit</label>
-                <select 
-                  required
-                  value={addForm.unit}
-                  onChange={(e) => setAddForm({...addForm, unit: e.target.value})}
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="" disabled>Select Unit</option>
+                <div className="flex flex-wrap gap-1.5">
                   {FLYING_WING_UNITS.filter(u => u !== '155 UASU BAF').map(u => (
-                    <option key={u} value={u}>{u}</option>
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => {
+                        const selectedUnit = u;
+                        const existing = displayData.find(d => d.unit === selectedUnit);
+                        setAddForm({
+                          unit: selectedUnit,
+                          totalStr: existing?.totalStr || 0,
+                          detTdy: existing?.detTdy || 0,
+                          leave: existing?.leave || 0,
+                          edExPpgf: existing?.edExPpgf || 0,
+                          cmhBnsBsh: existing?.cmhBnsBsh || 0,
+                          officeDuty: existing?.officeDuty || 0,
+                          baseAirfieldDuty: existing?.baseAirfieldDuty || 0,
+                          driving: existing?.driving || 0,
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        addForm.unit === u
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                      }`}
+                    >
+                      {u}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

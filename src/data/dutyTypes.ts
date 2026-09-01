@@ -179,8 +179,8 @@ export const DUTY_TYPES: DutyTypeInfo[] = [
     description: 'Sick Report / Excused Duty by MO',
   },
   {
-    code: 'DRILL_CAT_C',
-    name: 'Drill Cat-C',
+    code: 'ADMIN_ORDER',
+    name: 'Admin Order',
     shortName: 'DRL',
     category: 'Status',
     color: 'bg-stone-600 text-white',
@@ -276,6 +276,17 @@ export const DUTY_TYPES: DutyTypeInfo[] = [
     badgeText: 'text-rose-800 dark:text-rose-300',
     isCountedAsDuty: false,
     description: 'Excused Duty',
+  },
+  {
+    code: 'CANTEEN',
+    name: 'Canteen',
+    shortName: 'CAN',
+    category: 'Special',
+    color: 'bg-amber-600 text-white',
+    badgeBg: 'bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700',
+    badgeText: 'text-amber-800 dark:text-amber-300',
+    isCountedAsDuty: false,
+    description: 'Canteen Attachment',
   },
 ];
 

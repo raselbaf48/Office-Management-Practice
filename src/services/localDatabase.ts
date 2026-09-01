@@ -106,6 +106,19 @@ export class LocalDatabaseEngine {
       window.addEventListener("baf_signatures_updated", () => this.saveToFirebase(this.db));
       window.addEventListener("baf_logo_updated", () => this.saveToFirebase(this.db));
       window.addEventListener("baf_theme_updated", () => this.saveToFirebase(this.db));
+      
+      window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          if (this.saveTimeout) { // Only sync if there are pending unsynced changes
+            this.saveToFirebase(this.db, true);
+          }
+        }
+      });
+      window.addEventListener('beforeunload', () => {
+        if (this.saveTimeout) {
+          this.saveToFirebase(this.db, true);
+        }
+      });
     }
   }
 
@@ -170,15 +183,10 @@ export class LocalDatabaseEngine {
   /**
    * Push changes to Firebase Firestore
    */
-  private async saveToFirebase(dbToSave: LocalStorageDB): Promise<void> {
+  private async saveToFirebase(dbToSave: LocalStorageDB, immediate = false): Promise<void> {
     if (typeof window === 'undefined') return;
     
-    // Debounce to prevent multiple rapid writes and quota exhaustion
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    
-    this.saveTimeout = setTimeout(async () => {
+    const doSave = async () => {
       try {
         const success = await saveDbToFirebase({
           airmen: dbToSave.airmen,
@@ -193,9 +201,26 @@ export class LocalDatabaseEngine {
           broadcastSyncState();
         }
       } catch (e) {
-        // console.error('Firebase save error in background', e);
+        // console.error('Firebase save error', e);
       }
-    }, 2000);
+    };
+
+    if (immediate) {
+      if (this.saveTimeout) clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+      await doSave();
+      return;
+    }
+
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    
+    // Auto-sync after 1 hour (3600000 ms)
+    this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = null;
+      doSave();
+    }, 3600000);
   }
 
   private loadInitialLocalState(): LocalStorageDB {
@@ -927,9 +952,9 @@ export class LocalDatabaseEngine {
           dutyName = 'Sick Report';
           statusCategory = 'SICK_REPORT';
         }
-        else if (codeStr === 'DRILL_CAT_C') {
-          dutyName = 'Drill Cat-C';
-          statusCategory = 'DRILL_CAT_C';
+        else if (codeStr === 'ADMIN_ORDER') {
+          dutyName = 'Admin Order';
+          statusCategory = 'ADMIN_ORDER';
         }
         else if (codeStr === 'ADMIN_ORDER') {
           dutyName = 'Admin Order';

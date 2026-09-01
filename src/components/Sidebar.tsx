@@ -553,8 +553,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Settings Button in Sidebar Bottom for Admin */}
-        {(role === 'ADMIN' || role === 'SUPER_ADMIN') && onOpenSettings && (
+        {/* Settings Button in Sidebar Bottom */}
+        {onOpenSettings && (
           <div className="px-3 py-2 border-t border-[#0d4f31] shrink-0">
             <button
               type="button"
@@ -562,7 +562,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`w-full flex items-center ${
                 collapsed ? 'justify-center p-2' : 'justify-start px-3 py-2 space-x-2.5'
               } rounded-xl text-emerald-100/90 hover:text-white hover:bg-[#0c4e2f] text-xs font-bold transition-all cursor-pointer`}
-              title="Settings (Theme, Password, History)"
+              title="Settings"
             >
               <Settings className="w-4 h-4 text-emerald-300 shrink-0" />
               {!collapsed && <span>Settings</span>}

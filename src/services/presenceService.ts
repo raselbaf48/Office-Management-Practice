@@ -2,7 +2,10 @@ import { db } from '../firebase';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
 
 // Call this when user logs in
+let quotaExceeded = false;
+
 export const logUserLogin = async (user: any) => {
+  if (quotaExceeded) return;
   try {
     const timestamp = new Date().toISOString();
     // 1. Add to active users
@@ -26,13 +29,19 @@ export const logUserLogin = async (user: any) => {
       timestamp: timestamp,
       serverTime: serverTimestamp()
     });
-  } catch (error) {
-    console.error('Error logging user login:', error);
+  } catch (error: any) {
+    if (error?.message?.includes('Quota') || error?.message?.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+       quotaExceeded = true;
+       console.warn('Firebase quota exceeded. Presence sync disabled.');
+    } else {
+       console.error('Error logging user login:', error);
+    }
   }
 };
 
 // Call this periodically to update last active OR on logout
-export const updatePresence = async (bdNo: string, isLoggingOut = false) => {
+export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 'Dashboard') => {
+  if (quotaExceeded) return;
   if (!bdNo) return;
   try {
     if (isLoggingOut) {
@@ -43,11 +52,17 @@ export const updatePresence = async (bdNo: string, isLoggingOut = false) => {
     } else {
        await setDoc(doc(db, 'active_users', bdNo), {
          lastActive: serverTimestamp(),
-         status: 'online'
+         status: 'online',
+         page: page
        }, { merge: true });
     }
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    if (err?.message?.includes('Quota') || err?.message?.includes('resource-exhausted') || err?.code === 'resource-exhausted') {
+       quotaExceeded = true;
+       console.warn('Firebase quota exceeded. Presence sync disabled.');
+    } else {
+       console.error(err);
+    }
   }
 };
 

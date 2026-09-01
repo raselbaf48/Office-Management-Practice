@@ -149,6 +149,52 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     return sum + (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS' | 'Admin'] || 0);
   }, 0);
 
+  
+  // Calculate Auto Targets from localStorage
+  const savedDuty = localStorage.getItem('baf_duty_distribution_total_duty');
+  const savedManpower = localStorage.getItem('baf_duty_distribution_manpower');
+  let autoTargets = null;
+  if (savedDuty && savedManpower) {
+    try {
+      const totalDuty = JSON.parse(savedDuty);
+      const manpower = JSON.parse(savedManpower);
+      const totalCpl = manpower.mechCpl + manpower.aviCpl + manpower.gcsCpl + manpower.adminCpl;
+      const totalSgt = manpower.mechSgt + manpower.aviSgt + manpower.gcsSgt + manpower.adminSgt;
+      const totalAll = totalCpl + totalSgt;
+      
+      const dpp = {
+        syDuty: totalCpl > 0 ? (totalDuty.syDuty / totalCpl) : 0,
+        btfDuty: totalAll > 0 ? (totalDuty.btfDuty / totalAll) : 0,
+        ntfDuty: totalAll > 0 ? (totalDuty.ntfDuty / totalAll) : 0,
+        morning: totalAll > 0 ? (totalDuty.idacMorning / totalAll) : 0,
+        afternoon: totalAll > 0 ? (totalDuty.idacAfternoon / totalAll) : 0,
+        night: totalAll > 0 ? (totalDuty.idacNight / totalAll) : 0,
+        reception: totalAll > 0 ? (totalDuty.reception / totalAll) : 0,
+        airfield: totalAll > 0 ? (totalDuty.airfieldDuty / totalAll) : 0,
+      };
+      
+      const getFltTargets = (cpl, sgt) => {
+        const fltTotal = cpl + sgt;
+        return {
+          security_duty: dpp.syDuty * cpl,
+          base_tf: dpp.btfDuty * fltTotal,
+          nazirpara_tf: dpp.ntfDuty * fltTotal,
+          idac_mor: dpp.morning * fltTotal,
+          idac_an: dpp.afternoon * fltTotal,
+          idac_nt: dpp.night * fltTotal,
+          airport_duty: dpp.airfield * fltTotal
+        };
+      };
+      
+      autoTargets = {
+        Mechanics: getFltTargets(manpower.mechCpl, manpower.mechSgt),
+        Avionics: getFltTargets(manpower.aviCpl, manpower.aviSgt),
+        GCS: getFltTargets(manpower.gcsCpl, manpower.gcsSgt),
+        Admin: getFltTargets(manpower.adminCpl, manpower.adminSgt),
+      };
+    } catch(e){}
+  }
+
   const flightTotalsOverall: Record<FlightName, number> = {
     Mechanics: 0,
     Avionics: 0,
@@ -388,18 +434,18 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                   <table className="w-full text-xs text-center border-collapse">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
-                        <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700">
+                        <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700 text-center align-middle">
                           Date
                         </th>
                         {daysArray.map((d) => (
-                          <th key={d} className="p-1 min-w-[28px] max-w-[32px] font-mono text-[11px]">
+                          <th key={d} className="p-1 min-w-[28px] max-w-[32px] font-mono text-[11px] text-center align-middle">
                             {d}
                           </th>
                         ))}
-                        <th className="p-2 w-16 min-w-16 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700">
+                        <th className="p-2 w-16 min-w-16 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700 text-center align-middle">
                           Total
                         </th>
-                        <th className="p-2 w-24 min-w-24 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700">
+                        <th className="p-2 w-24 min-w-24 font-bold bg-slate-200/60 dark:bg-slate-700/60 border-l border-slate-200 dark:border-slate-700 text-center align-middle">
                           As Per Ratio
                         </th>
                       </tr>
@@ -415,7 +461,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                               key={flight}
                               className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                             >
-                              <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+                              <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 text-center align-middle">
                                 <div className="flex items-center justify-between">
                                   <span>{flight}</span>
                                   <span className="text-[10px] text-slate-400 font-mono">
@@ -459,11 +505,11 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                                 );
                               })}
 
-                              <td className="p-2 font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700">
+                              <td className="p-2 font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700 text-center align-middle">
                                 {rowSum}
                               </td>
-                              <td className="p-2 text-center font-mono text-slate-700 dark:text-slate-300 border-l border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800/50">
-                                {table.flightTargets?.[flight]?.toFixed(2) || '0.00'}
+                              <td className="p-2 text-center font-mono text-slate-700 dark:text-slate-300 border-l border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800/50 align-middle">
+                                {autoTargets?.[flight]?.[table.id]?.toFixed(2) || table.flightTargets?.[flight]?.toFixed(2) || '0.00'}
                               </td>
                             </tr>
                           );
@@ -471,7 +517,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
                       {/* Daily Total Row (Sum across all flights for each day) */}
                       <tr className="bg-slate-100/90 dark:bg-slate-800/90 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                        <td className="p-2 text-left font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700">
+                        <td className="p-2 text-left font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 text-center align-middle">
                           <div className="flex items-center justify-between">
                             <span className="uppercase text-[11px] font-black tracking-wider text-slate-800 dark:text-slate-200">
                               Daily Total
@@ -503,15 +549,15 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                           );
                         })}
 
-                        <td className="p-2 font-mono font-black text-emerald-800 dark:text-emerald-300 bg-slate-200/90 dark:bg-slate-700/90 border-l border-slate-300 dark:border-slate-700 text-xs">
+                        <td className="p-2 font-mono font-black text-emerald-800 dark:text-emerald-300 bg-slate-200/90 dark:bg-slate-700/90 border-l border-slate-300 dark:border-slate-700 text-xs text-center align-middle">
                           {tableTotal}
                         </td>
-                        <td className="border-l border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
+                        <td className="border-l border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 text-center align-middle">
                         </td>
                       </tr>
                       {/* Daily Allotment Row */}
                       <tr className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
-                        <td className="p-2 text-left font-black sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700">
+                        <td className="p-2 text-left font-black sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 text-center align-middle">
                           <span className="uppercase text-[11px] font-black tracking-wider text-slate-800 dark:text-slate-200">
                             Daily Allotment
                           </span>
@@ -519,12 +565,12 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                         {daysArray.map((dayNum, dayIdx) => {
                           const dailySum = flights.reduce((sum, fl) => sum + (table.data[fl]?.[dayIdx] || 0), 0);
                           return (
-                            <td key={dayNum} className="p-0.5 border border-slate-200 dark:border-slate-700/70 font-mono font-bold text-slate-700 dark:text-slate-300 text-center text-xs">
+                            <td key={dayNum} className="p-0.5 border border-slate-200 dark:border-slate-700/70 font-mono font-bold text-slate-700 dark:text-slate-300 text-center text-xs align-middle">
                               <span className="inline-block py-1">{dailySum}</span>
                             </td>
                           );
                         })}
-                        <td colSpan={2} className="p-2 font-mono font-black text-slate-800 dark:text-slate-200 border-l border-slate-300 dark:border-slate-700 text-xs text-center bg-slate-100/50 dark:bg-slate-800/50">
+                        <td colSpan={2} className="p-2 font-mono font-black text-slate-800 dark:text-slate-200 border-l border-slate-300 dark:border-slate-700 text-xs text-center bg-slate-100/50 dark:bg-slate-800/50 align-middle">
                           {table.totalRequiredMonth || 0}
                         </td>
                       </tr>

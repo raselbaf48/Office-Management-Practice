@@ -14,13 +14,14 @@ export type DutyCategoryCode =
   | 'ATT'          // Attachment
   | 'DETT' | 'BNS' | 'BSH' | 'ED'
   | 'LEAVE'        // Leave
-  | 'BAKE_N_BITE'  // Bake N Bite
+  | 'BAKE_N_BITE'
+  | 'CANTEEN'  // Bake N Bite
   | 'DUTY_OFF'     // Duty Off
   | 'ON_PARADE'    // On Parade / Normal Working Status
   | 'ESSN'         // Essential Duty / Task
   | 'CMH'          // BNS / BSH / CMH / Medical
   | 'SICK_REPORT'  // Sick Report / S/Q
-  | 'DRILL_CAT_C'  // Drill Cat-C
+  | 'ADMIN_ORDER'  // Admin Order
   | 'ADMIN_ORDER'  // Admin Order
   | 'CLASS_TRG'    // Class / Training
   | 'RECEPTION'    // K/O & Reception
