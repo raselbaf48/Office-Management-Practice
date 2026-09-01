@@ -36,6 +36,7 @@ import {
   UserPlus,
   PenTool,
   CheckSquare,
+Settings,
 } from 'lucide-react';
 import { DutyCellPopover } from './DutyCellPopover';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
@@ -108,7 +109,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [showAddDisposalModal, setShowAddDisposalModal] = useState<boolean>(false);
   const [disposalDateMode, setDisposalDateMode] = useState<'SINGLE' | 'MULTI'>('SINGLE');
   const [disposalFlight, setDisposalFlight] = useState<FlightName>('Avionics');
-  const [disposalCategory, setDisposalCategory] = useState<string>('ESSN');
+  const [disposalCategory, setDisposalCategory] = useState<string>('');
   const [disposalCustomTitle, setDisposalCustomTitle] = useState<string>('');
   const [selectedDisposalAirmenIds, setSelectedDisposalAirmenIds] = useState<string[]>([]);
   const [disposalPersonnelStatusMap, setDisposalPersonnelStatusMap] = useState<Record<string, { statusCategory: string; dutyCode: string; notes?: string; dutyName?: string }>>({});
@@ -118,6 +119,44 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [disposalNotes, setDisposalNotes] = useState<string>('');
   const [disposalLoading, setDisposalLoading] = useState<boolean>(false);
   const [disposalSuccessMsg, setDisposalSuccessMsg] = useState<string>('');
+
+  const [savedDisposals, setSavedDisposals] = useState<Array<{code: string, label: string, customTitle?: string}>>(() => {
+    try {
+      const saved = localStorage.getItem('savedDisposalKeys_Parade');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showDisposalDropdown, setShowDisposalDropdown] = useState(false);
+  const [isEditingDisposals, setIsEditingDisposals] = useState(false);
+
+  const ALL_DISPOSAL_OPTIONS = [{"code":"TDY","label":"Det/ Tdy"},{"code":"LEAVE","label":"Leave"},{"code":"ESSN","label":"Essn"},{"code":"CMH","label":"BNS/BSH/ CMH"},{"code":"SICK_REPORT","label":"Sick Report"},{"code":"CANTEEN","label":"Canteen"},{"code":"DUTY_OFF","label":"Guard Duty On/Off"},{"code":"BAKE_N_BITE","label":"Bake & Bite"},{"code":"RECEPTION","label":"K/O & Reception"},{"code":"ADMIN_ORDER","label":"Admin Order"},{"code":"CLASS_TRG","label":"Class/ Trg"},{"code":"AIRPORT","label":"Airfield Duty"},{"code":"GAMES","label":"G/H & Games"},{"code":"ABSENT","label":"Absent"},{"code":"OTHERS","label":"✨ Custom..."}];
+
+  const handleAddDisposalOption = (opt: any) => {
+    if (opt.code === 'OTHERS' && !opt.customTitle) {
+       setDisposalCategory('OTHERS');
+       setDisposalCustomTitle('');
+       setShowDisposalDropdown(false);
+       return;
+    }
+    
+    const isAlreadyAdded = savedDisposals.some(d => d.label === opt.label);
+    if (!isAlreadyAdded) {
+      const updated = [...savedDisposals, opt];
+      setSavedDisposals(updated);
+      localStorage.setItem('savedDisposalKeys_Parade', JSON.stringify(updated));
+    }
+    setDisposalCategory(opt.code);
+    if (opt.customTitle) setDisposalCustomTitle(opt.customTitle);
+    setShowDisposalDropdown(false);
+  };
+
+  const handleRemoveDisposalOption = (label: string) => {
+    const updated = savedDisposals.filter(d => d.label !== label);
+    setSavedDisposals(updated);
+    localStorage.setItem('savedDisposalKeys_Parade', JSON.stringify(updated));
+    if (updated.length === 0) setIsEditingDisposals(false);
+  };
+
 
   // Edit / Change Disposal Modal State
   const [editDisposalModal, setEditDisposalModal] = useState<{
@@ -406,7 +445,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   // Handle Add Disposal submit (multi-person support)
   const handleAddDisposalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedDisposalAirmenIds.length === 0 || !disposalFromDate || !disposalToDate) return;
+    if (selectedDisposalAirmenIds.length === 0 || !disposalFromDate || !disposalToDate || !disposalCategory) return;
 
     setDisposalLoading(true);
     setDisposalSuccessMsg('');
@@ -414,6 +453,18 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       const isCustom = disposalCategory === 'OTHERS';
       const effectiveDutyCode = isCustom ? 'OTHERS' : disposalCategory;
       const effectiveNotes = isCustom ? (disposalCustomTitle.trim() || 'Custom Disposal') : undefined;
+      if (isCustom && effectiveNotes && effectiveNotes !== 'Custom Disposal') {
+        setSavedDisposals(prev => {
+          const exists = prev.some(d => d.label === effectiveNotes);
+          if (!exists) {
+            const updated = [...prev, { code: 'OTHERS', customTitle: effectiveNotes, label: effectiveNotes }];
+            localStorage.setItem('savedDisposalKeys_Parade', JSON.stringify(updated));
+            return updated;
+          }
+          return prev;
+        });
+      }
+
       const effectiveScope = isPtDocument ? 'PT' : (disposalScope === 'PT' ? 'PT' : 'PARADE');
 
       const promises = selectedDisposalAirmenIds.map((airmanId) =>
@@ -1192,7 +1243,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       {/* OFFICIAL PARADE DOCUMENT SHEET (DISPLAYED ON SCREEN & IN PRINT) */}
       <div
         id="official-parade-document"
-        className="bg-white text-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-lg p-6 overflow-x-auto"
+        className="bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto"
       >
         {loading ? (
           <div className="py-20 text-center text-slate-400">
@@ -1852,125 +1903,112 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
             {/* Form */}
             <form onSubmit={handleAddDisposalSubmit} className="space-y-4">
-              {/* 1. Date Selection with Single/Multi Toggle */}
+              
+              {/* 1. Date Selection */}
               <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    1. Select Date Range
-                  </label>
-                  <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDisposalDateMode('SINGLE');
-                        setDisposalToDate(disposalFromDate);
-                      }}
-                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                        disposalDateMode === 'SINGLE'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      Single Date
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDisposalDateMode('MULTI')}
-                      className={`px-2.5 py-0.5 rounded-md transition-all cursor-pointer ${
-                        disposalDateMode === 'MULTI'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      Multi Date
-                    </button>
-                  </div>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                  1. Select Date
+                </label>
+                <div>
+                  <DateNavigator
+                    value={disposalFromDate}
+                    onChange={(e) => {
+                      setDisposalFromDate(e.target.value);
+                      setDisposalToDate(e.target.value);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
+                    required
+                  />
                 </div>
-
-                {disposalDateMode === 'SINGLE' ? (
-                  <div>
-                    <DateNavigator
-                      
-                      value={disposalFromDate}
-                      onChange={(e) => {
-                        setDisposalFromDate(e.target.value);
-                        setDisposalToDate(e.target.value);
-                      }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
-                      required
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">From Date:</span>
-                      <DateNavigator
-                        
-                        value={disposalFromDate}
-                        onChange={(e) => {
-                          setDisposalFromDate(e.target.value);
-                          if (!disposalToDate || disposalToDate < e.target.value) {
-                            setDisposalToDate(e.target.value);
-                          }
-                        }}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block mb-1">To Date:</span>
-                      <DateNavigator
-                        
-                        value={disposalToDate}
-                        min={disposalFromDate}
-                        onChange={(e) => setDisposalToDate(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
+
               {/* 2. Select Disposal Category */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  2. Select Disposal Category
-                </label>
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {[
-                    { code: 'ESSN', label: 'ESSN (Essential)' },
-                    { code: 'SICK_REPORT', label: 'Sick Report' },
-                    { code: 'ADMIN_ORDER', label: "Admin Order" },
-                    { code: 'OTHERS', label: '✨ Other Custom' },
-                  ].map((cat) => {
-                    const isSelected = disposalCategory === cat.code;
+              <div className="space-y-2 relative">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    2. Select Disposal Category
+                  </label>
+                  {savedDisposals.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDisposals(!isEditingDisposals)}
+                      className={`p-1 rounded-md transition-colors cursor-pointer ${isEditingDisposals ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                      title="Manage Saved Categories"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {savedDisposals.map((cat) => {
+                    const isSelected = !isEditingDisposals && disposalCategory === cat.code && (cat.code !== 'OTHERS' || disposalCustomTitle === cat.customTitle);
                     return (
-                      <button
-                        key={cat.code}
-                        type="button"
-                        onClick={() => setDisposalCategory(cat.code)}
-                        className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${
-                          isSelected
-                            ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-100 shadow-xs'
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
+                      <div key={cat.label} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isEditingDisposals) return;
+                            setDisposalCategory(cat.code);
+                            if (cat.customTitle) setDisposalCustomTitle(cat.customTitle);
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all truncate ${isEditingDisposals ? 'pr-6 opacity-80 cursor-default bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'cursor-pointer'} ${
+                            isSelected
+                              ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 shadow-xs'
+                              : (!isEditingDisposals ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600' : '')
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                        {isEditingDisposals && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisposalOption(cat.label)}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
+                  {!isEditingDisposals && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowDisposalDropdown(!showDisposalDropdown)}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-400 bg-slate-50 dark:bg-slate-900 transition-all cursor-pointer flex items-center space-x-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        {savedDisposals.length === 0 && <span>Add Category</span>}
+                      </button>
+                      {showDisposalDropdown && (
+                        <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
+                          {ALL_DISPOSAL_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => handleAddDisposalOption(opt)}
+                              className="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors"
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Custom Title Input if OTHERS */}
-                {disposalCategory === 'OTHERS' && (
+                {/* Custom Title Input if OTHERS selected */}
+                {disposalCategory === 'OTHERS' && (!ALL_DISPOSAL_OPTIONS.find(o => o.label === disposalCustomTitle) || disposalCustomTitle === '') && !isEditingDisposals && (
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn">
                     <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
                       Specify Custom Disposal Name
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
+                      placeholder="e.g. Special Escort, VVIP Detail..."
                       value={disposalCustomTitle}
                       onChange={(e) => setDisposalCustomTitle(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
@@ -2113,7 +2151,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </div>
 
                       {/* Airmen List Scrollbox */}
-                      <div className="max-h-56 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div className="max-h-56 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50">
                         {flightAirmen.length === 0 ? (
                           <div className="py-4 text-center text-xs text-slate-400">
                             No airmen registered in {disposalFlight} Flight
