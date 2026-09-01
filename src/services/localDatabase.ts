@@ -29,6 +29,14 @@ export interface LocalStorageDB {
   lastUpdated: string;
 }
 
+
+export interface SyncLog {
+  id: string;
+  timestamp: string;
+  type: 'PULL' | 'PUSH' | 'MANUAL';
+  status: 'SUCCESS' | 'ERROR';
+  message: string;
+}
 export interface FirebaseSyncStatusState {
   isConfigured: boolean;
   status: 'idle' | 'syncing' | 'connected' | 'error' | 'unconfigured';
@@ -38,6 +46,18 @@ export interface FirebaseSyncStatusState {
 
 let firebaseConnected: boolean = false;
 let firebaseLastSyncTime: string | null = null;
+let syncLogs: SyncLog[] = JSON.parse(typeof window !== "undefined" ? window.localStorage.getItem("baf_sync_logs") || "[]" : "[]");
+
+export const getSyncLogs = () => syncLogs;
+export const addSyncLog = (log: Omit<SyncLog, "id">) => {
+  const newLog = { ...log, id: "sync-" + Date.now() + Math.random() };
+  syncLogs = [newLog, ...syncLogs].slice(0, 10);
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("baf_sync_logs", JSON.stringify(syncLogs));
+    window.dispatchEvent(new CustomEvent("baf_sync_logs_updated", { detail: syncLogs }));
+  }
+};
+
 
 export const getFirebaseSyncState = (): FirebaseSyncStatusState => {
   return {
@@ -174,6 +194,7 @@ export class LocalDatabaseEngine {
           window.dispatchEvent(new CustomEvent('baf_state_updated', { detail: { source: 'd1Sync' } }));
         }
         firebaseLastSyncTime = new Date().toLocaleTimeString();
+        addSyncLog({ timestamp: new Date().toISOString(), type: "PULL", status: "SUCCESS", message: hasUpdates ? "Pulled new updates from cloud" : "Cloud data is up to date" });
         broadcastSyncState();
         return true;
       } else {
@@ -182,6 +203,7 @@ export class LocalDatabaseEngine {
         return true;
       }
     } catch (e) {
+      addSyncLog({ timestamp: new Date().toISOString(), type: "PULL", status: "ERROR", message: "Failed to pull from cloud" });
       console.error('Firebase sync failed', e);
     } finally {
       this.isFirebaseSyncing = false;
@@ -207,9 +229,11 @@ export class LocalDatabaseEngine {
         if (success) {
           firebaseConnected = true;
           firebaseLastSyncTime = new Date().toLocaleTimeString();
+          addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Successfully saved local data to cloud" });
           broadcastSyncState();
         }
       } catch (e) {
+        addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "ERROR", message: "Failed to push to cloud" });
         // console.error('Firebase save error', e);
       }
     };

@@ -748,6 +748,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         leave: leaveList.map((i) => i.airman),
         bakeBite: bakeBiteList.map((i) => i.airman),
         tdy: tdyList.map((i) => i.airman),
+        canteen: canteenList.map((i) => i.airman),
         reception: receptionList.map((i) => i.airman),
         dutyOn: dutyOnList,
         dutyOff: dutyOffList,
@@ -888,10 +889,14 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
   const onPtList: { airman: Airman; note?: string }[] = [];
   const leaveList: { airman: Airman; note?: string }[] = [];
+  const drillCatCList: { airman: Airman; note?: string }[] = [];
+  const adminOrderList: { airman: Airman; note?: string }[] = [];
+
   const essnList: { airman: Airman; note?: string }[] = [];
   const cmhList: { airman: Airman; note?: string }[] = [];
   const sickReportList: { airman: Airman; note?: string }[] = [];
-  const adminOrderList: { airman: Airman; note?: string }[] = [];
+  // removed adminOrderList
+  // drillCatCList is defined earlier
   const tdyList: { airman: Airman; note?: string }[] = [];
   const receptionList: { airman: Airman; note?: string }[] = [];
   
@@ -930,7 +935,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
         sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
       } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
-        adminOrderList.push({ airman, note: "Admin Order" });
+        drillCatCList.push({ airman, note: "Admin Order" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
       } else if (['BAKE_BITE', 'BAKE_N_BITE'].includes(codeUpper) || statusCategory === 'BAKE_N_BITE') {
@@ -947,6 +952,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         gamesList.push({ airman, note: 'G/H & Games' });
       } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
         absentList.push({ airman, note: 'Absent' });
+      } else if (codeUpper === 'CANTEEN' || notesLower?.includes('canteen')) {
+        canteenList.push({ airman, note: 'Canteen' });
       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
         const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
         dutyOffList.push({ airman, note: offName });
@@ -1281,14 +1288,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
             <div className="overflow-x-auto my-3">
               <table className="w-full min-w-[700px] print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
-                {Object.keys(customDisposalsMap).map(key => (
-      <th key={key} className="border border-black p-0.5 align-middle text-center">
-        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-          {key}
-        </div>
-      </th>
-    ))}
-    <thead>
+              <thead>
                   <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
                     <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Date</th>
                     <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Day</th>
@@ -1461,6 +1461,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Total Str</div>
                     </th>
+
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Det/Tdy</div>
                     </th>
@@ -1468,56 +1469,35 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Eff Str</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Leave
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Leave</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Essn
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Essn</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">BNS/BSH/CMH</div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/BNS/BSH</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
-                        Sick Report
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Sick Report</div>
+                    </th>
+                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Drill Cat-C</div>
+                    </th>
+                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard Duty On/Off</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Canteen</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Guard Duty On/Off
-                      </div>
-                    </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Bake & Bite
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Bake & Bite</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">K/O & Reception</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Admin Order</div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard of Honour</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Class/Trg</div>
-                    </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Airfield Duty
-                      </div>
-                    </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        G/H & Games
-                      </div>
-                    </th>
-                    
                     {Object.keys(customDisposalsMap).map(key => (
                       <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
                         <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
@@ -1529,11 +1509,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
                         {isPtDocument ? 'On PT' : 'On Parade'}
-                      </div>
-                    </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Absent
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center min-w-[35px]">
@@ -1557,33 +1532,25 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                           {unitLabel}
                         </td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.totalStr}</td>
+                        
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.effStr}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
+                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.classTrgCount > 0 ? stats.classTrgCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.airFdDutyCount > 0 ? stats.airFdDutyCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
                         {Object.keys(customDisposalsMap).map(key => {
-      const count = customDisposalsMap[key].length;
-      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
-    })}
-    
-                    {Object.keys(customDisposalsMap).map(key => {
-                      const count = customDisposalsMap[key].length;
-                      return <td key={key} className="border border-black p-0.5 text-center align-middle">{count > 0 ? count : '-'}</td>;
-                    })}
-                    <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
-    
+                          const count = customDisposalsMap[key].length;
+                          return <td key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">{count > 0 ? count : '-'}</td>;
+                        })}
+                        <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
                         <td className="border border-slate-800 p-1 font-black bg-slate-100 text-center align-middle">{stats.onPtParadeCount}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.absentCount > 0 ? stats.absentCount : '-'}</td>
                         <td className="border border-slate-800 p-1 text-center align-middle">-</td>
                       </tr>
                     );
@@ -1647,45 +1614,36 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   )}
                 </div>
 
+                
                 {/* DISPOSALS (ONLY SHOWN IF NOT EMPTY / >0 AIRMEN, NO EMPTY HEADINGS) */}
                 <div className="flex-1 flex flex-wrap gap-5">
                   {/* DISPOSAL COL A */}
-                  {(leaveList.length > 0 || dutyOnList.length > 0 || (!isPtDocument && dutyOffList.length > 0) || bakeBiteList.length > 0 || essnList.length > 0) && (
+                  {(bakeBiteList.length > 0 || tdyList.length > 0 || canteenList.length > 0 || leaveList.length > 0 || essnList.length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
+                      {bakeBiteList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Bake & Bite</h3>
+                          {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
+                        </div>
+                      )}
+                      {tdyList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Det/ Tdy</h3>
+                          {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
+                        </div>
+                      )}
+                      {canteenList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Canteen</h3>
+                          {renderDisposalAirmenList(canteenList, 'CANTEEN', 'Canteen')}
+                        </div>
+                      )}
                       {leaveList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Leave</h3>
                           {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
                         </div>
                       )}
-
-                      {dutyOnList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty On</h3>
-                          {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
-                        </div>
-                      )}
-
-                      {!isPtDocument && dutyOffList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty Off</h3>
-                          {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
-                        </div>
-                      )}
-
-                      {canteenList.length > 0 && (
-          <div>
-            <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Canteen</h3>
-            {renderDisposalAirmenList(canteenList, 'CANTEEN', 'Canteen')}
-          </div>
-        )}
-        {bakeBiteList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Bake & Bite</h3>
-                          {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
-                        </div>
-                      )}
-
                       {essnList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
@@ -1698,77 +1656,56 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   )}
 
                   {/* DISPOSAL COL B */}
-                  {(cmhList.length > 0 || sickReportList.length > 0 || tdyList.length > 0 || receptionList.length > 0) && (
+                  {(cmhList.length > 0 || sickReportList.length > 0 || drillCatCList.length > 0 || receptionList.length > 0 || gamesList.length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
                       {cmhList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
-                            CMH
+                            CMH/BNS/BSH
                           </h3>
                           {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
                         </div>
                       )}
-
                       {sickReportList.length > 0 && (
                         <div>
                           <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Sick Report</h3>
                           {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
                         </div>
                       )}
-
-                      {tdyList.length > 0 && (
+                      {drillCatCList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Det/Tdy</h3>
-                          {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Drill Cat-C</h3>
+                          {renderDisposalAirmenList(drillCatCList, 'ADMIN_ORDER', 'Drill Cat-C')}
                         </div>
                       )}
-
                       {receptionList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Reception</h3>
-                          {renderDisposalAirmenList(receptionList, 'RECEPTION', 'Reception')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">K/O & Reception</h3>
+                          {renderDisposalAirmenList(receptionList, 'RECEPTION', 'K/O & Reception')}
+                        </div>
+                      )}
+                      {gamesList.length > 0 && (
+                        <div>
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Guard of Honour</h3>
+                          {renderDisposalAirmenList(gamesList, 'GAMES', 'Guard of Honour')}
                         </div>
                       )}
                     </div>
                   )}
 
                   {/* DISPOSAL COL C */}
-                  {(adminOrderList.length > 0 || classTrgList.length > 0 || gamesList.length > 0 || absentList.length > 0 || Object.keys(customDisposalsMap).length > 0) && (
+                  {(dutyOnList.length > 0 || (!isPtDocument && dutyOffList.length > 0) || Object.keys(customDisposalsMap).length > 0) && (
                     <div className="w-48 flex flex-col space-y-3">
-                      
-
-                      {adminOrderList.length > 0 && (
+                      {dutyOnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Admin Order</h3>
-                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty On</h3>
+                          {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
                         </div>
                       )}
-
-                      {classTrgList.length > 0 && (
+                      {!isPtDocument && dutyOffList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Class / Trg</h3>
-                          {renderDisposalAirmenList(classTrgList, 'CLASS_TRG', 'Class / TRG')}
-                        </div>
-                      )}
-
-                      {adminOrderList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Admin Order</h3>
-                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
-                        </div>
-                      )}
-
-                      {gamesList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">G/H & Games</h3>
-                          {renderDisposalAirmenList(gamesList, 'GAMES', 'G/H & Games')}
-                        </div>
-                      )}
-
-                      {absentList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Absent</h3>
-                          {renderDisposalAirmenList(absentList, 'ABSENT', 'Absent')}
+                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty Off</h3>
+                          {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
                         </div>
                       )}
 
@@ -1789,7 +1726,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 </div>
               </div>
             </div>
-
             {/* SPACER ROW: 0.9 INCH HEIGHT TO PROVIDE AMPLE SIGNATURE HEADROOM */}
             <div className="w-full" style={{ height: '0.9in' }} />
 

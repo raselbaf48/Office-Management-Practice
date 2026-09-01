@@ -1,11 +1,11 @@
 import { db } from '../firebase';
-import { doc, setDoc, onSnapshot, serverTimestamp, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp, collection, query, orderBy, limit, addDoc, disableNetwork } from 'firebase/firestore';
 
 // Call this when user logs in
-let quotaExceeded = false;
+const isQuotaExceeded = () => typeof window !== 'undefined' && window.localStorage.getItem('firebase_quota_exceeded') === new Date().toDateString();
 
 export const logUserLogin = async (user: any) => {
-  if (quotaExceeded) return;
+  if (isQuotaExceeded()) return;
   try {
     const timestamp = new Date().toISOString();
     // 1. Add to active users
@@ -31,7 +31,11 @@ export const logUserLogin = async (user: any) => {
     });
   } catch (error: any) {
     if (error?.message?.includes('Quota') || error?.message?.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
-       quotaExceeded = true;
+       // quota handled in catch
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
        console.warn('Firebase quota exceeded. Presence sync disabled.');
     } else {
        console.error('Error logging user login:', error);
@@ -41,7 +45,7 @@ export const logUserLogin = async (user: any) => {
 
 // Call this periodically to update last active OR on logout
 export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 'Dashboard') => {
-  if (quotaExceeded) return;
+  if (isQuotaExceeded()) return;
   if (!bdNo) return;
   try {
     if (isLoggingOut) {
@@ -58,7 +62,11 @@ export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 
     }
   } catch (err: any) {
     if (err?.message?.includes('Quota') || err?.message?.includes('resource-exhausted') || err?.code === 'resource-exhausted') {
-       quotaExceeded = true;
+       // quota handled in catch
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
        console.warn('Firebase quota exceeded. Presence sync disabled.');
     } else {
        console.error(err);
@@ -67,6 +75,7 @@ export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 
 };
 
 export const subscribeToActiveUsers = (callback: (users: any[]) => void) => {
+  if (isQuotaExceeded()) return () => {};
   return onSnapshot(collection(db, 'active_users'), (snapshot) => {
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     // Filter out users who haven't been active for > 5 minutes
@@ -79,13 +88,32 @@ export const subscribeToActiveUsers = (callback: (users: any[]) => void) => {
        return (now - lastActiveMs) < 5 * 60 * 1000;
     });
     callback(active);
+  }, (err: any) => {
+    if (err?.message?.includes('Quota') || err?.message?.includes('resource-exhausted') || err?.code === 'resource-exhausted') {
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
+       disableNetwork(db).catch(console.error);
+       console.warn('Firebase quota exceeded in onSnapshot. Network disabled.');
+    }
   });
 };
 
 export const subscribeToLoginHistory = (callback: (logs: any[]) => void) => {
+  if (isQuotaExceeded()) return () => {};
   const q = query(collection(db, 'login_history'), orderBy('timestamp', 'desc'), limit(100));
   return onSnapshot(q, (snapshot) => {
     const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     callback(logs);
+  }, (err: any) => {
+    if (err?.message?.includes('Quota') || err?.message?.includes('resource-exhausted') || err?.code === 'resource-exhausted') {
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
+       disableNetwork(db).catch(console.error);
+       console.warn('Firebase quota exceeded in onSnapshot. Network disabled.');
+    }
   });
 };

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, disableNetwork, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -22,7 +22,19 @@ function removeUndefinedValues(obj: any): any {
   return result;
 }
 
+const todayDate = new Date().toDateString();
 let quotaExceeded = false;
+if (typeof window !== "undefined") {
+  const saved = window.localStorage.getItem("firebase_quota_exceeded");
+  if (saved === todayDate) {
+    quotaExceeded = true;
+  }
+}
+
+if (quotaExceeded && typeof window !== "undefined") {
+  setLogLevel('silent');
+  disableNetwork(db).catch(() => {});
+}
 
 export async function saveDbToFirebase(dbData: any) {
   if (quotaExceeded) return false;
@@ -51,6 +63,11 @@ export async function saveDbToFirebase(dbData: any) {
   } catch (error: any) {
     if (error?.message?.includes('Quota') || error?.message?.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
        quotaExceeded = true;
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
+       disableNetwork(db).catch(console.error);
        console.warn('Firebase quota exceeded. Cloud sync is disabled for this session.');
     } else {
        console.error('Error saving to Firebase:', error);
@@ -60,6 +77,7 @@ export async function saveDbToFirebase(dbData: any) {
 }
 
 export async function getDbFromFirebase() {
+  if (quotaExceeded) return null;
   try {
     const docRef = doc(db, 'baf_155_uasu_v2_db', 'main');
     const docSnap = await getDoc(docRef);
@@ -92,8 +110,27 @@ export async function getDbFromFirebase() {
     } else {
       return null;
     }
-  } catch (error) {
-    console.error('Error loading from Firebase:', error);
+  } catch (error: any) {
+    if (error?.message?.includes('Quota') || error?.message?.includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+       quotaExceeded = true;
+       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
+       disableNetwork(db).catch(console.error);
+       console.warn('Firebase quota exceeded during read. Cloud sync disabled.');
+    } else {
+       console.error('Error loading from Firebase:', error);
+    }
     return null;
   }
+}
+
+if (typeof window !== "undefined") {
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (args.some(arg => typeof arg === 'string' && (arg.includes('resource-exhausted') || arg.includes('maximum backoff delay')))) return;
+    if (args.some(arg => arg?.code === 'resource-exhausted')) return;
+    originalError(...args);
+  };
 }

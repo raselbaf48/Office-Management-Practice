@@ -182,10 +182,9 @@ export const saveDetailedUsers = (users: DetailedUserLogin[]): void => {
     window.dispatchEvent(new CustomEvent('baf_detailed_users_changed', { detail: users }));
     
     // Sync to Firebase via localDb
-    if (localDb.db) {
-      localDb.db.detailedUsers = users;
-      localDb.forceSave();
-    }
+    // Sync handled automatically if we had a public setter, for now just use forceSave after injecting
+    (localDb as any).db.detailedUsers = users;
+    localDb.forceSave();
   } catch (e) {
     console.error('Failed to save detailed user logins:', e);
   }

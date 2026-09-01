@@ -235,16 +235,16 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
           <form onSubmit={handleNextStep} className="space-y-5 animate-fadeIn">
             {resetStep === 1 && (
               <div className="space-y-2 text-left">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step 1: Enter User ID (BD No)</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step 1: Enter User ID (User ID)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="text-slate-500 font-bold font-mono">BD/</span>
+                    
                   </div>
                   <input
                     type="text"
                     value={resetBd}
                     onChange={(e) => setResetBd(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all"
+                    className="w-full pl-4 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all"
                     placeholder="474455"
                     required
                     autoFocus

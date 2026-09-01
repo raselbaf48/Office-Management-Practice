@@ -530,7 +530,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {userSession.rank} {userSession.name}
                   </div>
                   <div className="text-[10px] font-mono text-emerald-300/80">
-                    BD/{userSession.bdNo} • {userSession.flightName}
+                    {userSession.bdNo} • {userSession.flightName}
                   </div>
                 </div>
               </div>

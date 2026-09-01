@@ -101,7 +101,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   {userSession.rank} {userSession.name}
                 </div>
                 <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                  BD/{userSession.bdNo}
+                  {userSession.bdNo}
                 </div>
               </div>
               {onLogoutUser && (

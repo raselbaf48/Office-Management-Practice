@@ -1,36 +1,33 @@
 const fs = require('fs');
+let code = fs.readFileSync('src/services/presenceService.ts', 'utf8');
 
-let presenceService = fs.readFileSync('src/services/presenceService.ts', 'utf-8');
-presenceService = presenceService.replace(
-  "export const updatePresence = async (bdNo: string, isLoggingOut = false) => {",
-  "export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 'Dashboard') => {"
-);
-presenceService = presenceService.replace(
-  "status: 'online'",
-  "status: 'online',\n         page: page"
-);
-fs.writeFileSync('src/services/presenceService.ts', presenceService, 'utf-8');
+const target1 = `let quotaExceeded = false;`;
+const replace1 = `const isQuotaExceeded = () => typeof window !== 'undefined' && window.localStorage.getItem('firebase_quota_exceeded') === new Date().toDateString();`;
 
-let authSession = fs.readFileSync('src/utils/authSession.ts', 'utf-8');
-authSession = authSession.replace(
-  "updatePresence(session.bdNo, true); // logout",
-  "updatePresence(session.bdNo, true, ''); // logout"
-);
-fs.writeFileSync('src/utils/authSession.ts', authSession, 'utf-8');
+code = code.replace(target1, replace1);
+code = code.replaceAll('if (quotaExceeded)', 'if (isQuotaExceeded())');
+code = code.replaceAll('quotaExceeded = true;', '// quota handled in catch');
 
-let appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
-const useEffectStr = `
-  // Presence Update Interval
-  useEffect(() => {
-    if (session) {
-      updatePresence(session.bdNo, false, activeTab);
-      const interval = setInterval(() => {
-        updatePresence(session.bdNo, false, activeTab);
-      }, 60000); // every 1 min
-      return () => clearInterval(interval);
-    }
-  }, [session, activeTab]);
-`;
-appTsx = appTsx.replace("  // Initialize app data", useEffectStr + "\n  // Initialize app data");
-fs.writeFileSync('src/App.tsx', appTsx, 'utf-8');
-console.log("Patched presence logic");
+const onSnapshotTarget1 = `export const subscribeToActiveUsers = (callback: (users: any[]) => void) => {`;
+const onSnapshotReplace1 = `export const subscribeToActiveUsers = (callback: (users: any[]) => void) => {
+  if (isQuotaExceeded()) return () => {};`;
+
+code = code.replace(onSnapshotTarget1, onSnapshotReplace1);
+
+const onSnapshotTarget2 = `export const subscribeToLoginHistory = (callback: (logs: any[]) => void) => {`;
+const onSnapshotReplace2 = `export const subscribeToLoginHistory = (callback: (logs: any[]) => void) => {
+  if (isQuotaExceeded()) return () => {};`;
+
+code = code.replace(onSnapshotTarget2, onSnapshotReplace2);
+
+const catchTarget1 = `       console.warn('Firebase quota exceeded. Presence sync disabled.');`;
+const catchReplace1 = `       if (typeof window !== 'undefined') {
+         window.localStorage.setItem('firebase_quota_exceeded', new Date().toDateString());
+         window.dispatchEvent(new CustomEvent('baf_quota_exceeded'));
+       }
+       console.warn('Firebase quota exceeded. Presence sync disabled.');`;
+
+code = code.replaceAll(catchTarget1, catchReplace1);
+
+fs.writeFileSync('src/services/presenceService.ts', code);
+console.log('Patched presenceService.ts');

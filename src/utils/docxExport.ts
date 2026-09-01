@@ -519,6 +519,7 @@ export interface SingleParadeExportParams {
   leave: Airman[];
   bakeBite: Airman[];
   tdy: Airman[];
+  canteen?: Airman[];
   reception: Airman[];
   dutyOn: { airman: Airman; note?: string }[];
   dutyOff: { airman: Airman; note?: string }[];
@@ -622,19 +623,16 @@ export async function exportParadeStateSingleDocx(
     'Eff\nstr',
     'Leave',
     'Essn',
-    'CMH',
+    'CMH/BNS/BSH',
     'Sick\nReport',
     'Drill\nCat-C',
     'Guard Duty\nOn/Off',
+    'Canteen',
     'Bake &\nBite',
     'K/O &\nReception',
-    'Admin\nOrder',
-    'Class/\nTrg',
-    'Airfield\nDuty',
-    'G/H &\nGames',
+    'Guard of\nHonour',
     isPt ? 'Total Out\nPT' : 'Total Out\nParade',
     isPt ? 'On PT' : 'On Parade',
-    'Absent',
     'Rmk',
   ];
 
@@ -660,15 +658,12 @@ export async function exportParadeStateSingleDocx(
       createArialDataCell(valOrDash(stats.sickExCount), 680, AlignmentType.CENTER),
       createArialDataCell(valOrDash(stats.drillCatCCount), 680, AlignmentType.CENTER),
       createArialDataCell(valOrDash(stats.guardDutyCount), 680, AlignmentType.CENTER),
+      createArialDataCell(valOrDash(stats.canteenCount || 0), 680, AlignmentType.CENTER),
       createArialDataCell(valOrDash(stats.bakeBiteCount), 680, AlignmentType.CENTER),
       createArialDataCell(valOrDash(stats.koReceptionCount), 680, AlignmentType.CENTER),
-      createArialDataCell(valOrDash(stats.adminCommCount), 680, AlignmentType.CENTER),
-      createArialDataCell(valOrDash(stats.classTrgCount), 680, AlignmentType.CENTER),
-      createArialDataCell(valOrDash(stats.airFdDutyCount), 680, AlignmentType.CENTER),
       createArialDataCell(valOrDash(stats.gamesCount), 680, AlignmentType.CENTER),
       createArialDataCell(String(stats.totalOutPt), 680, AlignmentType.CENTER),
       createArialDataCell(String(stats.onPtParadeCount), 680, AlignmentType.CENTER),
-      createArialDataCell(valOrDash(stats.absentCount), 680, AlignmentType.CENTER),
       createArialDataCell('-', 680, AlignmentType.CENTER),
     ],
   });
@@ -860,6 +855,8 @@ export async function exportParadeStateSingleDocx(
 
   // Col 2 Disposals: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT
   const col2Paragraphs: Paragraph[] = [];
+  const secCanteen = buildDisposalSection('CANTEEN', toDisplay(params.canteen || []), col2Paragraphs.length === 0);
+  if (secCanteen.length > 0) col2Paragraphs.push(...secCanteen);
   const secLeave = buildDisposalSection('LEAVE', toDisplay(leave), col2Paragraphs.length === 0);
   if (secLeave.length > 0) col2Paragraphs.push(...secLeave);
 
