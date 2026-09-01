@@ -157,6 +157,29 @@ export default function App() {
     fetchAirmen();
   }, []);
 
+  useEffect(() => {
+    const handleDetailedUsersChange = (e: any) => {
+      const newUsers = e.detail;
+      if (userSession && newUsers) {
+        const myDetail = newUsers.find((u: any) => u.bdNo.toLowerCase() === userSession.bdNo.toLowerCase());
+        if (myDetail) {
+          if (myDetail.status !== 'ACTIVE') {
+            handleUserLogout();
+            alert('Your account has been suspended or disabled by admin.');
+          } else if (myDetail.role !== userSession.assignedRole) {
+            handleRoleChange(myDetail.role);
+            const updatedSession = { ...userSession, assignedRole: myDetail.role };
+            setUserSession(updatedSession);
+            localStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+          }
+        }
+      }
+    };
+    window.addEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
+    return () => window.removeEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
+  }, [userSession, handleRoleChange, handleUserLogout]);
+
+
   // Real-time EventSource Listener & Auto-sync across all clients
   useEffect(() => {
     let eventSource: EventSource | null = null;

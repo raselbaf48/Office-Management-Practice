@@ -1,3 +1,4 @@
+import { localDb } from '../services/localDatabase';
 import { logUserLogin, updatePresence } from '../services/presenceService';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
 
@@ -9,6 +10,7 @@ export interface UserLoginLog {
   flightName: string;
   timestamp: string;
   timeFormatted: string;
+  role?: string;
   deviceInfo: string;
 }
 
@@ -68,14 +70,50 @@ export const getCurrentUserSession = (): UserSession | null => {
 /**
  * Get all detailed/authorized login users
  */
+
+const SYSTEM_OWNER: DetailedUserLogin = {
+  id: 'user-login-53539919',
+  airmanId: 'system-owner',
+  bdNo: '53539919',
+  rank: 'Civil',
+  name: 'System Owner',
+  flightName: 'Admin',
+  trade: 'System Admin',
+  role: 'SUPER_ADMIN',
+  password: '54549919',
+  adminPass: '1124',
+  ownerPass: '1124',
+  status: 'ACTIVE',
+  detailOrder: 'SYSTEM_OWNER_01',
+  detailedAt: new Date().toISOString(),
+  detailedBy: 'System',
+  remarks: 'Mobile No: 01760369685',
+};
+
 export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogin[] => {
   try {
     const raw = localStorage.getItem(DETAILED_USERS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as DetailedUserLogin[];
+      
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Enforce System Owner
+        const ownerIdx = parsed.findIndex(u => u.bdNo === '53539919');
+        if (ownerIdx === -1) {
+          parsed.push(SYSTEM_OWNER);
+          try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
+        } else {
+          // Always ensure role is SUPER_ADMIN
+          if (parsed[ownerIdx].role !== 'SUPER_ADMIN' || parsed[ownerIdx].password !== '54549919') {
+            parsed[ownerIdx].role = 'SUPER_ADMIN';
+            parsed[ownerIdx].password = '54549919';
+            parsed[ownerIdx].adminPass = '1124';
+            try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
+          }
+        }
         return parsed;
       }
+
     }
   } catch (e) {
     console.warn('Failed to parse detailed user logins:', e);
@@ -83,6 +121,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
 
   // If none configured yet, populate with nominal roll airmen (default 474455 as primary active)
   if (nominalAirmen.length > 0) {
+    
     const defaults: DetailedUserLogin[] = nominalAirmen.map((a) => {
       const cleanBd = a.bdNo.replace(/^BD\/?/i, '').trim();
       const isPrimary = cleanBd === '474455';
@@ -103,6 +142,9 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
         remarks: isPrimary ? 'Primary System Admin User (BD/474455 LAC Rasel)' : 'Nominal Roll Detailed User',
       };
     });
+    
+    // Add System Owner
+    defaults.push(SYSTEM_OWNER);
 
     try {
       localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(defaults));
@@ -127,7 +169,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       detailedBy: '155 UASU Unit HQ',
       remarks: 'Primary Admin User ID (LAC Rasel)',
     },
-  ];
+  , SYSTEM_OWNER];
   return primaryFallback;
 };
 
@@ -138,6 +180,12 @@ export const saveDetailedUsers = (users: DetailedUserLogin[]): void => {
   try {
     localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('baf_detailed_users_changed', { detail: users }));
+    
+    // Sync to Firebase via localDb
+    if (localDb.db) {
+      localDb.db.detailedUsers = users;
+      localDb.forceSave();
+    }
   } catch (e) {
     console.error('Failed to save detailed user logins:', e);
   }

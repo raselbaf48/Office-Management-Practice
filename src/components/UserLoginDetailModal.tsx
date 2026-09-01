@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
 import { X, Search, ShieldCheck, UserCheck, ChevronLeft, Save, AlertCircle } from 'lucide-react';
 import { getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
@@ -20,6 +20,15 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL');
   const [detailedUsers, setDetailedUsers] = useState<DetailedUserLogin[]>(() => getDetailedUsers(nominalAirmen));
   
+  
+  useEffect(() => {
+    const handleDetailedUsersChange = (e: any) => {
+      setDetailedUsers(e.detail);
+    };
+    window.addEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
+    return () => window.removeEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
+  }, []);
+
   const isOwner = userSessionRole === 'SUPER_ADMIN';
 
   // Single Add Admin Mode States
@@ -30,11 +39,11 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   const [addAdminSearch, setAddAdminSearch] = useState('');
 
   const mergedUsers = useMemo(() => {
-    return nominalAirmen.map((airman, index) => {
+    const list = nominalAirmen.map((airman, index) => {
       const cleanBd = airman.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
       const detailed = detailedUsers.find(d => d.bdNo.toLowerCase() === cleanBd);
       
-      const isDefaultOwner = cleanBd === '474455';
+      const isDefaultOwner = cleanBd === '474455' || cleanBd === '53539919';
       const role = detailed ? detailed.role : (isDefaultOwner ? 'SUPER_ADMIN' : 'USER');
       const status = detailed ? detailed.status : 'ACTIVE';
       const password = detailed?.password || cleanBd;
@@ -54,6 +63,40 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
         isDefaultOwner
       };
     });
+
+    // Add extra detailed users not in nominal roll
+    let nextSerNo = list.length + 1;
+    detailedUsers.forEach(d => {
+      if (!list.some(u => u.cleanBd === d.bdNo.toLowerCase())) {
+        const isDefaultOwner = d.bdNo === '474455' || d.bdNo === '53539919';
+        list.push({
+          airman: {
+            id: d.airmanId || `extra-${d.bdNo}`,
+            serNo: nextSerNo,
+            code: d.bdNo,
+            bdNo: d.bdNo,
+            rank: d.rank || 'Civil',
+            name: d.name || 'User',
+            trade: d.trade || 'Admin',
+            addressBlock: '',
+            mobileNo: d.remarks || '',
+            flightName: d.flightName || 'Admin',
+            remarks: d.remarks || '',
+            active: true
+          },
+          cleanBd: d.bdNo.toLowerCase(),
+          serNo: nextSerNo++,
+          role: d.role,
+          status: d.status,
+          password: d.password || d.bdNo,
+          adminPass: d.adminPass || '',
+          ownerPass: d.ownerPass || '',
+          detailed: d,
+          isDefaultOwner
+        });
+      }
+    });
+    return list;
   }, [nominalAirmen, detailedUsers]);
 
   const filteredUsers = mergedUsers.filter((u) => {

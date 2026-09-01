@@ -787,7 +787,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  Currently Active Users ({activeUsers.length})
+                  Currently Active ({activeUsers.length})
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {activeUsers.length === 0 ? (
@@ -795,8 +795,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ) : (
                     activeUsers.map(u => (
                       <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
-                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{u.rank} {u.name} (BD/{u.bdNo}) - {u.page || 'Dashboard'}</span>
-                        <span className="text-[10px] text-slate-500">{u.role}</span>
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                          {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'Normal User'}
+                        </span>
                       </div>
                     ))
                   )}
@@ -839,18 +840,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   return filtered.map(log => (
                     <div key={log.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors flex justify-between items-center">
                       <div>
-                        <div className="text-sm font-black text-slate-900 dark:text-white">
+                        <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                           {log.rank} {log.name}
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 font-bold uppercase tracking-wider">
+                            {log.role === 'SUPER_ADMIN' ? 'Super Admin' : log.role === 'ADMIN' ? 'Admin' : 'Normal User'}
+                          </span>
                         </div>
-                        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                           BD/{log.bdNo} • {log.flightName}
                         </div>
                         <div className="text-[10px] text-slate-400 mt-1 font-medium">
                           {new Date(log.timestamp).toLocaleString()}
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                         <span className="text-xs font-bold text-slate-500">{log.role}</span>
                       </div>
                     </div>
                   ));

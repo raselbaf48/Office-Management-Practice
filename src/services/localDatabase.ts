@@ -24,6 +24,7 @@ export interface LocalStorageDB {
   assignments: Record<string, DutyAssignment[]>; // monthKey YYYY-MM -> DutyAssignment[]
   activityHistory: ActivityHistoryItem[];
   adminPasscode: string;
+  detailedUsers?: any[];
   importHistory: ImportHistoryBatch[];
   lastUpdated: string;
 }
@@ -151,6 +152,14 @@ export class LocalDatabaseEngine {
           this.db.assignments = { ...this.db.assignments, ...data.assignments };
           hasUpdates = true;
         }
+        if (data.detailedUsers && Array.isArray(data.detailedUsers)) {
+          this.db.detailedUsers = data.detailedUsers;
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('baf_detailed_user_logins', JSON.stringify(data.detailedUsers));
+            window.dispatchEvent(new CustomEvent('baf_detailed_users_changed', { detail: data.detailedUsers }));
+          }
+          hasUpdates = true;
+        }
         if (data.adminPasscode) {
           this.db.adminPasscode = String(data.adminPasscode);
           hasUpdates = true;
@@ -161,7 +170,7 @@ export class LocalDatabaseEngine {
         }
         if (hasUpdates) {
           this.db.lastUpdated = data.lastUpdated || new Date().toISOString();
-          this.saveToStorage(this.db, false, false);
+          this.saveToStorage(this.db, false, false, false);
           window.dispatchEvent(new CustomEvent('baf_state_updated', { detail: { source: 'd1Sync' } }));
         }
         firebaseLastSyncTime = new Date().toLocaleTimeString();
@@ -216,11 +225,11 @@ export class LocalDatabaseEngine {
       clearTimeout(this.saveTimeout);
     }
     
-    // Auto-sync after 1 hour (3600000 ms)
+    // Auto-sync after 10 seconds (10000 ms) to prevent data loss on sudden closes
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
       doSave();
-    }, 3600000);
+    }, 10000);
   }
 
   private loadInitialLocalState(): LocalStorageDB {
@@ -235,8 +244,9 @@ export class LocalDatabaseEngine {
               assignments: parsed.assignments || {},
               activityHistory: parsed.activityHistory || [],
               adminPasscode: parsed.adminPasscode || DEFAULT_ADMIN_PASSCODE,
+              detailedUsers: parsed.detailedUsers || [],
               importHistory: parsed.importHistory || [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: parsed.lastUpdated || new Date().toISOString(),
             };
 
             if (!db.assignments['2026-07']) {
@@ -272,9 +282,12 @@ export class LocalDatabaseEngine {
     return initialDb;
   }
 
-  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToFirebase: boolean = true) {
+  public forceSave() { this.saveToStorage(this.db, true, true, true); }
+  private saveToStorage(dbToSave: LocalStorageDB = this.db, notify: boolean = true, pushToFirebase: boolean = true, updateTimestamp: boolean = true) {
     try {
-      dbToSave.lastUpdated = new Date().toISOString();
+      if (updateTimestamp) {
+        dbToSave.lastUpdated = new Date().toISOString();
+      }
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dbToSave));
       }
