@@ -824,107 +824,99 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
                         Unit
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Total str
-                        </div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Total Str</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Det/ Tdy
-                        </div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Det/Tdy</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Eff str
-                        </div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Eff Str</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Leave
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                             ESSN
                           </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                             CMH
                           </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Sick Report
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Recep- tion
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Canteen</div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Canteen</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Guard Duty
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Bake & Bite
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Flood Cell
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Admin Order</div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Admin Order</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Deten- tion
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
-                          Class/ Trg
-                        </div>
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">Class/Trg</div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Air Fd Duty
                         </div>
                       </th>
                       
                     {Object.keys(customDisposalsMap).map(key => (
                       <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
-                        <div className="w-full h-28 h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {key}
                         </div>
                       </th>
                     ))}
-                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}</div></th>
+                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{documentType === 'PT' ? 'Total Out PT' : 'Total Out Parade'}</div></th>
                       <th className="border border-black p-0 align-bottom text-center font-bold align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {documentType === 'PT' ? 'On PT' : 'On Parade'}
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Games
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Absent
                         </div>
                       </th>
                       <th className="border border-black p-0 align-bottom text-center align-middle">
-                        <div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           Rmk
                         </div>
                       </th>

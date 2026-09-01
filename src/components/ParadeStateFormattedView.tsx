@@ -128,6 +128,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   });
   const [showDisposalDropdown, setShowDisposalDropdown] = useState(false);
   const [isEditingDisposals, setIsEditingDisposals] = useState(false);
+  const [historicalCustomCats, setHistoricalCustomCats] = useState<{code: string, label: string, customTitle: string}[]>(() => { try { const saved = localStorage.getItem('parade_historical_custom'); return saved ? JSON.parse(saved) : []; } catch { return []; } });
 
   const ALL_DISPOSAL_OPTIONS = [{"code":"TDY","label":"Det/ Tdy"},{"code":"LEAVE","label":"Leave"},{"code":"ESSN","label":"Essn"},{"code":"CMH","label":"BNS/BSH/ CMH"},{"code":"SICK_REPORT","label":"Sick Report"},{"code":"CANTEEN","label":"Canteen"},{"code":"DUTY_OFF","label":"Guard Duty On/Off"},{"code":"BAKE_N_BITE","label":"Bake & Bite"},{"code":"RECEPTION","label":"K/O & Reception"},{"code":"ADMIN_ORDER","label":"Admin Order"},{"code":"CLASS_TRG","label":"Class/ Trg"},{"code":"AIRPORT","label":"Airfield Duty"},{"code":"GAMES","label":"G/H & Games"},{"code":"ABSENT","label":"Absent"},{"code":"OTHERS","label":"✨ Custom..."}];
 
@@ -151,6 +152,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   };
 
   const handleRemoveDisposalOption = (label: string) => {
+    const removed = savedDisposals.find(d => d.label === label);
+    if (removed && removed.code === 'OTHERS' && removed.customTitle && !historicalCustomCats.some(h => h.customTitle === removed.customTitle)) {
+      const newHistory = [...historicalCustomCats, removed];
+      setHistoricalCustomCats(newHistory);
+      const lsKey = 'parade_historical_custom';
+      localStorage.setItem(lsKey, JSON.stringify(newHistory));
+    }
     const updated = savedDisposals.filter(d => d.label !== label);
     setSavedDisposals(updated);
     localStorage.setItem('savedDisposalKeys_Parade', JSON.stringify(updated));
@@ -1449,25 +1457,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               >
                 <thead>
                   <tr className="bg-transparent text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-0.5 align-middle text-center min-w-[50px] font-bold">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[11px] font-bold">
-                        Unit / Flight
-                      </div>
+                    <th className="border border-slate-800 p-1 align-middle text-center min-w-[70px] font-bold">Unit / Flight</th>
+                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Total Str</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Total str
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Det/Tdy</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Det/ Tdy
-                      </div>
-                    </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        Eff str
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Eff Str</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
@@ -1480,9 +1478,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
-                        BNS/BSH/ CMH
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">BNS/BSH/CMH</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
@@ -1503,17 +1499,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
-                        K/O & Reception
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">K/O & Reception</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Admin Order</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
-                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">
-                        Class/ Trg
-                      </div>
+                      <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Class/Trg</div>
                     </th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
@@ -1528,12 +1520,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     
                     {Object.keys(customDisposalsMap).map(key => (
                       <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
-                        <div className="w-full h-28 h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
+                        <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {key}
                         </div>
                       </th>
                     ))}
-                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-20 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{isPtDocument === 'PT' ? 'Total Out PT' : 'Total Out Parade'}</div></th>
+                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{isPtDocument ? 'Total Out PT' : 'Total Out Parade'}</div></th>
                     <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
                         {isPtDocument ? 'On PT' : 'On Parade'}
@@ -1929,7 +1921,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     2. Select Disposal Category
                   </label>
-                  {savedDisposals.length > 0 && (
+                  {savedDisposals.length > 0 && sessionStorage.getItem('baf_user_role') === 'SUPER_ADMIN' && (
                     <button
                       type="button"
                       onClick={() => setIsEditingDisposals(!isEditingDisposals)}
@@ -1984,14 +1976,14 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       </button>
                       {showDisposalDropdown && (
                         <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
-                          {ALL_DISPOSAL_OPTIONS.map((opt) => (
+                          {[...ALL_DISPOSAL_OPTIONS, ...historicalCustomCats].filter(opt => opt.code === 'OTHERS' || (!savedDisposals.some(d => d.code === opt.code && (d.code !== 'OTHERS' || d.customTitle === opt.customTitle)))).filter((opt, index, self) => index === self.findIndex((t) => t.code === opt.code && t.customTitle === opt.customTitle)).map((opt) => (
                             <button
                               key={opt.label}
                               type="button"
                               onClick={() => handleAddDisposalOption(opt)}
                               className="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors"
                             >
-                              {opt.label}
+                              {opt.code === 'OTHERS' && opt.customTitle ? opt.customTitle : opt.label}
                             </button>
                           ))}
                         </div>

@@ -134,6 +134,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   });
   const [showDisposalDropdown, setShowDisposalDropdown] = useState(false);
   const [isEditingDisposals, setIsEditingDisposals] = useState(false);
+  const [historicalCustomCats, setHistoricalCustomCats] = useState<{code: string, label: string, customTitle: string}[]>(() => { try { const saved = localStorage.getItem('parade_historical_custom'); return saved ? JSON.parse(saved) : []; } catch { return []; } });
 
   const ALL_DISPOSAL_OPTIONS = [{"code":"TDY","label":"Det/Tdy"},{"code":"LEAVE","label":"Leave"},{"code":"OTHERS","customTitle":"Course","label":"Course"},{"code":"CLASS_TRG","label":"Class/Exam"},{"code":"ABSENT","label":"AWOL/Detention"},{"code":"SICK_REPORT","label":"Sick report"},{"code":"ED","label":"ED/ EX PPGF"},{"code":"CMH","label":"CMH/BNS/BSH/Qnt"},{"code":"OTHERS","customTitle":"U/C, U/Board","label":"U/C, U/ Board"},{"code":"OTHERS","customTitle":"Office Duty","label":"Office Duty"},{"code":"OTHERS","customTitle":"Aft/ Ni flg/ Ni Duty","label":"Aft/ Ni flg/ Ni Duty"},{"code":"AIRPORT","label":"GD/TF/Airfield Duty"},{"code":"DUTY_OFF","label":"Off Duty"},{"code":"RECEPTION","label":"K/O"},{"code":"CANTEEN","label":"Mess/ Canteen / Bakery"},{"code":"OTHERS","customTitle":"Driving","label":"Driving"},{"code":"GAMES","label":"Games / Guard of Honor"},{"code":"OTHERS","label":"✨ Custom..."}];
 
@@ -157,6 +158,13 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   };
 
   const handleRemoveDisposalOption = (label: string) => {
+    const removed = savedDisposals.find(d => d.label === label);
+    if (removed && removed.code === 'OTHERS' && removed.customTitle && !historicalCustomCats.some(h => h.customTitle === removed.customTitle)) {
+      const newHistory = [...historicalCustomCats, removed];
+      setHistoricalCustomCats(newHistory);
+      const lsKey = 'nc_historical_custom';
+      localStorage.setItem(lsKey, JSON.stringify(newHistory));
+    }
     const updated = savedDisposals.filter(d => d.label !== label);
     setSavedDisposals(updated);
     localStorage.setItem('savedDisposalKeys_NC', JSON.stringify(updated));
@@ -693,6 +701,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
     let airFdDutyCount = 0;
     let gamesCount = 0;
     let absentCount = 0;
+    let officeDutyCount = 0;
     let othersCount = 0;
 
     if (pList.length > 0) {
@@ -734,11 +743,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
         } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
           absentCount++;
         } else if (isBake || codeUpper === 'CANTEEN' || notesLower.includes('canteen') || codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-        onPtList.push({ airman, note: '' });
-      } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
-        const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
-        dutyOnList.push({ airman, note: 'Office Duty' });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper) || statusCategory === 'DUTY') {
+          bakeBiteCount++;
+        } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
+          officeDutyCount++;
+        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper) || statusCategory === 'DUTY') {
           guardDutyCount++;
         } else {
           othersCount++;
@@ -763,6 +771,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       airFdDutyCount +
       gamesCount +
       absentCount +
+      officeDutyCount +
       othersCount;
 
     const onPtParadeCount = Math.max(0, effStr - totalOutPt);
@@ -887,11 +896,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
         absentList.push({ airman, note: 'Absent' });
       } else if (isBake || codeUpper === 'CANTEEN' || notesLower.includes('canteen') || codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-          // Available on Parade / PT
-        } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
-          officeDutyCount++;
-          totalOutPt++;
-        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+        onPtList.push({ airman, note: '' });
+      } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
+        dutyOnList.push({ airman, note: 'Office Duty' });
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
         const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
         dutyOnList.push({ airman, note: dutyDisplay });
       } else {
@@ -1804,7 +1812,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     2. Select Disposal Category
                   </label>
-                  {savedDisposals.length > 0 && (
+                  {savedDisposals.length > 0 && sessionStorage.getItem('baf_user_role') === 'SUPER_ADMIN' && (
                     <button
                       type="button"
                       onClick={() => setIsEditingDisposals(!isEditingDisposals)}
@@ -1859,14 +1867,14 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       </button>
                       {showDisposalDropdown && (
                         <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
-                          {ALL_DISPOSAL_OPTIONS.map((opt) => (
+                          {[...ALL_DISPOSAL_OPTIONS, ...historicalCustomCats].filter(opt => opt.code === 'OTHERS' || (!savedDisposals.some(d => d.code === opt.code && (d.code !== 'OTHERS' || d.customTitle === opt.customTitle)))).filter((opt, index, self) => index === self.findIndex((t) => t.code === opt.code && t.customTitle === opt.customTitle)).map((opt) => (
                             <button
                               key={opt.label}
                               type="button"
                               onClick={() => handleAddDisposalOption(opt)}
                               className="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors"
                             >
-                              {opt.label}
+                              {opt.code === 'OTHERS' && opt.customTitle ? opt.customTitle : opt.label}
                             </button>
                           ))}
                         </div>

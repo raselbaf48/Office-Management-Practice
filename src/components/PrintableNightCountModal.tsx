@@ -686,6 +686,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
     let airFdDutyCount = 0;
     let gamesCount = 0;
     let absentCount = 0;
+    let officeDutyCount = 0;
     let othersCount = 0;
 
     if (pList.length > 0) {
@@ -727,11 +728,10 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
         } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
           absentCount++;
         } else if (isBake || codeUpper === 'CANTEEN' || notesLower.includes('canteen') || codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-        onPtList.push({ airman, note: '' });
-      } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
-        const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
-        dutyOnList.push({ airman, note: 'Office Duty' });
-      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper) || statusCategory === 'DUTY') {
+          bakeBiteCount++;
+        } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
+          officeDutyCount++;
+        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper) || statusCategory === 'DUTY') {
           guardDutyCount++;
         } else {
           othersCount++;
@@ -756,6 +756,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
       airFdDutyCount +
       gamesCount +
       absentCount +
+      officeDutyCount +
       othersCount;
 
     const onPtParadeCount = Math.max(0, effStr - totalOutPt);
@@ -880,11 +881,10 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
       } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
         absentList.push({ airman, note: 'Absent' });
       } else if (isBake || codeUpper === 'CANTEEN' || notesLower.includes('canteen') || codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
-          // Available on Parade / PT
-        } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
-          officeDutyCount++;
-          totalOutPt++;
-        } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
+        onPtList.push({ airman, note: '' });
+      } else if (isIdacB || isIdacC || codeUpper === 'OFFICE' || notesLower.includes('office')) {
+        dutyOnList.push({ airman, note: 'Office Duty' });
+      } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
         const dutyDisplay = formatDutyOnShortName(codeUpper, idaShift, notes, item.dutyName);
         dutyOnList.push({ airman, note: dutyDisplay });
       } else {
@@ -1679,7 +1679,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     2. Select Disposal Category
                   </label>
-                  {savedDisposals.length > 0 && (
+                  {savedDisposals.length > 0 && sessionStorage.getItem('baf_user_role') === 'SUPER_ADMIN' && (
                     <button
                       type="button"
                       onClick={() => setIsEditingDisposals(!isEditingDisposals)}
@@ -1734,7 +1734,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                       </button>
                       {showDisposalDropdown && (
                         <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
-                          {ALL_DISPOSAL_OPTIONS.map((opt) => (
+                          {ALL_DISPOSAL_OPTIONS.filter(opt => opt.code === 'OTHERS' || !savedDisposals.some(d => d.code === opt.code)).map((opt) => (
                             <button
                               key={opt.label}
                               type="button"
