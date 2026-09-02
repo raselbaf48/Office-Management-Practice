@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
-import { Search, ChevronLeft, Save, ShieldCheck } from 'lucide-react';
+import { Search, ChevronLeft, Save, ShieldCheck, Settings } from 'lucide-react';
 import { getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserManagementTabProps {
@@ -28,94 +28,163 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     return () => window.removeEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
   }, []);
 
-  const isOwner = userSessionRole === 'SUPER_ADMIN';
-  const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'ADMIN';
-
-  const activeAirmen = useMemo(() => nominalAirmen.filter(a => a.active), [nominalAirmen]);
-
-  const mergedUsers = useMemo(() => {
-    return activeAirmen.map((airman, index) => {
-      const cleanBd = airman.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
-      const detailed = detailedUsers.find(d => d.bdNo.toLowerCase() === cleanBd);
-      
-      const role = detailed?.role || 'USER';
-      const status = detailed?.status || 'ACTIVE';
-      const isDefaultOwner = airman.bdNo === 'BD/116962';
-      
-      return {
-        serNo: index + 1,
-        cleanBd: airman.bdNo,
-        airman,
-        detailed,
-        role: isDefaultOwner ? 'SUPER_ADMIN' : role,
-        status,
-        password: detailed?.password || '',
-        adminPass: detailed?.adminPass || '',
-        ownerPass: detailed?.ownerPass || '',
-        isDefaultOwner
-      };
-    });
-  }, [activeAirmen, detailedUsers]);
-
-  const filteredUsers = useMemo(() => {
-    return mergedUsers.filter(u => {
-      if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
-      if (flightFilter !== 'ALL' && u.airman.flightName !== flightFilter) return false;
-      
-      const query = searchQuery.toLowerCase();
-      if (!query) return true;
-      
-      return (
-        u.cleanBd.toLowerCase().includes(query) ||
-        u.airman.name.toLowerCase().includes(query) ||
-        u.airman.rank.toLowerCase().includes(query)
-      );
-    });
-  }, [mergedUsers, searchQuery, roleFilter, flightFilter]);
-
-  const [selectedUser, setSelectedUser] = useState<typeof mergedUsers[0] | null>(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [newUser, setNewUser] = useState({ bdNo: '', name: '', rank: '', mobileNo: '', role: 'USER' as UserLoginRole, password: '' });
   
+  const isAdmin = userSessionRole === 'ADMIN' || userSessionRole === 'SUPER_ADMIN';
+  const isOwner = userSessionRole === 'SUPER_ADMIN';
+  
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editRole, setEditRole] = useState<UserLoginRole>('USER');
   const [editStatus, setEditStatus] = useState<UserLoginStatus>('ACTIVE');
   const [editPassword, setEditPassword] = useState('');
   const [editAdminPass, setEditAdminPass] = useState('');
 
-  const openProfile = (user: typeof mergedUsers[0]) => {
+  const mergedUsers = useMemo(() => {
+    const combined = nominalAirmen.map(airman => {
+      const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
+      const dbUser = detailedUsers.find(u => u.bdNo === cleanBd);
+      return {
+        ...airman,
+        cleanBd,
+        role: dbUser?.role || 'USER',
+        status: dbUser?.status || 'ACTIVE',
+        password: dbUser?.password || cleanBd,
+        adminPass: dbUser?.adminPass || '',
+        isDefaultOwner: (dbUser as any)?.isDefaultOwner || false,
+        lastLogin: dbUser?.lastLoginAt,
+        detailed: dbUser,
+        airman
+      };
+    });
+    
+    const independentUsers = detailedUsers
+      .filter(u => !combined.some(c => c.cleanBd === u.bdNo))
+      .map(u => ({
+        id: `indep-${u.bdNo}`,
+        cleanBd: u.bdNo,
+        bdNo: u.bdNo,
+        name: u.name,
+        rank: u.rank,
+        mobileNo: u.mobileNo || '',
+        flight: u.flightName || '',
+        role: u.role,
+        status: u.status,
+        password: u.password || u.bdNo,
+        adminPass: u.adminPass || '',
+        isDefaultOwner: (u as any).isDefaultOwner || false,
+        lastLogin: u.lastLoginAt,
+        detailed: u,
+        airman: {
+          rank: u.rank,
+          name: u.name
+        }
+      }));
+    
+    let filtered = [...combined, ...independentUsers];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(u => 
+        u.cleanBd.toLowerCase().includes(q) || 
+        u.name.toLowerCase().includes(q)
+      );
+    }
+    if (roleFilter !== 'ALL') {
+      filtered = filtered.filter(u => u.role === roleFilter);
+    }
+    if (flightFilter !== 'ALL') {
+      filtered = filtered.filter(u => (u.flight || u.flightName) === flightFilter);
+    }
+    return filtered.sort((a, b) => {
+      if (a.role === 'SUPER_ADMIN' && b.role !== 'SUPER_ADMIN') return -1;
+      if (a.role !== 'SUPER_ADMIN' && b.role === 'SUPER_ADMIN') return 1;
+      return 0;
+    });
+  }, [nominalAirmen, detailedUsers, searchQuery, roleFilter, flightFilter]);
+
+  const uniqueFlights = useMemo(() => {
+    return Array.from(new Set(nominalAirmen.map(a => a.flightName))).filter(Boolean).sort();
+  }, [nominalAirmen]);
+
+  const openProfile = (user: any) => {
     if (!isAdmin) return;
     setSelectedUser(user);
     setEditRole(user.role);
     setEditStatus(user.status);
     setEditPassword(user.password);
     setEditAdminPass(user.adminPass);
+    setIsEditingProfile(false);
   };
 
   const closeProfile = () => {
     setSelectedUser(null);
+    setIsEditingProfile(false);
+  };
+
+  const handleAddUser = () => {
+    if (!newUser.bdNo || !newUser.name || !newUser.password) return;
+    
+    const updatedDetailedUsers = [...detailedUsers];
+    const newDetail: DetailedUserLogin = {
+      id: `user-login-${newUser.bdNo}`,
+      bdNo: newUser.bdNo,
+      name: newUser.name,
+      rank: newUser.rank || '',
+      mobileNo: newUser.mobileNo || '',
+      flightName: 'Admin', // default or ask
+      trade: '',
+      role: newUser.role,
+      status: 'ACTIVE',
+      password: newUser.password,
+      adminPass: '',
+      detailedAt: new Date().toISOString(),
+      detailedBy: 'System',
+    };
+    
+    const existingIdx = updatedDetailedUsers.findIndex(u => u.bdNo === newDetail.bdNo);
+    if (existingIdx >= 0) {
+      updatedDetailedUsers[existingIdx] = newDetail;
+    } else {
+      updatedDetailedUsers.push(newDetail);
+    }
+    
+    saveDetailedUsers(updatedDetailedUsers);
+    setDetailedUsers(updatedDetailedUsers);
+    
+    setIsAddingUser(false);
+    setNewUser({ bdNo: '', name: '', rank: '', mobileNo: '', role: 'USER', password: '' });
   };
 
   const saveProfile = () => {
-    if (!selectedUser || !isAdmin) return;
+    if (!selectedUser) return;
     
     const updatedDetailedUsers = [...detailedUsers];
-    const cleanBd = selectedUser.cleanBd.toLowerCase();
-    const existingIdx = updatedDetailedUsers.findIndex(d => d.bdNo.toLowerCase() === cleanBd);
+    const existingIdx = updatedDetailedUsers.findIndex(u => u.bdNo === selectedUser.cleanBd);
     
     const newDetail: DetailedUserLogin = {
-      id: selectedUser.detailed?.id || `detail-${selectedUser.cleanBd}-${Date.now()}`,
-      airmanId: selectedUser.airman.id,
+      id: `user-login-${selectedUser.cleanBd}`,
       bdNo: selectedUser.cleanBd,
-      rank: selectedUser.airman.rank,
-      name: selectedUser.airman.name,
-      flightName: selectedUser.airman.flightName || 'Admin',
-      trade: selectedUser.airman.trade || 'General',
+      name: selectedUser.airman?.name || selectedUser.name || '',
+      rank: selectedUser.airman?.rank || selectedUser.rank || '',
+      flightName: selectedUser.airman?.flightName || selectedUser.flight || '',
+      trade: selectedUser.airman?.trade || selectedUser.trade || '',
+      mobileNo: selectedUser.airman?.mobileNo || selectedUser.mobileNo || '',
       role: editRole,
       status: editStatus,
       password: editPassword,
       adminPass: editAdminPass,
-      ownerPass: selectedUser.ownerPass,
-      detailedAt: selectedUser.detailed?.detailedAt || new Date().toISOString(),
-      detailedBy: selectedUser.detailed?.detailedBy || 'System',
+      detailedAt: new Date().toISOString(),
+      detailedBy: 'System',
     };
+    
+    // preserve fields
+    if (existingIdx >= 0) {
+      newDetail.ownerPass = updatedDetailedUsers[existingIdx].ownerPass;
+      newDetail.lastLoginAt = updatedDetailedUsers[existingIdx].lastLoginAt;
+      newDetail.detailOrder = updatedDetailedUsers[existingIdx].detailOrder;
+      (newDetail as any).isDefaultOwner = (updatedDetailedUsers[existingIdx] as any).isDefaultOwner;
+    }
 
     if (existingIdx >= 0) {
       updatedDetailedUsers[existingIdx] = newDetail;
@@ -129,14 +198,15 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fadeIn space-y-4">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50">
+      <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 sm:p-6 shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-3">
-          {selectedUser ? (
-            <button 
-              onClick={closeProfile} 
-              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-            >
+          {isAddingUser ? (
+            <button onClick={() => setIsAddingUser(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+              <ChevronLeft className="w-6 h-6 text-slate-700 dark:text-slate-200" />
+            </button>
+          ) : selectedUser ? (
+            <button onClick={closeProfile} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
               <ChevronLeft className="w-6 h-6 text-slate-700 dark:text-slate-200" />
             </button>
           ) : (
@@ -146,201 +216,176 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
           )}
           <div>
             <h2 className="text-lg font-black text-slate-900 dark:text-white">
-              {selectedUser ? 'User Profile & Access' : 'User Management'}
+              {isAddingUser ? 'Add Independent User' : selectedUser ? 'User Profile' : 'User Management'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              {selectedUser 
-                ? `BD/${selectedUser.cleanBd} - ${selectedUser.airman.rank} ${selectedUser.airman.name}` 
-                : 'Manage roles, passwords, and access for all nominal airmen'}
+              {isAddingUser ? 'Create a new standalone user account' : selectedUser ? `BD/${selectedUser.cleanBd} - ${selectedUser.airman?.rank || ''} ${selectedUser.airman?.name || selectedUser.name || ''}` : 'Manage roles, PINs, and access for all nominal airmen'}
             </p>
           </div>
         </div>
+        {!isAddingUser && !selectedUser && isOwner && (
+          <button onClick={() => setIsAddingUser(true)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl shadow-sm transition-all">
+            + Add User
+          </button>
+        )}
       </div>
 
-      {selectedUser ? (
+      {isAddingUser ? (
         <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-start">
           <div className="max-w-xl w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
-            
-            <div className="space-y-4">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Account Role</label>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setEditRole('USER')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'USER' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-                >
-                  User
-                </button>
-                <button
-                  onClick={() => setEditRole('ADMIN')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'ADMIN' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-                >
-                  Admin
-                </button>
-                <button
-                  disabled={!isOwner}
-                  onClick={() => setEditRole('SUPER_ADMIN')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'SUPER_ADMIN' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} ${!isOwner && 'opacity-50 cursor-not-allowed'}`}
-                >
-                  {selectedUser.isDefaultOwner ? 'System Owner' : 'Super Admin'}
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">User ID (BD No) <span className="text-rose-500">*</span></label>
+                <input type="text" value={newUser.bdNo} onChange={(e) => setNewUser({...newUser, bdNo: e.target.value})} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" placeholder="e.g. 123456" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name <span className="text-rose-500">*</span></label>
+                <input type="text" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" placeholder="Full Name" />
               </div>
             </div>
-
-            {isOwner && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Login Password</label>
-                  <input
-                    type="text"
-                    value={editPassword}
-                    onChange={(e) => setEditPassword(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 font-mono text-slate-900 dark:text-white"
-                    placeholder="Login Pass"
-                  />
-                </div>
-                
-                {(editRole === 'ADMIN' || editRole === 'SUPER_ADMIN') && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin Passcode <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      value={editAdminPass}
-                      onChange={(e) => setEditAdminPass(e.target.value)}
-                      className="w-full bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 font-mono text-slate-900 dark:text-white"
-                      placeholder="Required for Admin"
-                    />
-                  </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">User PIN <span className="text-rose-500">*</span></label>
+              <input type="text" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} className="w-full md:w-1/2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 font-mono text-slate-900 dark:text-white" placeholder="User PIN" />
+            </div>
+            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <button onClick={() => setIsAddingUser(false)} className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">Cancel</button>
+              <button onClick={handleAddUser} className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold"><Save className="w-5 h-5" /><span>Save User</span></button>
+            </div>
+          </div>
+        </div>
+      ) : selectedUser ? (
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-start">
+          <div className="max-w-xl w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Profile Details</h3>
+                {isOwner && (
+                  <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`p-1.5 rounded-lg ${isEditingProfile ? 'bg-emerald-100 text-emerald-600' : 'text-slate-400'}`}>
+                    <Settings className="w-4 h-4" />
+                  </button>
                 )}
               </div>
-            )}
-
-            <div className="space-y-2">
-               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Account Status</label>
-               <select
-                 value={editStatus}
-                 onChange={(e) => setEditStatus(e.target.value as UserLoginStatus)}
-                 className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-sm font-bold text-slate-900 dark:text-white"
-               >
-                 <option value="ACTIVE">ACTIVE - Can log in</option>
-                 <option value="SUSPENDED">SUSPENDED - Temporarily blocked</option>
-                 <option value="REVOKED">REVOKED - Access permanently removed</option>
-               </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase">Ser No</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.airman?.serNo || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase">User ID (BD No)</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.cleanBd}</p>
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase">Rank & Name</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.airman?.rank} {selectedUser.airman?.name || selectedUser.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase">Trade</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.airman?.trade || selectedUser.trade || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase">Mobile No</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.airman?.mobileNo || selectedUser.mobileNo || '-'}</p>
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase">Flight</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.airman?.flightName || selectedUser.flight || '-'}</p>
+                </div>
+                {isOwner && (
+                  <>
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase">User PIN</p>
+                      <p className="text-sm font-mono font-medium text-slate-900 dark:text-white">{selectedUser.password}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase">Admin PIN</p>
+                      <p className="text-sm font-mono font-medium text-slate-900 dark:text-white">{selectedUser.adminPass || '-'}</p>
+                    </div>
+                  </>
+                )}
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase">Current Role</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.role}</p>
+                </div>
+              </div>
             </div>
 
+            {isEditingProfile && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-6 mb-6">
+                <div className="space-y-4">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Account Role</label>
+                  <div className="flex space-x-3">
+                    <button onClick={() => setEditRole('USER')} className={`flex-1 py-3 px-4 rounded-xl border transition-colors ${editRole === 'USER' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>User</button>
+                    <button onClick={() => setEditRole('ADMIN')} className={`flex-1 py-3 px-4 rounded-xl border transition-colors ${editRole === 'ADMIN' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>Admin</button>
+                    <button disabled={!isOwner} onClick={() => setEditRole('SUPER_ADMIN')} className={`flex-1 py-3 px-4 rounded-xl border transition-colors ${editRole === 'SUPER_ADMIN' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>Owner</button>
+                  </div>
+                </div>
+                {isOwner && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase">User PIN</label>
+                      <input type="text" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-mono dark:text-white" />
+                    </div>
+                    {(editRole === 'ADMIN' || editRole === 'SUPER_ADMIN') && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Admin PIN</label>
+                        <input type="text" value={editAdminPass} onChange={(e) => setEditAdminPass(e.target.value)} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-mono dark:text-white" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Account Status</label>
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as UserLoginStatus)} className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 dark:text-white">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                    <option value="REVOKED">REVOKED</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-200 dark:border-slate-700">
-              <button
-                onClick={closeProfile}
-                className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 font-bold transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveProfile}
-                className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-sm"
-              >
-                <Save className="w-5 h-5" />
-                <span>Save Changes</span>
-              </button>
+              {isEditingProfile ? (
+                <>
+                  <button onClick={() => setIsEditingProfile(false)} className="px-6 py-3 rounded-xl bg-slate-200 text-slate-700 font-bold">Cancel</button>
+                  <button onClick={saveProfile} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold">Save Changes</button>
+                </>
+              ) : (
+                <button onClick={closeProfile} className="px-6 py-3 rounded-xl bg-slate-200 text-slate-700 font-bold">Close</button>
+              )}
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col xl:flex-row items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by User ID, Rank, Name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:text-slate-200"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <select 
-                  value={flightFilter}
-                  onChange={(e) => setFlightFilter(e.target.value)}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer"
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-100 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800">
+                <th className="px-4 py-3 font-bold text-slate-500 text-xs">SER NO</th>
+                <th className="px-4 py-3 font-bold text-slate-500 text-xs">USER ID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 text-xs">RANK & NAME</th>
+                <th className="px-4 py-3 font-bold text-slate-500 text-xs">ROLE</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {mergedUsers.map((user, idx) => (
+                <tr 
+                  key={user.cleanBd || idx} 
+                  onClick={() => openProfile(user)}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                 >
-                  <option value="ALL">All Flights</option>
-                  <option value="Avionics">Avionics</option>
-                  <option value="Mechanics">Mechanics</option>
-                  <option value="GCS">GCS</option>
-                  <option value="Admin">Admin</option>
-                </select>
-                <select 
-                  value={roleFilter}
-                  onChange={(e: any) => setRoleFilter(e.target.value)}
-                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer"
-                >
-                  <option value="ALL">All Roles</option>
-                  <option value="USER">User</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto bg-white dark:bg-slate-900 relative custom-scrollbar">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs">Sl</th>
-                  <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs">User ID</th>
-                  <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs">Rank & Name</th>
-                  <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs">Role</th>
-                  <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">Status</th>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.airman?.serNo || '-'}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{user.cleanBd}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.airman?.rank} {user.airman?.name || user.name}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800' : user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+                      {user.role}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-500">
-                      No active airmen found matching the criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <tr 
-                      key={user.cleanBd}
-                      onClick={() => { if (isAdmin) openProfile(user); }}
-                      className={`transition-colors ${isAdmin ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}`}
-                    >
-                      <td className="px-4 py-3 font-mono text-slate-500">{user.serNo}</td>
-                      <td className="px-4 py-3 font-mono font-black text-slate-900 dark:text-white">
-                        {user.cleanBd}
-                        {user.isDefaultOwner && <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 rounded text-[9px]">Sys Admin</span>}
-                      </td>
-                      <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-200">
-                        {user.airman.rank} {user.airman.name}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                          user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
-                          user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800' :
-                          'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                        }`}>
-                          {user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.role === 'ADMIN' ? 'Admin' : 'User'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                            user.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' :
-                            user.status === 'SUSPENDED' ? 'text-amber-600 dark:text-amber-400' :
-                            'text-rose-600 dark:text-rose-400'
-                          }`}>
-                            {user.status}
-                          </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

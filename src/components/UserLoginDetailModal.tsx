@@ -100,6 +100,9 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   }, [nominalAirmen, detailedUsers]);
 
   const filteredUsers = mergedUsers.filter((u) => {
+    // Normal admins cannot see super admins
+    if (!isOwner && u.role === 'SUPER_ADMIN') return false;
+
     if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();

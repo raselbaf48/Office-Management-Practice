@@ -9,6 +9,7 @@ import { TopHeader } from './components/TopHeader';
 import { DashboardParadeState } from './components/DashboardParadeState';
 import { ParadeStateFormattedView } from './components/ParadeStateFormattedView';
 import { updatePresence } from './services/presenceService';
+import { getAppConfig, isFeatureActive, AppConfig } from './utils/appConfig';
 import { NightCountStateView } from './components/NightCountStateView';
 import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
@@ -31,7 +32,7 @@ import { UserLoginGate } from './components/UserLoginGate';
 import { Airman, FlightName, ParadeShift, UserRole, ThemePreference } from './types';
 import { INITIAL_AIRMEN } from './data/initialAirmen';
 import { Logo155UASU } from './components/Logo155UASU';
-import { Shield } from 'lucide-react';
+import { Shield, AlertCircle, X } from 'lucide-react';
 import { getCurrentUserSession, clearUserSession, UserSession } from './utils/authSession';
 
 export default function App() {
@@ -42,6 +43,44 @@ export default function App() {
     return saved === 'ADMIN' ? 'ADMIN' : 'USER';
   });
   const [userSession, setUserSession] = useState<UserSession | null>(() => getCurrentUserSession());
+
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [hasSeenNotice, setHasSeenNotice] = useState<boolean>(false);
+  
+  useEffect(() => {
+    setAppConfig(getAppConfig());
+    const handleConfigChange = (e: any) => setAppConfig(e.detail);
+    window.addEventListener('baf_app_config_changed', handleConfigChange);
+    return () => window.removeEventListener('baf_app_config_changed', handleConfigChange);
+  }, []);
+
+  const renderNoticeModal = () => {
+    if (!userSession || !appConfig || hasSeenNotice) return null;
+    if (!isFeatureActive(appConfig.notice)) return null;
+    
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fadeIn border border-slate-200 dark:border-slate-700 relative">
+          <button onClick={() => setHasSeenNotice(true)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="flex flex-col items-center text-center space-y-4 mb-4">
+            <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-500">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">{appConfig.notice.heading || "Important Notice"}</h2>
+            <div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+              {appConfig.notice.message}
+            </div>
+          </div>
+          
+
+        </div>
+      </div>
+    );
+  };
+
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState<boolean>(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState<boolean>(false);
@@ -95,7 +134,8 @@ export default function App() {
         }
       };
       mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
+      
+return () => mediaQuery.removeEventListener('change', listener);
     }
   }, [themePreference]);
 
@@ -359,7 +399,11 @@ export default function App() {
           onAuthenticated={() => {
             const sess = getCurrentUserSession();
             setUserSession(sess);
-            handleRoleChange('USER');
+            if (sess?.assignedRole) {
+              handleRoleChange(sess.assignedRole as any);
+            } else {
+              handleRoleChange('USER');
+            }
           }}
         />
       </div>
@@ -368,6 +412,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      {renderNoticeModal()}
       {/* Left Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}

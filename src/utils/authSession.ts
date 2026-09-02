@@ -59,7 +59,6 @@ export const formatLogTime = (isoString: string): string => {
  */
 export const getCurrentUserSession = (): UserSession | null => {
   try {
-    sessionStorage.removeItem(SESSION_KEY); // Force clear persistent session
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as UserSession;
@@ -91,66 +90,104 @@ const SYSTEM_OWNER: DetailedUserLogin = {
   remarks: 'Mobile No: 01760369685',
 };
 
+const SYSTEM_OWNER_NEW: DetailedUserLogin = {
+  id: 'user-login-48456',
+  airmanId: 'system-owner-2',
+  bdNo: '48456',
+  rank: 'Civil',
+  name: 'System Owner',
+  flightName: 'Admin',
+  trade: 'System Admin',
+  role: 'SUPER_ADMIN',
+  password: '48456',
+  adminPass: '51519919',
+  ownerPass: '51519919',
+  status: 'ACTIVE',
+  detailOrder: 'SYSTEM_OWNER_02',
+  detailedAt: new Date().toISOString(),
+  detailedBy: 'System',
+  remarks: 'System Owner Super Admin',
+};
+
 export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogin[] => {
+  let parsed: DetailedUserLogin[] = [];
   try {
     const raw = localStorage.getItem(DETAILED_USERS_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as DetailedUserLogin[];
-      
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Enforce System Owner
-        const ownerIdx = parsed.findIndex(u => u.bdNo === '53539919');
-        if (ownerIdx === -1) {
-          parsed.push(SYSTEM_OWNER);
-          try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
-        } else {
-          // Always ensure role is SUPER_ADMIN
-          if (parsed[ownerIdx].role !== 'SUPER_ADMIN' || parsed[ownerIdx].password !== '54549919') {
-            parsed[ownerIdx].role = 'SUPER_ADMIN';
-            parsed[ownerIdx].password = '54549919';
-            parsed[ownerIdx].adminPass = '1124';
-            try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
-          }
-        }
-        return parsed;
+      const p = JSON.parse(raw);
+      if (Array.isArray(p) && p.length > 0) {
+        parsed = p;
       }
-
     }
   } catch (e) {
     console.warn('Failed to parse detailed user logins:', e);
   }
 
-  // If none configured yet, populate with nominal roll airmen (default 474455 as primary active)
-  if (nominalAirmen.length > 0) {
-    
-    const defaults: DetailedUserLogin[] = nominalAirmen.map((a) => {
-      const cleanBd = a.bdNo.replace(/^BD\/?/i, '').trim();
-      const isPrimary = cleanBd === '474455';
-      return {
-        id: `user-login-${cleanBd}`,
-        airmanId: a.id,
-        bdNo: cleanBd,
-        rank: a.rank,
-        name: a.name,
-        flightName: a.flightName,
-        trade: a.trade,
-        role: isPrimary ? 'SUPER_ADMIN' : 'USER',
-        password: cleanBd,
-        status: 'ACTIVE',
-        detailOrder: isPrimary ? 'DO-155/ADMIN/01' : 'DO-155/GEN/2026',
-        detailedAt: new Date().toISOString(),
-        detailedBy: '155 UASU Admin',
-        remarks: isPrimary ? 'Primary System Admin User (BD/474455 LAC Rasel)' : 'Nominal Roll Detailed User',
-      };
-    });
-    
-    // Add System Owner
-    defaults.push(SYSTEM_OWNER);
+  let modified = false;
 
-    try {
-      localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(defaults));
-    } catch {}
-    return defaults;
+  // Enforce System Owners
+  const enforceOwner = (owner: DetailedUserLogin, bdNo: string, pass: string, adminPass: string) => {
+    const idx = parsed.findIndex(u => u.bdNo === bdNo);
+    if (idx === -1) {
+      parsed.push(owner);
+      modified = true;
+    } else {
+      if (parsed[idx].role !== 'SUPER_ADMIN' || parsed[idx].password !== pass || parsed[idx].adminPass !== adminPass) {
+        parsed[idx].role = 'SUPER_ADMIN';
+        parsed[idx].password = pass;
+        parsed[idx].adminPass = adminPass;
+        modified = true;
+      }
+    }
+  };
+
+  enforceOwner(SYSTEM_OWNER, '53539919', '54549919', '1124');
+  enforceOwner(SYSTEM_OWNER_NEW, '48456', '48456', '51519919');
+
+  // Auto-sync Nominal Roll users into User Management
+  if (nominalAirmen && nominalAirmen.length > 0) {
+    nominalAirmen.forEach((a) => {
+      const cleanBd = a.bdNo.replace(/^BD\/?/i, '').trim();
+      const idx = parsed.findIndex(u => u.bdNo.toLowerCase() === cleanBd.toLowerCase());
+      
+      if (idx === -1) {
+        // Create auto profile for nominal roll airman
+        const isPrimary = cleanBd === '474455';
+        parsed.push({
+          id: `user-login-${cleanBd}`,
+          airmanId: a.id,
+          bdNo: cleanBd,
+          rank: a.rank,
+          name: a.name,
+          mobileNo: a.mobileNo,
+          flightName: a.flightName,
+          trade: a.trade,
+          role: isPrimary ? 'SUPER_ADMIN' : 'USER',
+          password: cleanBd,
+          adminPass: isPrimary ? '1124' : '',
+          status: a.active ? 'ACTIVE' : 'SUSPENDED',
+          detailOrder: isPrimary ? 'DO-155/ADMIN/01' : 'DO-155/GEN/2026',
+          detailedAt: new Date().toISOString(),
+          detailedBy: 'System Auto Sync',
+          remarks: 'Auto-synced from Nominal Roll',
+        });
+        modified = true;
+      } else {
+        // Suspend user if they are inactive in nominal roll
+        if (!a.active && parsed[idx].status === 'ACTIVE') {
+          parsed[idx].status = 'SUSPENDED';
+          modified = true;
+        }
+      }
+    });
+  }
+
+  if (modified) {
+    try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
+  }
+
+  if (parsed.length > 0) {
+    return parsed;
   }
 
   // Fallback single primary user
@@ -170,7 +207,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       detailedBy: '155 UASU Unit HQ',
       remarks: 'Primary Admin User ID (LAC Rasel)',
     },
-  , SYSTEM_OWNER];
+   SYSTEM_OWNER, SYSTEM_OWNER_NEW];
   return primaryFallback;
 };
 

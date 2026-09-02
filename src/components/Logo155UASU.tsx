@@ -15,22 +15,27 @@ export const Logo155UASU: React.FC<LogoProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() => {
     if (customLogoUrl) return customLogoUrl;
     const stored = localStorage.getItem('baf_custom_logo');
-    return stored || '/new-logo.png';
+    return (stored && stored.trim() !== '') ? stored : '/new-logo.png';
   });
 
   useEffect(() => {
-    if (customLogoUrl !== undefined && customLogoUrl !== null) {
+    if (customLogoUrl !== undefined && customLogoUrl !== null && customLogoUrl.trim() !== '') {
       setLogoSrc(customLogoUrl);
     } else {
       const stored = localStorage.getItem('baf_custom_logo');
-      setLogoSrc(stored || '/new-logo.png');
+      setLogoSrc((stored && stored.trim() !== '') ? stored : '/new-logo.png');
     }
   }, [customLogoUrl]);
 
   useEffect(() => {
     const handleLogoUpdated = (e: any) => {
-      const newLogo = e?.detail?.logoUrl !== undefined ? e.detail.logoUrl : localStorage.getItem('baf_custom_logo');
-      setLogoSrc(newLogo || '/new-logo.png');
+      const newLogo = e?.detail?.logoUrl;
+      if (newLogo && newLogo.trim() !== '') {
+        setLogoSrc(newLogo);
+      } else {
+        const stored = localStorage.getItem('baf_custom_logo');
+        setLogoSrc((stored && stored.trim() !== '') ? stored : '/new-logo.png');
+      }
     };
 
     window.addEventListener('baf_logo_updated', handleLogoUpdated);

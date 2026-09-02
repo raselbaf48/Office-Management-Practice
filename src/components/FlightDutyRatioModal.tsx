@@ -213,8 +213,8 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col relative overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-6xl max-h-[90vh] shadow-2xl flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden relative">
         
         {/* Header */}
         <div className="flex-none flex items-start justify-between border-b border-slate-200 dark:border-slate-800 p-6">
@@ -231,9 +231,7 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-rose-500 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-rose-500 transition-colors"><X className="w-5 h-5" /></button>
         </div>
 
         {savedMsg && (

@@ -84,6 +84,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const isPtDocument = false;
   const [fromDate, setFromDate] = useState<string>(selectedDate);
   const [toDate, setToDate] = useState<string>(selectedDate);
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isAdmin = role === 'ADMIN';
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
   const [singleParadeData, setSingleParadeData] = useState<ParadeStateResponse | null>(null);

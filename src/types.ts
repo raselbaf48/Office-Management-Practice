@@ -256,6 +256,7 @@ export interface DetailedUserLogin {
   name: string;
   flightName: FlightName | string;
   trade: string;
+  mobileNo?: string;
   role: UserLoginRole;
   status: UserLoginStatus;
   detailOrder?: string;

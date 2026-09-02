@@ -82,6 +82,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const isPtDocument = initialDocumentType === 'PT';
   const [fromDate, setFromDate] = useState<string>(selectedDate);
   const [toDate, setToDate] = useState<string>(selectedDate);
+  const isSuperAdmin = role === 'SUPER_ADMIN';
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
   

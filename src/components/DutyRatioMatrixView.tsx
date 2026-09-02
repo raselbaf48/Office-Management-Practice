@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DutyRatioSettingsModal } from './DutyRatioSettingsModal';
+import { DutyRatioConfigPanel } from './DutyRatioConfigPanel';
 
 import {
   DutyRatioTable,
@@ -225,7 +225,18 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   });
 
   return (
-    <div className="space-y-6 pb-12 animate-fadeIn">
+    
+    <div className="flex flex-col xl:flex-row gap-6 pb-12 animate-fadeIn">
+      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+        <div className="w-full xl:w-[45%] 2xl:w-[40%] flex-shrink-0">
+          <div className="sticky top-6 h-[calc(100vh-100px)] flex flex-col overflow-hidden">
+            <DutyRatioConfigPanel />
+          </div>
+        </div>
+      )}
+      
+      <div className="flex-1 space-y-6 w-full xl:w-[55%] 2xl:w-[60%] overflow-x-auto pb-8 custom-scrollbar">
+
       {/* Top Banner & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center space-x-3.5">
@@ -249,15 +260,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Duty Targets Settings"
-            >
-              <Sliders className="w-4 h-4" />
-            </button>
-          )}
+          
           <button
             type="button"
             onClick={() => exportDutyRatioDocx(matrix)}
@@ -597,12 +600,8 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             );
           })}
       </div>
-
       
-      {/* Duty Targets Settings Modal */}
-      {isSettingsOpen && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-        <DutyRatioSettingsModal onClose={() => setIsSettingsOpen(false)} />
-      )}
+      </div>
 
       {/* Calendar Edit Modal */}
       {editingCalendar && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (

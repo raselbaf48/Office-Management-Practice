@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
 import { X, Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Fingerprint } from 'lucide-react';
+import { getAppConfig, isFeatureActive } from '../utils/appConfig';
 import { setUserSession, validateUserLogin, getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserLoginGateProps {
@@ -18,6 +19,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
+  const [isUserIdFocused, setIsUserIdFocused] = useState<boolean>(false);
 
   const [recentLogins, setRecentLogins] = useState<string[]>(() => {
     try {
@@ -61,6 +63,14 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
       const validation = validateUserLogin(cleanInput, passwordInput, airmen);
 
       if (validation.success && validation.airman) {
+        const config = getAppConfig();
+        const role = validation.detailedUser?.role || 'USER';
+        
+        if (isFeatureActive(config.maintenance) && role !== 'SUPER_ADMIN') {
+          setErrorMsg(config.maintenance.message || 'App is currently undergoing maintenance. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
         const airman = validation.airman;
         setSuccessAirman(airman);
         setUserSession(airman, validation.detailedUser?.role || 'USER', validation.detailedUser);
@@ -216,18 +226,29 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   type="text"
                   autoFocus
                   value={bdInput}
+                  onFocus={() => setIsUserIdFocused(true)}
+                  onBlur={() => setTimeout(() => setIsUserIdFocused(false), 200)}
                   onChange={(e) => { setBdInput(e.target.value); setErrorMsg(''); }}
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
                 />
-                {recentLogins.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                {isUserIdFocused && recentLogins.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 w-full z-10 flex flex-col bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto">
                     {recentLogins.map(id => (
-                      <div key={id} className="flex items-center bg-slate-800/80 border border-slate-700/80 rounded-lg px-3 py-1.5 shadow-sm">
-                        <button type="button" onClick={() => { setBdInput(id); setErrorMsg(''); }} className="text-[13px] font-mono font-bold text-slate-300 hover:text-emerald-400 mr-2 transition-colors">
-                          {id}
-                        </button>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); removeRecent(id); }} className="text-slate-500 hover:text-red-400 p-0.5 rounded-full hover:bg-slate-700 transition-colors">
-                          <X className="w-3.5 h-3.5" />
+                      <div key={id} className="flex items-center justify-between px-4 py-3 hover:bg-slate-700/50 cursor-pointer border-b border-slate-700/50 last:border-0"
+                           onMouseDown={(e) => {
+                             e.preventDefault();
+                             setBdInput(id);
+                             setErrorMsg('');
+                             setIsUserIdFocused(false);
+                           }}>
+                        <div className="flex items-center space-x-3">
+                          <Fingerprint className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm font-mono font-bold text-slate-200">
+                            {id}
+                          </span>
+                        </div>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeRecent(id); }} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-slate-700 transition-colors">
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
