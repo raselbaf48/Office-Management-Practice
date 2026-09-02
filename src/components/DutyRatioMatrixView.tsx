@@ -29,6 +29,7 @@ import {
   CheckCircle2} from 'lucide-react';
 import { exportDutyRatioDocx } from '../utils/docxExport';
 import { ImportDutyRatioModal } from './ImportDutyRatioModal';
+import { FlightDutyCalendarModal } from './FlightDutyCalendarModal';
 
 interface DutyRatioMatrixViewProps {
   role?: UserRole;
@@ -46,6 +47,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'Overall' | 'Mechanics' | 'Avionics' | 'GCS' | null>(null);
+  const [editingCalendar, setEditingCalendar] = useState<{tableIdx: number, flight: FlightName} | null>(null);
 
   const daysArray = Array.from({ length: 31 }, (_, i) => i + 1);
   const flights: FlightName[] = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
@@ -115,6 +117,20 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     const arr = [...flightData[flight]];
     arr[dayIndex] = num;
     flightData[flight] = arr;
+    tableObj.data = flightData;
+    updated[tableIndex] = tableObj;
+    setMatrix(updated);
+    setIsSaved(false);
+  };
+
+  const handleResetTable = (tableIndex: number) => {
+    if (!window.confirm('Reset this table to 0 for all flights?')) return;
+    const updated = [...matrix];
+    const tableObj = { ...updated[tableIndex] };
+    const flightData = { ...tableObj.data };
+    flights.forEach(f => {
+      flightData[f] = new Array(31).fill(0);
+    });
     tableObj.data = flightData;
     updated[tableIndex] = tableObj;
     setMatrix(updated);
@@ -427,6 +443,15 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                           : (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS' | 'Admin'] || 0)}
                       </strong>
                     </span>
+                    {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                      <button
+                        onClick={() => handleResetTable(tableIdx)}
+                        title="Reset Table"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {/* Table Body (Days 1 to 31) */}
@@ -464,9 +489,17 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                               <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 text-center align-middle">
                                 <div className="flex items-center justify-between">
                                   <span>{flight}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {flightShortMap[flight]}
-                                  </span>
+                                  {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+                                    <button
+                                      onClick={() => setEditingCalendar({ tableIdx, flight })}
+                                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-500 transition-colors cursor-pointer"
+                                      title="Edit in Calendar"
+                                    >
+                                      <Calendar className="w-4 h-4" />
+                                    </button>
+                                  ) : (
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                  )}
                                 </div>
                               </td>
 
@@ -483,24 +516,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                                         : 'text-slate-400 dark:text-slate-600 font-normal'
                                     }`}
                                   >
-                                    {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={9}
-                                        value={val}
-                                        onChange={(e) =>
-                                          handleCellChange(tableIdx, flight, dayIdx, e.target.value)
-                                        }
-                                        className={`w-full text-center py-1 font-mono text-xs rounded-xs focus:outline-none focus:ring-1 focus:ring-slate-500 ${
-                                          isPositive
-                                            ? 'bg-emerald-100/70 dark:bg-emerald-900/60 font-bold'
-                                            : 'bg-transparent text-slate-400'
-                                        }`}
-                                      />
-                                    ) : (
-                                      <span className="inline-block py-1 font-mono text-xs">{val}</span>
-                                    )}
+                                    <span className="inline-block py-1 font-mono text-xs">{val || ''}</span>
                                   </td>
                                 );
                               })}
@@ -586,6 +602,22 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
       {/* Duty Targets Settings Modal */}
       {isSettingsOpen && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
         <DutyRatioSettingsModal onClose={() => setIsSettingsOpen(false)} />
+      )}
+
+      {/* Calendar Edit Modal */}
+      {editingCalendar && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+        <FlightDutyCalendarModal
+          table={matrix[editingCalendar.tableIdx]}
+          flight={editingCalendar.flight}
+          onClose={() => setEditingCalendar(null)}
+          onSave={(newData) => {
+            const updated = [...matrix];
+            updated[editingCalendar.tableIdx].data[editingCalendar.flight] = newData;
+            setMatrix(updated);
+            setIsSaved(false);
+            setEditingCalendar(null);
+          }}
+        />
       )}
     </div>
   );

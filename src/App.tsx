@@ -25,7 +25,6 @@ import { AirmanProfileModal } from './components/AirmanProfileModal';
 import { AddEditAirmanModal } from './components/AddEditAirmanModal';
 import { PrintableParadeStateModal } from './components/PrintableParadeStateModal';
 import { PdfDutyImportModal } from './components/PdfDutyImportModal';
-import { UserLoginDetailModal } from './components/UserLoginDetailModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminPasscodeModal } from './components/AdminPasscodeModal';
 import { UserLoginGate } from './components/UserLoginGate';
@@ -634,23 +633,14 @@ export default function App() {
         bdNo={userSession?.bdNo}
       />
 
-      <UserLoginDetailModal
-        isOpen={isUserManagementOpen}
-        onClose={() => setIsUserManagementOpen(false)}
-        nominalAirmen={airmen}
-        userSessionRole={role}
-      />
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         role={role}
+        nominalAirmen={airmen}
         currentTheme={themePreference}
         onThemeChange={(newTheme) => setThemePreference(newTheme)}
         onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
-        onOpenUserManagement={() => {
-          setIsSettingsModalOpen(false);
-          setIsUserManagementOpen(true);
-        }}
         onRosterUpdated={() => {
           fetchAirmen();
           window.dispatchEvent(new CustomEvent('baf_state_updated'));

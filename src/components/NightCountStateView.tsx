@@ -1329,9 +1329,9 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               <div className="text-center font-bold min-w-[200px]">
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{preparedBy.name}</div>
-                  <div className="text-[11px] font-bold uppercase">{preparedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{preparedBy.rank}</div>
                   <div className="text-[11px] font-normal">{preparedBy.designation}</div>
-                  <div className="text-[10px] font-normal">{preparedBy.unit || '155 UASU BAF'}</div>
+                  <div className="text-[10px] uppercase font-bold">{preparedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
 
@@ -1339,9 +1339,9 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               <div className="text-center font-bold min-w-[200px]">
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
-                  <div className="text-[11px] font-bold uppercase">{authorizedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{authorizedBy.rank}</div>
                   <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
-                  <div className="text-[10px] font-normal">{authorizedBy.unit || '155 UASU BAF'}</div>
+                  <div className="text-[10px] uppercase font-bold">{authorizedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
             </div>
@@ -1700,9 +1700,9 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 )}
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{preparedBy.name}</div>
-                  <div className="text-[11px] font-bold uppercase">{preparedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{preparedBy.rank}</div>
                   <div className="text-[11px] font-normal">{preparedBy.designation}</div>
-                  <div className="text-[10px] font-normal">{preparedBy.unit || '155 UASU BAF'}</div>
+                  <div className="text-[10px] uppercase font-bold">{preparedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
 
@@ -1720,9 +1720,9 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 )}
                 <div className="border-t border-slate-900 pt-1.5">
                   <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
-                  <div className="text-[11px] font-bold uppercase">{authorizedBy.rank}</div>
+                  <div className="text-[11px] font-normal">{authorizedBy.rank}</div>
                   <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
-                  <div className="text-[10px] font-normal">{authorizedBy.unit || '155 UASU BAF'}</div>
+                  <div className="text-[10px] uppercase font-bold">{authorizedBy.unit || '155 UASU BAF'}</div>
                 </div>
               </div>
             </div>

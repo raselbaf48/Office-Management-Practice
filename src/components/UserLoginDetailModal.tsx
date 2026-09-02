@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, DetailedUserLogin, UserLoginRole, UserLoginStatus } from '../types';
-import { X, Search, ShieldCheck, UserCheck, ChevronLeft, Save, AlertCircle } from 'lucide-react';
+import { X, Search, Activity, ShieldCheck, UserCheck, ChevronLeft, Save, AlertCircle } from 'lucide-react';
 import { getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserLoginDetailModalProps {
@@ -387,80 +387,30 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Role Management */}
+              {/* Activity History */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Access Role</h4>
-                
-                <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                  <button
-                    onClick={handleDemote}
-                    disabled={selectedUser.isDefaultOwner}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'USER' ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} ${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Normal User
-                  </button>
-                  <button
-                    onClick={() => handlePromote('ADMIN')}
-                    disabled={selectedUser.isDefaultOwner}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'ADMIN' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'} ${selectedUser.isDefaultOwner ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Promote to Admin
-                  </button>
-                  <button
-                    onClick={() => handlePromote('SUPER_ADMIN')}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all border ${editRole === 'SUPER_ADMIN' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-                  >
-                    {selectedUser.isDefaultOwner ? 'System Owner' : 'Super Admin'}
-                  </button>
-                </div>
-
-                {/* Password Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Login Password</label>
-                    <input
-                      type="text"
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 font-mono text-slate-900 dark:text-white"
-                      placeholder="Login Pass"
-                    />
+                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6 flex items-center space-x-2">
+                  <Activity className="w-4 h-4" />
+                  <span>Activity History</span>
+                </h4>
+                <div className="space-y-6">
+                  <div className="relative pl-6 border-l-2 border-emerald-200 dark:border-emerald-900/50">
+                    <div className="absolute w-3 h-3 bg-emerald-500 rounded-full -left-[7px] top-1 border-2 border-white dark:border-slate-800"></div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">Logged In</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">System Login</p>
+                    <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+                      {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : new Date().toLocaleString()}
+                    </p>
                   </div>
-                  
-                  {(editRole === 'ADMIN' || editRole === 'SUPER_ADMIN') && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Admin Passcode <span className="text-rose-500">*</span></label>
-                      <input
-                        type="text"
-                        value={editAdminPass}
-                        onChange={(e) => setEditAdminPass(e.target.value)}
-                        className="w-full bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 font-mono text-slate-900 dark:text-white"
-                        placeholder="Required for Admin"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 space-y-2">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Account Status</label>
-                   <select
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as UserLoginStatus)}
-                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 font-bold text-slate-900 dark:text-white"
-                      disabled={selectedUser.isDefaultOwner}
-                    >
-                      <option value="ACTIVE">Active</option>
-                      <option value="SUSPENDED">Suspended</option>
-                      <option value="DISABLED">Disabled</option>
-                    </select>
-                </div>
-
-                {errorMsg && (
-                  <div className="mt-4 flex items-center space-x-2 text-rose-500 text-sm font-bold bg-rose-50 dark:bg-rose-950/50 p-3 rounded-xl border border-rose-200 dark:border-rose-900">
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <span>{errorMsg}</span>
+                  <div className="relative pl-6 border-l-2 border-slate-200 dark:border-slate-700">
+                    <div className="absolute w-3 h-3 bg-slate-400 rounded-full -left-[7px] top-1 border-2 border-white dark:border-slate-800"></div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">System Access</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">Only View Dashboard</p>
+                    <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+                      {selectedUser.lastLoginAt ? new Date(new Date(selectedUser.lastLoginAt).getTime() + 60000).toLocaleString() : new Date(Date.now() + 60000).toLocaleString()}
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-4">
@@ -468,14 +418,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                   onClick={closeProfile}
                   className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 font-bold transition-colors"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveProfile}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-sm"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>Save Changes</span>
+                  Close Profile
                 </button>
               </div>
 

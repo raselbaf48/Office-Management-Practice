@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
-import { Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight } from 'lucide-react';
+import { Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Fingerprint } from 'lucide-react';
 import { setUserSession, validateUserLogin, getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserLoginGateProps {
@@ -28,6 +28,9 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [targetAirman, setTargetAirman] = useState<Airman | null>(null);
+
+  
+  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,8 +212,9 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   type="password"
                   value={passwordInput}
                   onChange={(e) => { setPasswordInput(e.target.value); setErrorMsg(''); }}
-                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
+                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 pr-12 text-sm font-mono font-bold text-white outline-none transition-all"
                 />
+                
               </div>
             </div>
             <button
@@ -329,6 +333,9 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         )}
 
       </div>
+
+      
+
     </div>
   );
 };

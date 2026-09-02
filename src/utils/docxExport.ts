@@ -13,6 +13,7 @@ import {
   TextDirection,
   VerticalAlign,
   HeightRule,
+  TableLayoutType,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Airman, DutyAssignment, FlightName } from '../types';
@@ -160,6 +161,7 @@ export async function exportDutyRosterDocx(
     });
 
     const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [headerRow, ...dataRows],
     });
@@ -272,6 +274,7 @@ export async function exportIdacRosterDocx(
   });
 
   const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [headerRow, ...dataRows],
   });
@@ -363,6 +366,7 @@ export async function exportNominalRollDocx(
   });
 
   const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [headerRow, ...dataRows],
   });
@@ -480,6 +484,7 @@ export async function exportDutyRatioDocx(
     });
 
     const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [headerRow, ...dataRows, dailyTotalRow],
     });
@@ -669,6 +674,7 @@ export async function exportParadeStateSingleDocx(
   });
 
   const matrixTable = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [headerRow, dataRow],
   });
@@ -838,6 +844,7 @@ export async function exportParadeStateSingleDocx(
       );
     }
     const onParadeSubTable = new Table({
+    layout: TableLayoutType.AUTOFIT,
       width: { size: 5040, type: WidthType.DXA },
       columnWidths: [1680, 1680, 1680],
       borders: invisibleBorders,
@@ -1091,6 +1098,7 @@ export async function exportParadeStateSingleDocx(
   ];
 
   const disposalTable = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 15120, type: WidthType.DXA },
     columnWidths: [5040, 3360, 3360, 3360],
     borders: invisibleBorders,
@@ -1245,6 +1253,7 @@ export async function exportParadeStateMultiDocx(
   });
 
   const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [headerRow1, ...dataRows],
   });
@@ -1268,6 +1277,7 @@ export async function exportParadeStateMultiDocx(
   const rSigDesig = rightSig?.desig || 'Adjutant';
 
   const sigTable = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: invisibleBorders,
     rows: [
@@ -1513,6 +1523,7 @@ export async function exportMonthlyDutyRegisterDocx(
   });
 
   const table = new Table({
+    layout: TableLayoutType.AUTOFIT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [headerRow, ...dataRows],
   });

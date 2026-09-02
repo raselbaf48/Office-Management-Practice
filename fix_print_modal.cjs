@@ -1,23 +1,17 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/components/PrintableNightCountModal.tsx', 'utf-8');
+let code = fs.readFileSync('src/components/PrintableParadeStateModal.tsx', 'utf8');
 
-// Modals
-content = content.replace(/<span className="font-bold text-black">\{a.rank\}<\/span>/g, '<span className="font-bold">{a.rank}</span>');
-content = content.replace(/<h3 className="text-base font-black text-black flex items-center space-x-2">/g, '<h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2">');
-content = content.replace(/<span className="font-bold text-black text-xs">/g, '<span className="font-bold text-slate-900 dark:text-white text-xs">');
-
-// Input fields
-content = content.replace(/className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300  bg-white  text-black outline-none focus:border-amber-500 shadow-xs"/g, 'className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-500 shadow-xs"');
-content = content.replace(/text-black outline-none/g, 'text-slate-900 dark:text-white dark:bg-slate-900 outline-none');
-
-// Checkbox
-content = content.replace(/className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"/g, 'className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer border-slate-300 dark:border-slate-600 dark:bg-slate-800"');
-
-// Selected border fix
-content = content.replace(
-  "isChecked ? 'bg-emerald-50 dark:bg-emerald-900/40 border-emerald-400 text-emerald-950 dark:text-emerald-100 font-bold shadow-xs' :",
-  "isChecked ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-700 text-emerald-950 dark:text-emerald-300 font-bold shadow-xs' :"
+// Fix the modal overlay center -> start so long content is scrollable from top
+code = code.replace(
+  'className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible printable-modal-overlay"',
+  'className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 pt-10 sm:pt-10 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible printable-modal-overlay"'
 );
 
-fs.writeFileSync('src/components/PrintableNightCountModal.tsx', content, 'utf-8');
-console.log("Fixed PrintableNightCountModal");
+// Auto fit to window for the modal content container
+code = code.replace(
+  'className="space-y-6 bg-white w-full max-w-[1400px] print:w-auto mx-auto border border-slate-300 rounded-xl shadow-2xl print:border-none print:rounded-none print:shadow-none p-4"',
+  'className="space-y-6 bg-white w-full max-w-none 2xl:w-[98%] print:w-auto mx-auto border border-slate-300 rounded-xl shadow-2xl print:border-none print:rounded-none print:shadow-none p-4"'
+);
+
+fs.writeFileSync('src/components/PrintableParadeStateModal.tsx', code);
+console.log('Fixed PrintableParadeStateModal');

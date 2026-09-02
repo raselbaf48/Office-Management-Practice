@@ -2,5 +2,7 @@
   "name": "155 UASU BAF | Duty & Office Management System",
   "description": "Military personnel duty register, parade state tracker, TDY register, and monthly roster management system for 155 UASU BAF BASE ZHR.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
