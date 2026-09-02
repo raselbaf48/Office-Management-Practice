@@ -555,7 +555,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
                     const isPastDate = attFromDate < todayStr;
-                    const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || isPastDate;
+                    const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                     const setterStateValue = grantAttFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file
                     return (
                     <button
@@ -588,7 +588,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                   </span>
                 </div>
                 
-                {attFromDate < todayStr ? (
+                {attFromDate < todayStr && session?.assignedRole !== 'SUPER_ADMIN' ? (
                   <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-xs font-bold text-slate-500 text-center">
                     🚫 Cannot modify past dates.
                   </div>

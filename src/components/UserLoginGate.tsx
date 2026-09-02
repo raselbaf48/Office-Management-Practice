@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
-import { Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Fingerprint } from 'lucide-react';
+import { X, Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Fingerprint } from 'lucide-react';
 import { setUserSession, validateUserLogin, getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserLoginGateProps {
@@ -18,6 +18,19 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
+
+  const [recentLogins, setRecentLogins] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('baf_recent_logins');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const removeRecent = (id: string) => {
+    const updated = recentLogins.filter(x => x !== id);
+    setRecentLogins(updated);
+    localStorage.setItem('baf_recent_logins', JSON.stringify(updated));
+  };
 
   // Reset Password Flow States
   const [isResetMode, setIsResetMode] = useState<boolean>(false);
@@ -51,6 +64,9 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         const airman = validation.airman;
         setSuccessAirman(airman);
         setUserSession(airman, validation.detailedUser?.role || 'USER', validation.detailedUser);
+        const updatedRecents = [cleanInput, ...recentLogins.filter(x => x !== cleanInput)].slice(0, 4);
+        setRecentLogins(updatedRecents);
+        localStorage.setItem('baf_recent_logins', JSON.stringify(updatedRecents));
         setTimeout(() => {
           setIsLoading(false);
           onAuthenticated();
@@ -203,6 +219,20 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   onChange={(e) => { setBdInput(e.target.value); setErrorMsg(''); }}
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
                 />
+                {recentLogins.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {recentLogins.map(id => (
+                      <div key={id} className="flex items-center bg-slate-800/80 border border-slate-700/80 rounded-lg px-3 py-1.5 shadow-sm">
+                        <button type="button" onClick={() => { setBdInput(id); setErrorMsg(''); }} className="text-[13px] font-mono font-bold text-slate-300 hover:text-emerald-400 mr-2 transition-colors">
+                          {id}
+                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeRecent(id); }} className="text-slate-500 hover:text-red-400 p-0.5 rounded-full hover:bg-slate-700 transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="text-left space-y-2">

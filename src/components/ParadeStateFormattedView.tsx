@@ -526,7 +526,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       return;
     }
     const todayStr = new Date().toISOString().split('T')[0];
-    if (disposalFromDate < todayStr) {
+    if (disposalFromDate < todayStr && !isSuperAdmin) {
       alert("You cannot edit disposals for past dates.");
       return;
     }
@@ -2052,8 +2052,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
+                    const isSuperAdmin = role === 'SUPER_ADMIN';
                     const isPastDate = disposalFromDate < todayStr;
-                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || isPastDate;
+                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (isPastDate && !isSuperAdmin);
                     return (
                     <button
                       key={fl}
@@ -2153,7 +2154,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     setSelectedDisposalAirmenIds((prev) => prev.filter((id) => !flightIds.includes(id)));
                   };
                   
-                  if (disposalFromDate < todayStr) {
+                  if (disposalFromDate < todayStr && !isSuperAdmin) {
                     return (
                       <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
                         <div className="mb-2">🚫</div>

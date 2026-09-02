@@ -69,7 +69,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const [fromDate, setFromDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
 
   const isPastDate = fromDate < new Date().toISOString().split('T')[0];
-  const isReadOnly = isPastDate;
+  const isReadOnly = isPastDate && !isSuperAdmin;
   const [toDate, setToDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
 
   // Active duty & flight filters
@@ -952,7 +952,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 2. Flight:
               </span>
               {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((flt) => {
-                const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || isPastDate;
+                const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                 return (
                 <button
                   key={flt}

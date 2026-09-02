@@ -548,8 +548,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
+                    const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
                     const isPastDate = tdyFromDate < todayStr;
-                    const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || isPastDate;
+                    const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                     const setterStateValue = grantTdyFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file
                     return (
                     <button
@@ -582,7 +583,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   </span>
                 </div>
                 
-                {tdyFromDate < todayStr ? (
+                {tdyFromDate < todayStr && session?.assignedRole !== 'SUPER_ADMIN' ? (
                   <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-xs font-bold text-slate-500 text-center">
                     🚫 Cannot modify past dates.
                   </div>

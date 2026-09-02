@@ -59,7 +59,8 @@ export const formatLogTime = (isoString: string): string => {
  */
 export const getCurrentUserSession = (): UserSession | null => {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY); // Force clear persistent session
+    const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as UserSession;
   } catch {
@@ -424,7 +425,7 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
   };
 
   try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch (e) {
     console.error('Failed to save user session:', e);
   }
@@ -456,7 +457,7 @@ export const clearUserSession = (): void => {
     if (session) {
       updatePresence(session.bdNo, true, ''); // logout
     }
-    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem('baf_user_role');
   } catch (e) {
     console.error('Failed to clear user session:', e);
