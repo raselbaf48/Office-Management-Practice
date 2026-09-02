@@ -1435,7 +1435,7 @@ export async function exportMonthlyDutyRegisterDocx(
 ) {
   const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', {
     month: 'long',
-    year: 'numeric',
+    year: '2-digit',
   });
   const daysInMonth = new Date(year, month, 0).getDate();
 

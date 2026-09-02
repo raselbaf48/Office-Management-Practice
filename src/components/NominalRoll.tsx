@@ -31,6 +31,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   const [search, setSearch] = useState('');
   const [flightFilter, setFlightFilter] = useState<FlightName | 'All' | ''>('All');
   const [rankFilter, setRankFilter] = useState<Rank | 'All' | ''>('All');
+  const [statusFilter, setStatusFilter] = useState<'Total' | 'Active' | 'Previous Airmen'>('Active');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -72,6 +73,13 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
 
   // Filter airmen
   const filteredAirmen = sortedAirmen.filter((airman) => {
+    let matchesStatus = true;
+    if (statusFilter === 'Active') {
+      matchesStatus = airman.active !== false;
+    } else if (statusFilter === 'Previous Airmen') {
+      matchesStatus = airman.active === false;
+    }
+    
     const matchesFlight = flightFilter === '' ? true : (flightFilter === 'All' || airman.flightName === flightFilter);
     const matchesRank = rankFilter === '' ? true : (rankFilter === 'All' || airman.rank === rankFilter);
     const q = search.toLowerCase();
@@ -82,7 +90,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
       airman.trade.toLowerCase().includes(q) ||
       airman.addressBlock.toLowerCase().includes(q);
 
-    return matchesFlight && matchesRank && matchesSearch;
+    return matchesStatus && matchesFlight && matchesRank && matchesSearch;
   });
 
   const handlePrint = () => {
@@ -97,7 +105,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
           <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center space-x-2">
             <span>Nominal Roll Directory</span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300">
-              {airmen.length} Airmen (Seniority Order)
+              {filteredAirmen.length} Airmen (Seniority Order)
             </span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -106,13 +114,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={onRefresh}
-            className="p-2.5 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-            title="Refresh Airmen Directory"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          
 
           <button
             onClick={() => exportNominalRollDocx(filteredAirmen)}
@@ -212,6 +214,20 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               ))}
             </select>
           </div>
+          
+          {/* Status Filter */}
+          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs">
+            <span className="text-slate-400 font-medium">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="bg-transparent font-black outline-none text-slate-900 dark:text-slate-100 cursor-pointer"
+            >
+              <option value="Total">Total</option>
+              <option value="Active">Active</option>
+              <option value="Previous Airmen">Previous Airmen</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -280,8 +296,8 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${airman.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'}`}>
-                      {airman.active ? 'Active' : 'Inactive'}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${airman.active !== false ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'}`}>
+                      {airman.active !== false ? 'Active' : (airman.leaveReason || 'Inactive')}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">

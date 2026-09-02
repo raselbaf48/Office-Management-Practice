@@ -1,6 +1,7 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
+import { getCurrentUserSession } from '../utils/authSession';
 import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Sun, Moon, Plus, RefreshCw, X, Check, FileText, History } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { EntryHistoryModal } from './EntryHistoryModal';
@@ -118,7 +119,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   airmen,
   onViewProfile,
 }) => {
-  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>('All');
+  const session = getCurrentUserSession();
+  const isAdmin = session?.assignedRole === 'ADMIN';
+  const adminFlight = session?.flightName;
+  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
   const [leaveData, setLeaveData] = useState<Record<string, LeaveRecord>>({});
@@ -544,14 +548,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           </div>
 
           {/* Refresh Button */}
-          <button
-            onClick={fetchLeaves}
-            disabled={loading}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors cursor-pointer"
-            title="Refresh Leave Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-500' : ''}`} />
-          </button>
+          
 
           {/* Entry History & Undo Button */}
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
@@ -901,20 +898,26 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   Flight
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => (
+                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
+                    const isDisabledFlt = isAdmin && adminFlight && flt !== adminFlight;
+                    const setterStateValue = grantLeaveFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file
+                    return (
                     <button
                       key={flt}
                       type="button"
-                      onClick={() => setGrantLeaveFlight(flt)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                      onClick={() => !isDisabledFlt && setGrantLeaveFlight(flt)}
+                      disabled={isDisabledFlt}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                        isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
                         grantLeaveFlight === flt
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                          ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-xs cursor-pointer'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400 cursor-pointer'
                       }`}
                     >
                       {flt}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

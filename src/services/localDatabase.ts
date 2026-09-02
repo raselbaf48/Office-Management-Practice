@@ -17,6 +17,7 @@ import { generateOfficialMonthAssignments, getOfficialParadeStateDocument } from
 import { calculateDutyStats, detectConflicts, getDaysInMonth } from '../data/rosterGenerator';
 import { DutyRatioTable, INITIAL_OFFICIAL_DUTY_MATRIX, getStoredDutyMatrix, saveDutyMatrix } from '../data/officialDutyRatioMatrix';
 import { findBestAirmanMatch as matchAirmanRankFirst, parseRosterTextHeuristically } from '../utils/airmanMatcher';
+import { sortAirmenBySeniority } from '../utils/seniority';
 import { saveDbToFirebase, getDbFromFirebase } from '../firebase';
 
 export interface LocalStorageDB {
@@ -366,7 +367,7 @@ export class LocalDatabaseEngine {
           a.addressBlock.toLowerCase().includes(q)
       );
     }
-    return list;
+    return sortAirmenBySeniority(list);
   }
 
   public addAirman(data: Partial<Airman>): Airman {
@@ -850,9 +851,17 @@ export class LocalDatabaseEngine {
 
     // Target airmen filter
     const allAirmen = this.db.airmen || [];
-    const filteredAirmen = selectedFlight === 'Overall' 
-      ? allAirmen 
-      : allAirmen.filter((a) => a.flightName === selectedFlight);
+    
+    // Filter out airmen who haven't joined yet or have left before this date
+    const dateActiveAirmen = allAirmen.filter(a => {
+      if (a.dateJoined && a.dateJoined > date) return false;
+      if (a.dateLeft && a.dateLeft < date) return false;
+      return true;
+    });
+
+    const filteredAirmen = sortAirmenBySeniority(selectedFlight === 'Overall' 
+      ? dateActiveAirmen 
+      : dateActiveAirmen.filter((a) => a.flightName === selectedFlight));
 
     let onParade = 0;
     let onDuty = 0;
@@ -988,10 +997,6 @@ export class LocalDatabaseEngine {
         else if (codeStr === 'SICK_REPORT') {
           dutyName = 'Sick Report';
           statusCategory = 'SICK_REPORT';
-        }
-        else if (codeStr === 'ADMIN_ORDER') {
-          dutyName = 'Admin Order';
-          statusCategory = 'ADMIN_ORDER';
         }
         else if (codeStr === 'ADMIN_ORDER') {
           dutyName = 'Admin Order';

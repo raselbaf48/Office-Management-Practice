@@ -523,14 +523,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
           </div>
 
           {/* Refresh button */}
-          <button
-            onClick={fetchRosterData}
-            disabled={loading}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors"
-            title="Refresh Roster Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-500' : ''}`} />
-          </button>
+          
 
           {/* Export document button */}
           <button

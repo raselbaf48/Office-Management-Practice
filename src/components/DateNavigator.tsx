@@ -19,8 +19,15 @@ export function DateNavigator({ hideArrows, className, value, disabled, onChange
   };
 
   // Format the date for display (e.g., "12 Aug")
-  const displayDate = value && typeof value === 'string' 
-    ? new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    const displayDate = value && typeof value === 'string'
+    ? (() => {
+        const d = new Date(value);
+        if(isNaN(d.getTime())) return '';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        const year = String(d.getFullYear()).slice(-2);
+        return `${day} ${month} ${year}`;
+      })()
     : '';
 
   return (

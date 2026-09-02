@@ -43,7 +43,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       case 'tdy-register':
         return { category: 'WORKFORCE', title: 'TDY Register' };
       case 'attachment-register':
-        return { category: 'WORKFORCE', title: 'Attachment Register' };
+        return { category: 'WORKFORCE', title: 'Deployment Register' };
       case 'ida-center':
         return { category: 'SCHEDULE MANAGEMENT', title: 'IDA Center Duty' };
       case 'register':

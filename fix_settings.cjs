@@ -1,7 +1,7 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/components/SettingsModal.tsx', 'utf8');
+let code = fs.readFileSync('src/components/SettingsModal.tsx', 'utf8');
 
-const regex = /{showBiometricPrompt && \([\s\S]*?<BiometricPromptModal[\s\S]*?\/>\s*\)}/;
-content = content.replace(regex, '');
+code = code.replace(/role: UserRole;/, "role: UserRole;\n  userFlight?: string;");
+code = code.replace(/role,\n  currentTheme,/, "role,\n  userFlight,\n  currentTheme,");
 
-fs.writeFileSync('src/components/SettingsModal.tsx', content);
+fs.writeFileSync('src/components/SettingsModal.tsx', code);

@@ -1,6 +1,7 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { ActivityHistoryItem, Airman, DutyCategoryCode, IDAShift } from '../types';
+import { getCurrentUserSession } from '../utils/authSession';
 import { DUTY_TYPES } from '../data/dutyTypes';
 import {
   History,
@@ -46,6 +47,11 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   const [savingEdit, setSavingEdit] = useState<boolean>(false);
   const [visibleCount, setVisibleCount] = useState<number>(10);
 
+  const session = getCurrentUserSession();
+  const isAdmin = session?.assignedRole === 'ADMIN';
+  const adminFlight = session?.flightName;
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const fetchHistory = async () => {
     setLoading(true);
     try {
@@ -66,6 +72,17 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   }, []);
 
   const handleUndo = async (item: ActivityHistoryItem) => {
+    if (isAdmin && adminFlight && item.airmanId) {
+      const target = airmen.find(a => a.id === item.airmanId);
+      if (target && target.flightName !== adminFlight) {
+        alert("You cannot undo entries for personnel outside your flight.");
+        return;
+      }
+    }
+    if (isAdmin && item.fromDate < todayStr) {
+      alert("You cannot undo entries for past dates.");
+      return;
+    }
     if (!window.confirm(`Are you sure you want to undo and revert this entry for ${item.airmanName}?`)) {
       return;
     }
@@ -97,6 +114,17 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   };
 
   const startEditing = (item: ActivityHistoryItem) => {
+    if (isAdmin && adminFlight && item.airmanId) {
+      const target = airmen.find(a => a.id === item.airmanId);
+      if (target && target.flightName !== adminFlight) {
+        alert("You cannot edit entries for personnel outside your flight.");
+        return;
+      }
+    }
+    if (isAdmin && item.fromDate < todayStr) {
+      alert("You cannot edit entries for past dates.");
+      return;
+    }
     setEditingItem(item);
     setEditAirmanId(item.airmanId);
     setEditDutyCode(item.dutyCode || 'GD');
@@ -390,8 +418,8 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
           ) : (
             filteredHistory.map((item, index) => {
               const dt = new Date(item.timestamp);
-              const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              const timeStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              const dateStr = dt.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: '2-digit' });
 
               const air = airmen.find((a) => a.id === item.airmanId);
               const isLeave = item.dutyCode === 'LEAVE' || item.actionType === 'GRANT_LEAVE';

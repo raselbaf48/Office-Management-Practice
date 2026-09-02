@@ -14,7 +14,7 @@ import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
 import { LeaveRegisterView } from './components/LeaveRegisterView';
 import { TdyRegisterView } from './components/TdyRegisterView';
-import { AttachmentRegisterView } from './components/AttachmentRegisterView';
+import { DeploymentRegisterView } from './components/DeploymentRegisterView';
 import { IdaCenterDutyView } from './components/IdaCenterDutyView';
 import { MonthlyDutyRegister } from './components/MonthlyDutyRegister';
 import { DutyRosterPeriodView } from './components/DutyRosterPeriodView';
@@ -373,6 +373,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         role={role}
+              userFlight={userSession?.flightName}
         conflictCount={conflictCount}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
@@ -394,6 +395,7 @@ export default function App() {
           activeTab={activeTab}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           role={role}
+              userFlight={userSession?.flightName}
           userSession={userSession}
                               onLogoutUser={handleUserLogout}
           onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
@@ -405,6 +407,7 @@ export default function App() {
           {activeTab === 'overview' && (
             <DashboardParadeState
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -421,6 +424,7 @@ export default function App() {
           {activeTab === 'parade-state' && (
             <ParadeStateFormattedView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -434,6 +438,7 @@ export default function App() {
           {activeTab === 'pt-state' && (
             <ParadeStateFormattedView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -448,6 +453,7 @@ export default function App() {
           {activeTab === 'night-count-state' && (
             <NightCountStateView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -458,6 +464,7 @@ export default function App() {
             <NominalRoll
               airmen={airmen}
               role={role}
+              userFlight={userSession?.flightName}
               onRefresh={fetchAirmen}
               onSyncGoogleSheet={handleSyncGoogleSheet}
               onAddAirman={() => {
@@ -476,6 +483,7 @@ export default function App() {
           {activeTab === 'flights' && (
             <FlightsMiniView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               onSelectFlight={(fl) => {
                 setSelectedFlight(fl);
@@ -488,6 +496,7 @@ export default function App() {
           {activeTab === 'leave-register' && (
             <LeaveRegisterView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
             />
@@ -496,13 +505,15 @@ export default function App() {
           {activeTab === 'tdy-register' && (
             <TdyRegisterView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
             />
           )}
           {activeTab === 'attachment-register' && (
-            <AttachmentRegisterView
+            <DeploymentRegisterView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
             />
@@ -511,6 +522,7 @@ export default function App() {
           {activeTab === 'ida-center' && (
             <IdaCenterDutyView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
               onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
@@ -521,6 +533,7 @@ export default function App() {
             <MonthlyDutyRegister
               airmen={airmen}
               role={role}
+              userFlight={userSession?.flightName}
               conflictCount={conflictCount}
               setConflictCount={setConflictCount}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
@@ -530,6 +543,7 @@ export default function App() {
           {activeTab === 'duty-roster' && (
             <DutyRosterPeriodView
               role={role}
+              userFlight={userSession?.flightName}
               airmen={airmen}
               onViewProfile={(a) => setSelectedAirmanProfile(a)}
             />
@@ -538,6 +552,7 @@ export default function App() {
           {activeTab === 'duty-ratio' && (
             <DutyRatioMatrixView
               role={role}
+              userFlight={userSession?.flightName}
                           />
           )}
 
@@ -593,7 +608,7 @@ export default function App() {
       )}
 
       {isPrintModalOpen && (
-        <PrintableParadeStateModal
+        <PrintableParadeStateModal userFlight={userSession?.flightName} 
           date={selectedDate}
           shift={selectedShift}
           flight={selectedFlight}
@@ -637,6 +652,7 @@ export default function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         role={role}
+              userFlight={userSession?.flightName}
         nominalAirmen={airmen}
         currentTheme={themePreference}
         onThemeChange={(newTheme) => setThemePreference(newTheme)}

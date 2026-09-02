@@ -150,7 +150,7 @@ export function FlyingWingStateView({
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
     } catch {
       return dateStr;
     }
@@ -281,7 +281,7 @@ export function FlyingWingStateView({
   const colTotals: Record<string, number> = {};
 
   return (
-    <div className="bg-white text-black w-full min-h-screen p-4 sm:p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
+    <div className="bg-white dark:bg-slate-900 text-black dark:text-white print:text-black w-full min-h-screen p-4 sm:p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
       <div className="relative mb-6 text-center">
         <h1 className="font-bold tracking-wide underline inline-block text-base uppercase">
           CONSOLIDATED NIGHT COUNT STATE : BAF AIRMEN
@@ -296,32 +296,32 @@ export function FlyingWingStateView({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-center border-collapse border border-black text-[11px]">
+        <table className="w-full text-center border-collapse border border-black dark:border-slate-500 print:border-black text-[11px]">
           <thead className="font-bold">
             <tr>
-              <th className="border border-black p-1 w-24 align-middle text-center">Sqn/Unit</th>
-              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Str</div></th>
-              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Det/Tdy</div></th>
-              <th className="border border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Eff Str</div></th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 w-24 align-middle text-center">Sqn/Unit</th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Str</div></th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Det/Tdy</div></th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-8 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Eff Str</div></th>
               
               {DISPOSAL_COLUMNS.map(col => (
-                <th key={col} className="border border-black p-1 break-words w-6 align-middle text-center">
+                <th key={col} className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-6 align-middle text-center">
                   <div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">
                     {col}
                   </div>
                 </th>
               ))}
               {customColumns.map(col => (
-                <th key={col} className="border border-black p-1 break-words w-6 align-middle text-center text-blue-800">
+                <th key={col} className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-6 align-middle text-center text-blue-800 dark:text-blue-300 print:text-blue-800">
                   <div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">
                     {col}
                   </div>
                 </th>
               ))}
 
-              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Out PT/Parade</div></th>
-              <th className="border border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">On PT / Parade(Forecast)</div></th>
-              <th className="border border-black p-1 w-16 align-middle text-center">Rmks</th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">Total Out PT/Parade</div></th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 break-words w-6 align-middle text-center"><div className="w-full h-32 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[10px] leading-tight">On PT / Parade(Forecast)</div></th>
+              <th className="border border-black dark:border-slate-500 print:border-black p-1 w-16 align-middle text-center">Rmks</th>
             </tr>
           </thead>
           <tbody>
@@ -346,43 +346,43 @@ export function FlyingWingStateView({
 
               return (
                 <tr key={d.unit} className={index === displayData.length - 1 ? 'font-bold' : ''}>
-                  <td className="border border-black p-1 text-left font-bold">{d.unit}</td>
-                  <td className="border border-black p-1">{d.totalStr || 0}</td>
-                  <td className="border border-black p-1">{d.detTdy || 0}</td>
-                  <td className="border border-black p-1">{effStr}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1 text-left font-bold">{d.unit}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1">{d.totalStr || 0}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1">{d.detTdy || 0}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1">{effStr}</td>
                   
                   {DISPOSAL_COLUMNS.map(col => {
                     const val = d.disposals[col] || 0;
                     colTotals[col] = (colTotals[col] || 0) + val;
-                    return <td key={col} className="border border-black p-1">{val || 0}</td>;
+                    return <td key={col} className="border border-black dark:border-slate-500 print:border-black p-1">{val || 0}</td>;
                   })}
                   {customColumns.map(col => {
                     const val = d.disposals[col] || 0;
                     colTotals[col] = (colTotals[col] || 0) + val;
-                    return <td key={col} className="border border-black p-1">{val || 0}</td>;
+                    return <td key={col} className="border border-black dark:border-slate-500 print:border-black p-1">{val || 0}</td>;
                   })}
 
-                  <td className="border border-black p-1">{totalOut || 0}</td>
-                  <td className="border border-black p-1">{onPt || 0}</td>
-                  <td className="border border-black p-1"></td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1">{totalOut || 0}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1">{onPt || 0}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1"></td>
                 </tr>
               );
             })}
             
             <tr className="font-bold">
-              <td className="border border-black p-1 text-left">Total</td>
-              <td className="border border-black p-1">{t_totalStr}</td>
-              <td className="border border-black p-1">{t_detTdy}</td>
-              <td className="border border-black p-1">{t_effStr}</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1 text-left">Total</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_totalStr}</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_detTdy}</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_effStr}</td>
               {DISPOSAL_COLUMNS.map(col => (
-                <td key={col} className="border border-black p-1">{colTotals[col] || 0}</td>
+                <td key={col} className="border border-black dark:border-slate-500 print:border-black p-1">{colTotals[col] || 0}</td>
               ))}
               {customColumns.map(col => (
-                <td key={col} className="border border-black p-1">{colTotals[col] || 0}</td>
+                <td key={col} className="border border-black dark:border-slate-500 print:border-black p-1">{colTotals[col] || 0}</td>
               ))}
-              <td className="border border-black p-1">{t_totalOut}</td>
-              <td className="border border-black p-1">{t_onPt}</td>
-              <td className="border border-black p-1"></td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_totalOut}</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_onPt}</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1"></td>
             </tr>
           </tbody>
         </table>

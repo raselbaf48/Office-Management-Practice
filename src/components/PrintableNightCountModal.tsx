@@ -56,6 +56,7 @@ import {
 
 interface NightCountStateViewProps {
   role?: UserRole;
+  userFlight?: string;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   airmen: Airman[];
@@ -69,6 +70,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
   onClose,
 
   role = 'ADMIN',
+  userFlight,
   selectedDate,
   setSelectedDate,
   airmen,
@@ -105,9 +107,10 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
   } | null>(null);
 
   // Add Disposal Modal State
+  const todayStr = new Date().toISOString().split('T')[0];
   const [showAddDisposalModal, setShowAddDisposalModal] = useState<boolean>(false);
   const [disposalDateMode, setDisposalDateMode] = useState<'SINGLE' | 'MULTI'>('SINGLE');
-  const [disposalFlight, setDisposalFlight] = useState<FlightName>('Avionics');
+  const [disposalFlight, setDisposalFlight] = useState<FlightName>(role === 'ADMIN' && userFlight ? userFlight as FlightName : 'Avionics');
   const [disposalCategory, setDisposalCategory] = useState<string>('');
   const [disposalCustomTitle, setDisposalCustomTitle] = useState<string>('');
   const [selectedDisposalAirmenIds, setSelectedDisposalAirmenIds] = useState<string[]>([]);
@@ -715,7 +718,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
           hospitalCount++;
         } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
-        } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        } else if (['CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
         } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
           adminCommCount++;
@@ -866,7 +869,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
         cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
         sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
-      } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+      } else if (['CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
         adminOrderList.push({ airman, note: "Admin Order" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
@@ -890,7 +893,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
       } else {
         let customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
         if (notes) {
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) { 
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) { 
             customKey = notes; 
           }
         }
@@ -1043,7 +1046,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
               className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer"
             >
               <Printer className="w-5 h-5" />
-              <span>Print / Save PDF</span>
+              <span>Official Export / Print</span>
             </button>
           </div>
         </div>
@@ -1509,12 +1512,6 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                         </div>
                       )}
 
-                      {adminOrderList.length > 0 && (
-                        <div>
-                          <h3 className="font-bold underline text-black mb-1">Admin Order</h3>
-                          {renderDisposalAirmenList(adminOrderList, 'ADMIN_ORDER', 'Admin Order')}
-                        </div>
-                      )}
 
                       {gamesList.length > 0 && (
                         <div>
@@ -1776,20 +1773,25 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                   </label>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => (
+                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
+                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (role === 'ADMIN' && selectedDate < todayStr);
+                    return (
                     <button
                       key={fl}
                       type="button"
-                      onClick={() => setDisposalFlight(fl)}
-                      className={`py-1 px-2 text-xs font-bold rounded-lg border text-center transition-all cursor-pointer ${
+                      onClick={() => !isDisabledFlt && setDisposalFlight(fl)}
+                      disabled={isDisabledFlt}
+                      className={`py-1 px-2 text-xs font-bold rounded-lg border text-center transition-all ${
+                        isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
                         disposalFlight === fl
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                          : 'bg-white dark:bg-slate-900  text-slate-700  border-slate-300  hover:border-slate-400'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs cursor-pointer'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400 cursor-pointer'
                       }`}
                     >
                       {fl}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Multi-Select Airmen List */}
@@ -1840,8 +1842,8 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                     if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick')) {
                       return { isOnParade: false, label: 'Sick Report', dutyCode: 'SICK_REPORT', notes, dutyName: 'Sick Report' };
                     }
-                    if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper)) {
-                      return { isOnParade: false, label: "Admin Order", dutyCode: 'ADMIN_ORDER', notes, dutyName: "Admin Order" };
+                    if (['CAT_C', 'DRILL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: "Drill Cat-C", dutyCode: 'CAT_C', notes, dutyName: "Drill Cat-C" };
                     }
                     if (codeUpper === 'RECEPTION' || notesLower.includes('reception')) {
                       return { isOnParade: false, label: 'Reception / KO', dutyCode: 'RECEPTION', notes, dutyName: 'Reception / KO' };

@@ -76,7 +76,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(
-        now.toLocaleTimeString('en-US', {
+        now.toLocaleTimeString('en-GB', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -84,11 +84,11 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
         })
       );
       setCurrentDateFormatted(
-        now.toLocaleDateString('en-US', {
+        now.toLocaleDateString('en-GB', {
           weekday: 'long',
-          year: 'numeric',
+          year: '2-digit',
           month: 'long',
-          day: 'numeric',
+          day: '2-digit',
         })
       );
     };
@@ -171,8 +171,8 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
         const pData = paradeResults[idx];
         const [y, m, d] = dStr.split('-').map(Number);
         const dObj = new Date(y, m - 1, d);
-        const dateDisplay = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const dayDisplay = dObj.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateDisplay = dObj.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: '2-digit' });
+        const dayDisplay = dObj.toLocaleDateString('en-GB', { weekday: 'short' });
 
         const pList = pData?.personnelStatusList || [];
         const dateRoster = allRosterAssignments.filter(

@@ -2,7 +2,7 @@ import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { 
   Users, ShieldCheck, UserMinus, Plane, Calendar, Filter,
-  Search, RefreshCw, Moon, ShieldAlert, Coffee,
+  Search, RefreshCw, Moon, ShieldAlert, Coffee, PenTool, Printer,
   Plus, CalendarRange, X, Check, Sliders, Eye, EyeOff, Activity, Clock, History, Sparkles, CheckSquare, Square
 } from 'lucide-react';
 import { FlightName, ParadeShift, Airman, DutyCategoryCode, IDAShift, UserRole } from '../types';
@@ -12,9 +12,11 @@ import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../dat
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { EntryHistoryModal } from './EntryHistoryModal';
 import { AssignDutyModal } from './AssignDutyModal';
+import { SignatureConfigModal } from './SignatureConfigModal';
 
 interface DashboardParadeStateProps {
   role?: UserRole;
+  userFlight?: string;
   airmen?: Airman[];
   selectedDate: string;
   setSelectedDate: (date: string) => void;
@@ -59,17 +61,20 @@ interface ParadeData {
 
 export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
   role = 'ADMIN',
+  userFlight,
   airmen,
   selectedDate,
   setSelectedDate,
   selectedFlight,
   setSelectedFlight,
+  onOpenPrintModal,
   onViewAirmanProfile,
   onOpenImportModal,
 }) => {
   const [data, setData] = useState<ParadeData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
+  const [showSignatureModal, setShowSignatureModal] = useState<boolean>(false);
 
   // Strength Category Detail List Modal State (When clicking Strength Cards)
   const [strengthCategoryModal, setStrengthCategoryModal] = useState<{
@@ -721,6 +726,14 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           date={selectedDate}
           onClose={() => setShowRatioModal(false)}
           onRatiosUpdated={() => setRatioRefreshTrigger((prev) => prev + 1)}
+        />
+      )}
+
+      {/* Signature Configuration Modal */}
+      {showSignatureModal && (
+        <SignatureConfigModal
+          initialTab="PREPARED_BY"
+          onClose={() => setShowSignatureModal(false)}
         />
       )}
     </div>

@@ -180,17 +180,6 @@ export const DUTY_TYPES: DutyTypeInfo[] = [
   },
   {
     code: 'ADMIN_ORDER',
-    name: 'Admin Order',
-    shortName: 'DRL',
-    category: 'Status',
-    color: 'bg-stone-600 text-white',
-    badgeBg: 'bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-600',
-    badgeText: 'text-stone-700 dark:text-stone-300',
-    isCountedAsDuty: false,
-    description: 'Drill Category C',
-  },
-  {
-    code: 'ADMIN_ORDER',
     name: 'Admin Order / Det',
     shortName: 'ADM',
     category: 'Status',

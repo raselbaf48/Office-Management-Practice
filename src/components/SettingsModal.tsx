@@ -44,6 +44,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   role: UserRole;
+  userFlight?: string;
   nominalAirmen: any[];
   currentTheme: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
@@ -61,6 +62,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   role,
+  userFlight,
   currentTheme,
   onThemeChange,
   onOpenAdminLogin,
@@ -342,12 +344,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
-const sections = [
+  const sections = [
     { id: 'appearance', label: 'Theme & Appearance', icon: <Palette className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
-    ...(role === 'SUPER_ADMIN' ? [{ id: 'cloudsync', label: 'Database Cloud Sync', icon: <Cloud className="w-5 h-5" />, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' }] : []),
-    ...(role === 'SUPER_ADMIN' ? [{ id: 'users', label: 'User Management', icon: <ShieldCheck className="w-5 h-5" />, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' }] : []),
+    ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'cloudsync', label: 'Database Cloud Sync', icon: <Cloud className="w-5 h-5" />, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' }] : []),
+    ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'users', label: 'User Management', icon: <ShieldCheck className="w-5 h-5" />, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' }] : []),
     { id: 'security', label: 'Security & Passcode', icon: <Lock className="w-5 h-5" />, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950 dark:text-amber-400' },
-    ...(role === 'SUPER_ADMIN' ? [{ id: 'database', label: 'Database Backup', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' }] : []),
+    ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'database', label: 'Backup & Restore', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' }] : []),
     ...(role === 'SUPER_ADMIN' ? [{ id: 'history', label: 'Login History', icon: <History className="w-5 h-5" />, color: 'text-sky-500 bg-sky-100 dark:bg-sky-950 dark:text-sky-400' }] : []),
   ];
 
@@ -374,7 +376,7 @@ const sections = [
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
+          <div className="flex overflow-x-auto sm:flex-col sm:overflow-y-auto sm:flex-1 px-4 pb-4 sm:pb-6 gap-2 sm:gap-1 sm:space-y-1 scrollbar-hide">
             {sections.map(sec => (
               <button
                 key={sec.id}
@@ -521,9 +523,9 @@ const sections = [
           )}
 
 
-          {activeSection === 'users' && role === 'SUPER_ADMIN' && (
+          {activeSection === 'users' && (role === 'SUPER_ADMIN' || role === 'ADMIN') && (
             <div className="flex-1 h-full">
-              <UserManagementTab nominalAirmen={nominalAirmen} userSessionRole={role} />
+              <UserManagementTab nominalAirmen={nominalAirmen} userSessionRole={role} userFlight={userFlight} />
             </div>
           )}
 
@@ -752,7 +754,7 @@ const sections = [
                         activeUsers.map(u => (
                           <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                              {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'Normal User'}
+                              {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
                             </span>
                           </div>
                         ))
@@ -803,7 +805,7 @@ const sections = [
                             <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                               {log.rank} {log.name}
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 font-bold uppercase tracking-wider">
-                                {log.role === 'SUPER_ADMIN' ? 'Super Admin' : log.role === 'ADMIN' ? 'Admin' : 'Normal User'}
+                                {log.role === 'SUPER_ADMIN' ? 'Super Admin' : log.role === 'ADMIN' ? 'Admin' : 'User'}
                               </span>
                             </div>
                             <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">

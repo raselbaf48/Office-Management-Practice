@@ -1,6 +1,7 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
+import { getCurrentUserSession } from '../utils/authSession';
 import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Plus, RefreshCw, X, Check, FileText, MapPin, History } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { EntryHistoryModal } from './EntryHistoryModal';
@@ -28,7 +29,10 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   airmen,
   onViewProfile,
 }) => {
-  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>('All');
+  const session = getCurrentUserSession();
+  const isAdmin = session?.assignedRole === 'ADMIN';
+  const adminFlight = session?.flightName;
+  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
   const [tdyData, setTdyData] = useState<Record<string, TdyRecord>>({});
@@ -361,19 +365,24 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Flight Pills */}
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-          {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((fl) => (
+          {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((fl) => {
+            const isDisabledFlt = isAdmin && adminFlight && fl !== adminFlight;
+            return (
             <button
               key={fl}
-              onClick={() => setSelectedFlight(fl)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all shrink-0 cursor-pointer ${
+              onClick={() => !isDisabledFlt && setSelectedFlight(fl)}
+              disabled={isDisabledFlt}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all shrink-0 ${
+                isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600' :
                 selectedFlight === fl
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  ? 'bg-emerald-600 text-white shadow-xs cursor-pointer'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer'
               }`}
             >
               {fl === 'All' ? 'All Flights (48)' : `${fl} Flight`}
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* Search */}
@@ -537,20 +546,26 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   Flight
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => (
+                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
+                    const isDisabledFlt = isAdmin && adminFlight && flt !== adminFlight;
+                    const setterStateValue = grantTdyFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file
+                    return (
                     <button
                       key={flt}
                       type="button"
-                      onClick={() => setGrantTdyFlight(flt)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                      onClick={() => !isDisabledFlt && setGrantTdyFlight(flt)}
+                      disabled={isDisabledFlt}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                        isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
                         grantTdyFlight === flt
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                          ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-xs cursor-pointer'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400 cursor-pointer'
                       }`}
                     >
                       {flt}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

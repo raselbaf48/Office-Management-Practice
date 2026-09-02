@@ -23,6 +23,15 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
     const [flightName, setFlightName] = useState<FlightName | ''>(airmanToEdit?.flightName || '');
   const [mobileNo, setMobileNo] = useState(airmanToEdit?.mobileNo || '');
   const [remarks, setRemarks] = useState(airmanToEdit?.remarks || '');
+  const [dateJoined, setDateJoined] = useState(airmanToEdit?.dateJoined || (!airmanToEdit ? new Date().toISOString().split('T')[0] : ''));
+  const [dateLeft, setDateLeft] = useState(airmanToEdit?.dateLeft || '');
+  const [leaveReason, setLeaveReason] = useState(airmanToEdit?.leaveReason || '');
+  const [customLeaveReason, setCustomLeaveReason] = useState(() => {
+    if (airmanToEdit?.leaveReason && !['Posted Out', 'Retired', 'Dismissed'].includes(airmanToEdit.leaveReason)) {
+      return airmanToEdit.leaveReason;
+    }
+    return '';
+  });
   const [validationError, setValidationError] = useState<string>('');
 
   // Address Selection States: L/In vs L/Out
@@ -118,6 +127,11 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
       if (livingOutType === 'OUTSIDE_BASE' && !outsideAddress.trim()) return setValidationError('Please enter Outside Base Address');
     }
 
+    if (dateLeft) {
+      if (!leaveReason) return setValidationError('Please select a Reason for leaving the unit');
+      if (leaveReason === 'Custom' && !customLeaveReason.trim()) return setValidationError('Please enter a custom reason');
+    }
+
     // BD Number Uniqueness check (Part 2)
     const normalizedNewBd = bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
     const duplicateAirman = existingAirmen.find((a) => {
@@ -132,6 +146,7 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
     }
 
     const finalAddress = computeFinalAddress();
+    const finalLeaveReason = dateLeft ? (leaveReason === 'Custom' ? customLeaveReason.trim() : leaveReason) : undefined;
 
     onSave({
       name: name.trim(),
@@ -143,6 +158,10 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
       addressBlock: finalAddress,
       mobileNo: mobileNo.trim() || '01',
       remarks: remarks.trim(),
+      dateJoined: dateJoined || undefined,
+      dateLeft: dateLeft || undefined,
+      leaveReason: finalLeaveReason,
+      active: !dateLeft, // Set active to false if dateLeft is provided
     });
     onClose();
   };
@@ -222,49 +241,41 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Rank <span className="text-red-500">*</span>
               </label>
-              <div className="flex flex-wrap gap-1.5">
+              <select
+                value={rank}
+                onChange={(e) => {
+                  setRank(e.target.value as any);
+                  if (validationError) setValidationError('');
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="" disabled>Select Rank</option>
                 {ranksList.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => {
-                      setRank(r as any);
-                      if (validationError) setValidationError('');
-                    }}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      rank === r
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
-                    }`}
-                  >
+                  <option key={r} value={r}>
                     {r}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Trade <span className="text-red-500">*</span>
               </label>
-              <div className="flex flex-wrap gap-1.5">
+              <select
+                value={trade}
+                onChange={(e) => {
+                  setTrade(e.target.value);
+                  if (validationError) setValidationError('');
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="" disabled>Select Trade</option>
                 {['Afr Fitt', 'Eng Fitt', 'E&I Fitt', 'Radio Fitt', 'Armt Fitt', 'GS', 'Log Asst', 'Sec Asst (GD)', 'Sec Asst (Accts)', 'Admin Asst', 'ATCA'].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setTrade(t);
-                      if (validationError) setValidationError('');
-                    }}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      trade === t
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
-                    }`}
-                  >
+                  <option key={t} value={t}>
                     {t}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
 
@@ -434,6 +445,76 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
                 )}
               </div>
             ) : null}
+          </div>
+
+          {/* Unit Joining & Posting Out Dates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Date Joined Unit <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                value={dateJoined}
+                onChange={(e) => setDateJoined(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Date Left Unit <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                value={dateLeft}
+                onChange={(e) => {
+                  setDateLeft(e.target.value);
+                  if (e.target.value && !leaveReason) {
+                    setLeaveReason('Posted Out'); // Default selection
+                  }
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            {dateLeft && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Reason <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  <select
+                    value={leaveReason === 'Custom' || (leaveReason && !['Posted Out', 'Retired', 'Dismissed'].includes(leaveReason)) ? 'Custom' : leaveReason}
+                    onChange={(e) => {
+                      setLeaveReason(e.target.value);
+                      if (e.target.value !== 'Custom') {
+                        setCustomLeaveReason('');
+                      }
+                      if (validationError) setValidationError('');
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="" disabled>Select Reason</option>
+                    <option value="Posted Out">Posted Out</option>
+                    <option value="Retired">Retired</option>
+                    <option value="Dismissed">Dismissed</option>
+                    <option value="Custom">Custom...</option>
+                  </select>
+                  
+                  {(leaveReason === 'Custom' || (leaveReason && !['Posted Out', 'Retired', 'Dismissed'].includes(leaveReason) && leaveReason !== 'Custom')) && (
+                    <input
+                      type="text"
+                      placeholder="Enter reason..."
+                      value={customLeaveReason}
+                      onChange={(e) => {
+                        setCustomLeaveReason(e.target.value);
+                        if (validationError) setValidationError('');
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Remarks */}

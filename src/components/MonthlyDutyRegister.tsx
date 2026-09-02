@@ -763,7 +763,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
   const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleString('en-US', {
     month: 'long',
-    year: 'numeric',
+    year: '2-digit',
   });
 
   return (
@@ -877,13 +877,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
             <span>{onlyHolidaysFilter ? '🏖️ Holidays Only' : '📅 All Days'}</span>
           </button>
 
-          <button
-            onClick={fetchRoster}
-            className="p-2 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-            title="Refresh Roster"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          
 
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <div className="flex items-center space-x-2">

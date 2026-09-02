@@ -23,6 +23,8 @@ import {
   Eye,
   EyeOff,
   Filter,
+  UserMinus,
+  PenTool,
   MapPin,
   Phone,
   Sliders,
@@ -34,7 +36,6 @@ import {
   Download,
   FileDown,
   UserPlus,
-  PenTool,
   CheckSquare,
 Settings,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ import {
 
 interface ParadeStateFormattedViewProps {
   role?: UserRole;
+  userFlight?: string;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   airmen: Airman[];
@@ -68,6 +70,7 @@ interface ParadeStateFormattedViewProps {
 
 export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> = ({
   role = 'ADMIN',
+  userFlight,
   selectedDate,
   setSelectedDate,
   airmen,
@@ -75,6 +78,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   onOpenPrintModal,
   onViewAirmanProfile,
 }) => {
+  const todayStr = new Date().toISOString().split('T')[0];
   const isPtDocument = initialDocumentType === 'PT';
   const [fromDate, setFromDate] = useState<string>(selectedDate);
   const [toDate, setToDate] = useState<string>(selectedDate);
@@ -108,7 +112,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   // Add Disposal Modal State
   const [showAddDisposalModal, setShowAddDisposalModal] = useState<boolean>(false);
   const [disposalDateMode, setDisposalDateMode] = useState<'SINGLE' | 'MULTI'>('SINGLE');
-  const [disposalFlight, setDisposalFlight] = useState<FlightName>('Avionics');
+  const [disposalFlight, setDisposalFlight] = useState<FlightName>(role === 'ADMIN' && userFlight ? userFlight as FlightName : 'Avionics');
   const [disposalCategory, setDisposalCategory] = useState<string>('');
   const [disposalCustomTitle, setDisposalCustomTitle] = useState<string>('');
   const [selectedDisposalAirmenIds, setSelectedDisposalAirmenIds] = useState<string[]>([]);
@@ -185,6 +189,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
   const [ratioRefreshTrigger, setRatioRefreshTrigger] = useState<number>(0);
   const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
   const [activePreset, setActivePreset] = useState<'today' | '7days' | '15days' | 'month' | 'custom'>('today');
+  const [dateMode, setDateMode] = useState<'single' | 'multi'>('single');
 
   // Keep fromDate/toDate in sync when parent selectedDate updates
   useEffect(() => {
@@ -516,6 +521,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
   // Open Edit / Change Disposal Modal for a specific airman
   const openEditDisposal = (airman: Airman, dutyCode: string, dutyName?: string, note?: string) => {
+    if (role === 'ADMIN' && userFlight && airman.flightName !== userFlight) {
+      alert("You are not authorized to edit disposals for personnel outside your flight.");
+      return;
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (role === 'ADMIN' && selectedDate < todayStr) {
+      alert("You cannot edit disposals for past dates.");
+      return;
+    }
     const isStandardCat = [
       'ESSN',
       'CMH',
@@ -769,7 +783,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
   // Compute Flight Stats for Single-Day Summary Matrix
   const getFlightStats = (fl: FlightName | 'Overall') => {
-    const flightAirmen = fl === 'Overall' ? airmen : airmen.filter((a) => a.flightName === fl);
+    const activeAirmen = airmen.filter((a) => {
+      if (a.dateJoined && a.dateJoined > selectedDate) return false;
+      if (a.dateLeft && a.dateLeft < selectedDate) return false;
+      return true;
+    });
+    const flightAirmen = fl === 'Overall' ? activeAirmen : activeAirmen.filter((a) => a.flightName === fl);
     const rawPersonnel = singleParadeData?.personnelStatusList || [];
     const pList = fl === 'Overall' ? rawPersonnel : rawPersonnel.filter((p) => p.airman.flightName === fl);
 
@@ -816,7 +835,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           hospitalCount++;
         } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
           sickExCount++;
-        } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+        } else if (['CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
           drillCatCCount++;
         } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
           adminCommCount++;
@@ -934,7 +953,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         cmhList.push({ airman, note: item.dutyName || dutyCode || 'CMH' });
       } else if (['SICK_REPORT', 'SICK', 'EX_PPGF'].includes(codeUpper) || notesLower.includes('sick') || notesLower.includes('ppgf')) {
         sickReportList.push({ airman, note: item.dutyName || dutyCode || 'Sick Report' });
-      } else if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
+      } else if (['CAT_C', 'DRILL'].includes(codeUpper) || notesLower.includes('drill')) {
         drillCatCList.push({ airman, note: "Admin Order" });
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
@@ -964,7 +983,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
         // Other dynamic custom disposal
         let customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
         if (notes) {
-          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+          if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
              customKey = notes;
           }
         }
@@ -1093,67 +1112,114 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       `}</style>
 
       {/* Top Controls Banner (Hidden during print) */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5 mb-4 print:hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 print:hidden">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg shrink-0">
+            <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">State Controls</h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Select date range and flight</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center xl:justify-end gap-2.5">
         {isPtDocument ? null : (
           <>
             {/* Quick Date Presets */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
               <button
                 onClick={() => handleSetPreset('today')}
                 className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                  activePreset === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  activePreset === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white print:text-black'
                 }`}
               >
                 Today
               </button>
               <button
                 onClick={() => handleSetPreset('7days')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white print:text-black dark:hover:text-white' }`}
               >
                 7 Days
               </button>
               <button
                 onClick={() => handleSetPreset('15days')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white print:text-black dark:hover:text-white' }`}
               >
                 15 Days
               </button>
               <button
                 onClick={() => handleSetPreset('month')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }`}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white print:text-black dark:hover:text-white' }`}
               >
                 Month
               </button>
             </div>
 
-            {/* From / To Date Filter */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
-              <span className="text-slate-500 font-semibold">From:</span>
-              <DateNavigator
-                
-                value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setSelectedDate(e.target.value);
-                }}
-                className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-              />
-              <span className="text-slate-400 font-semibold">To:</span>
-              <DateNavigator
-                
-                value={toDate}
-                onChange={(e) => { setToDate(e.target.value); setActivePreset('custom'); }}
-                className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
-              />
+            {/* Date Mode Toggle & Pickers */}
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                <button
+                  onClick={() => {
+                    setDateMode('single');
+                    setToDate(fromDate);
+                    setActivePreset('today');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg transition-all ${dateMode === 'single' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                >
+                  Single Dt
+                </button>
+                <button
+                  onClick={() => setDateMode('multi')}
+                  className={`px-3 py-1.5 rounded-lg transition-all ${dateMode === 'multi' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                >
+                  Multi Dt
+                </button>
+              </div>
+
+              {dateMode === 'single' ? (
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                  <span className="text-slate-500 font-semibold mr-2">Dt:</span>
+                  <DateNavigator
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setToDate(e.target.value);
+                      setSelectedDate(e.target.value);
+                      setActivePreset('custom');
+                    }}
+                    className="bg-transparent text-slate-900 dark:text-white print:text-black font-black outline-none cursor-pointer"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold space-x-2">
+                  <span className="text-slate-500 font-semibold">From:</span>
+                  <DateNavigator
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setSelectedDate(e.target.value);
+                    }}
+                    className="bg-transparent text-slate-900 dark:text-white print:text-black font-black outline-none cursor-pointer"
+                  />
+                  <span className="text-slate-400 font-semibold">To:</span>
+                  <DateNavigator
+                    value={toDate}
+                    min={fromDate}
+                    onChange={(e) => { setToDate(e.target.value); setActivePreset('custom'); }}
+                    className="bg-transparent text-slate-900 dark:text-white print:text-black font-black outline-none cursor-pointer"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Flight Selector */}
-            <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+            <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={selectedFlight}
                 onChange={(e) => setSelectedFlight(e.target.value as any)}
-                className="bg-transparent text-slate-900 dark:text-white font-black outline-none cursor-pointer"
+                className="bg-transparent text-slate-900 dark:text-white print:text-black dark:text-white font-black outline-none cursor-pointer"
               >
                 <option value="Overall">Overall ({airmen.length})</option>
                 <option value="Avionics">Avionics</option>
@@ -1175,21 +1241,44 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
           <span>Download DOCX</span>
         </button>
+        {/* Add Disposal Button */}
+        {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+          <button
+            onClick={() => setShowAddDisposalModal(true)}
+            className="flex items-center space-x-1.5 px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-sm shadow-lg shadow-rose-900/20 transition-all cursor-pointer ml-4"
+            title="Add Disposal"
+          >
+            <UserMinus className="w-5 h-5" />
+            <span>Add Disposal</span>
+          </button>
+        )}
+        {/* Signature Settings Button */}
+        {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+          <button
+            onClick={() => setShowSignatureModal(true)}
+            className="flex items-center space-x-1.5 px-6 py-2 bg-slate-100 dark:bg-slate-800 print:bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-black text-sm shadow-lg transition-all cursor-pointer ml-4"
+            title="Signatures"
+          >
+            <PenTool className="w-5 h-5" />
+            <span>Signatures</span>
+          </button>
+        )}
         {/* Official Export / Print Button */}
         <button
           onClick={handleExportOrPrint}
           className="flex items-center space-x-1.5 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer ml-4"
-          title="Print / Save PDF"
+          title="Official Export / Print"
         >
           <Printer className="w-5 h-5" />
-          <span>Print / Save PDF</span>
+          <span>Official Export / Print</span>
         </button>
+        </div>
       </div>
 
       {/* OFFICIAL PARADE DOCUMENT SHEET (DISPLAYED ON SCREEN & IN PRINT) */}
       <div
         id="official-parade-document"
-        className="bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto"
+        className="bg-white dark:bg-slate-900 text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-2xl shadow-lg p-6 overflow-x-auto print:bg-white print:text-black print:border-none print:shadow-none"
       >
         {loading ? (
           <div className="py-20 text-center text-slate-400">
@@ -1204,15 +1293,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             {/* DOCUMENT TOP HEADER */}
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
-                <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
+                <h1 className="font-bold tracking-wide text-slate-900 dark:text-white print:text-black underline inline-block text-base uppercase">
                   {isPtDocument ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
                 <br />
-                <h2 className="font-bold tracking-wide text-slate-900 mt-0.5 underline inline-block text-sm uppercase">
+                <h2 className="font-bold tracking-wide text-slate-900 dark:text-white print:text-black mt-0.5 underline inline-block text-sm uppercase">
                   155 UASU BAF {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLIGHT)` : ''}
                 </h2>
               </div>
-              <div className="text-right font-normal text-slate-900 pr-1 text-xs mt-1">
+              <div className="text-right font-normal text-slate-900 dark:text-white print:text-black pr-1 text-xs mt-1">
                 Period: {formatDateShort(fromDate)} To {formatDateShort(toDate)}
               </div>
             </div>
@@ -1279,28 +1368,28 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                      return (
                      <div className="overflow-x-auto my-3">
 
-              <table className="w-full print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 text-[11px]">
+              <table className="w-full print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black text-[11px]">
               <thead>
-                  <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Date</th>
-                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Day</th>
-                    {hasData('Base Security Duty') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Security Duty</th>}
-                    {hasData('Base Taskforce Duty') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Base Taskforce Duty</th>}
-                    {hasData('Najirpara Taskforce Duty') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>}
-                    {hasData('Airfield Duty') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>}
-                    {hasData('Halishahar Duty') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>}
-                    {hasData('Bake N Bite') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Bake N Bite</th>}
-                    {hasData('Tdy') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>}
-                    {customKeysArray.map(key => <th key={key} className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>{key}</th>)}
-                    {hasData('Leave') && <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Leave</th>}
-                    <th className="border border-slate-800 p-1.5 text-center align-middle" colSpan={3}>IDA CENTER Duty</th>
-                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>Duty Off</th>
-                    <th className="border border-slate-800 p-1.5 text-center align-middle" rowSpan={2}>{isPtDocument ? 'On PT' : 'On Parade'}</th>
+                  <tr className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white print:bg-slate-200 print:text-black font-bold border-b-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black print:bg-slate-200 print:text-black">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Date</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Day</th>
+                    {hasData('Base Security Duty') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Base Security Duty</th>}
+                    {hasData('Base Taskforce Duty') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Base Taskforce Duty</th>}
+                    {hasData('Najirpara Taskforce Duty') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>}
+                    {hasData('Airfield Duty') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>}
+                    {hasData('Halishahar Duty') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>}
+                    {hasData('Bake N Bite') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Bake N Bite</th>}
+                    {hasData('Tdy') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>}
+                    {customKeysArray.map(key => <th key={key} className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>{key}</th>)}
+                    {hasData('Leave') && <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Leave</th>}
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" colSpan={3}>IDA CENTER Duty</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Duty Off</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>{isPtDocument ? 'On PT' : 'On Parade'}</th>
                   </tr>
-                  <tr className="bg-slate-200 text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-1 text-center align-middle">Morning</th>
-                    <th className="border border-slate-800 p-1 text-center align-middle">Afternoon</th>
-                    <th className="border border-slate-800 p-1 text-center align-middle">Night</th>
+                  <tr className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white print:bg-slate-200 print:text-black font-bold border-b-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black print:bg-slate-200 print:text-black">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">Morning</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">Afternoon</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">Night</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1370,58 +1459,58 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     return (
                       <tr
                         key={dStr}
-                        className={`border-b border-slate-800 align-top ${
-                          isWeekend ? 'text-red-600 font-semibold' : 'text-slate-900'
+                        className={`border-b border-slate-800 dark:border-white print:border-black dark:border-white print:border-black align-top ${
+                          isWeekend ? 'text-red-600 font-semibold' : 'text-slate-900 dark:text-white print:text-black'
                         }`}
                       >
-                        <td className="border border-slate-800 p-1.5 whitespace-nowrap font-bold text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 whitespace-nowrap font-bold text-center align-middle">
                           {formatDateSuperShort(dStr)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 whitespace-nowrap text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 whitespace-nowrap text-center align-middle">
                           {dayName}
                         </td>
-                        {hasData('Base Security Duty') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Base Security Duty') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(baseSec)}
                         </td>}
-                        {hasData('Base Taskforce Duty') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Base Taskforce Duty') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(btf)}
                         </td>}
-                        {hasData('Najirpara Taskforce Duty') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Najirpara Taskforce Duty') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(ntf)}
                         </td>}
-                        {hasData('Airfield Duty') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Airfield Duty') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(airfield)}
                         </td>}
-                        {hasData('Halishahar Duty') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Halishahar Duty') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(halishahar)}
                         </td>}
-                        {hasData('Bake N Bite') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Bake N Bite') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(bakeBite)}
                         </td>}
-                        {hasData('Tdy') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Tdy') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(tdy)}
                         </td>}
                         {customKeysArray.map(key => (
-                          <td key={key} className="border border-slate-800 p-1.5 text-center align-middle">
+                          <td key={key} className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                             {renderAirmanColumnList(dayCustomDisposals[key] || [])}
                           </td>
                         ))}
-                        {hasData('Leave') && <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        {hasData('Leave') && <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(leave)}
                         </td>}
-                        <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaMorn)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaAft)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(idaNight)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(dutyOff)}
                         </td>
-                        <td className="border border-slate-800 p-1.5 text-center align-middle">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center align-middle">
                           {renderAirmanColumnList(onParade)}
                         </td>
                       </tr>
@@ -1435,31 +1524,6 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             {/* SPACER ROW: 0.6 INCH HEIGHT TO PROVIDE SIGNATURE HEADROOM */}
             <div className="w-full" style={{ height: '0.6in' }} />
 
-            {/* OFFICIAL SIGNATURE FOOTER FOR MULTI-DAY */}
-            <div
-              className="flex justify-between items-end pt-1 text-slate-900 text-xs"
-              style={{ fontFamily: 'Arial, sans-serif' }}
-            >
-              {/* LEFT SIGNATURE BLOCK (Prepared By) */}
-              <div className="text-center font-bold min-w-[200px]">
-                <div className="border-t border-slate-900 pt-1.5">
-                  <div className="text-xs uppercase font-black">{preparedBy.name}</div>
-                  <div className="text-[11px] font-normal">{preparedBy.rank}</div>
-                  <div className="text-[11px] font-normal">{preparedBy.designation}</div>
-                  <div className="text-[10px] uppercase font-bold">{preparedBy.unit || '155 UASU BAF'}</div>
-                </div>
-              </div>
-
-              {/* RIGHT SIGNATURE BLOCK (Authorized By) */}
-              <div className="text-center font-bold min-w-[200px]">
-                <div className="border-t border-slate-900 pt-1.5">
-                  <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
-                  <div className="text-[11px] font-normal">{authorizedBy.rank}</div>
-                  <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
-                  <div className="text-[10px] uppercase font-bold">{authorizedBy.unit || '155 UASU BAF'}</div>
-                </div>
-              </div>
-            </div>
           </div>
         ) : (
           /* ========================================================================= */
@@ -1469,15 +1533,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             {/* TOP DOCUMENT HEADER */}
             <div className="relative mb-3 text-center" style={{ fontFamily: 'Arial, sans-serif' }}>
               <div className="text-center">
-                <h1 className="font-bold tracking-wide text-slate-900 underline inline-block text-base uppercase">
+                <h1 className="font-bold tracking-wide text-slate-900 dark:text-white print:text-black underline inline-block text-base uppercase">
                   {isPtDocument ? 'PT STATE : AIRMEN' : 'PARADE STATE : AIRMEN'}
                 </h1>
                 <br />
-                <h2 className="font-bold tracking-wide text-slate-900 mt-0.5 underline inline-block text-sm uppercase">
+                <h2 className="font-bold tracking-wide text-slate-900 dark:text-white print:text-black mt-0.5 underline inline-block text-sm uppercase">
                   155 UASU BAF {selectedFlight !== 'Overall' ? `(${selectedFlight.toUpperCase()} FLT)` : ''}
                 </h2>
               </div>
-              <div className="text-right font-normal text-slate-900 pr-1 text-xs mt-1">
+              <div className="text-right font-normal text-slate-900 dark:text-white print:text-black pr-1 text-xs mt-1">
                 Date: {formatDateShort(fromDate)}
               </div>
             </div>
@@ -1485,66 +1549,66 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             {/* SUMMARY MATRIX TABLE: EXACT SINGLE-ROW FORMAT FOR SELECTED FLIGHT / OVERALL */}
             <div className="overflow-x-auto my-1">
               <table
-                className="w-full text-center align-middle border-collapse border-2 border-slate-900"
+                className="w-full text-center align-middle border-collapse border-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black"
                 style={{ fontFamily: 'Arial, sans-serif', fontSize: '10px' }}
               >
                 <thead>
-                  <tr className="bg-transparent text-slate-900 font-bold border-b-2 border-slate-900">
-                    <th className="border border-slate-800 p-1 align-middle text-center min-w-[70px] font-bold">Unit / Flight</th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                  <tr className="bg-transparent text-slate-900 dark:text-white print:text-black font-bold border-b-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 align-middle text-center min-w-[70px] font-bold">Unit / Flight</th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Total Str</div>
                     </th>
 
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Det/Tdy</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Eff Str</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Leave</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Essn</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/BNS/BSH</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Sick Report</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Drill Cat-C</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard Duty On/Off</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Canteen</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Bake & Bite</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">K/O & Reception</div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard of Honour</div>
                     </th>
                     {Object.keys(customDisposalsMap).map(key => (
-                      <th key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">
+                      <th key={key} className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black border-black dark:border-white print:border-black p-0.5 align-middle text-center">
                         <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">
                           {key}
                         </div>
                       </th>
                     ))}
-                    <th className="border border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{isPtDocument ? 'Total Out PT' : 'Total Out Parade'}</div></th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center font-extrabold">
+                    <th className="border border-black dark:border-white print:border-black p-0.5 align-middle text-center font-extrabold"><div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px] font-bold leading-tight">{isPtDocument ? 'Total Out PT' : 'Total Out Parade'}</div></th>
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center font-extrabold">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
                         {isPtDocument ? 'On PT' : 'On Parade'}
                       </div>
                     </th>
-                    <th className="border border-slate-800 p-0.5 align-middle text-center min-w-[35px]">
+                    <th className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-0.5 align-middle text-center min-w-[35px]">
                       <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">
                         Rmk
                       </div>
@@ -1560,31 +1624,31 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         : `155 UASU BAF (${selectedFlight.toUpperCase()} FLT)`;
 
                     return (
-                      <tr className="font-bold text-slate-900 border-b-2 border-slate-900 bg-white">
-                        <td className="border border-slate-800 p-1.5 text-center font-black whitespace-nowrap align-middle">
+                      <tr className="font-bold text-slate-900 dark:text-white print:text-black border-b-2 border-slate-900 dark:border-white print:border-black dark:border-white print:border-black bg-white dark:bg-slate-800 print:bg-white">
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1.5 text-center font-black whitespace-nowrap align-middle">
                           {unitLabel}
                         </td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.totalStr}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.totalStr}</td>
                         
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.effStr}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.detTdyCount > 0 ? stats.detTdyCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.effStr}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.leaveCount > 0 ? stats.leaveCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.essnCount > 0 ? stats.essnCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.hospitalCount > 0 ? stats.hospitalCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
                         {Object.keys(customDisposalsMap).map(key => {
                           const count = customDisposalsMap[key].length;
-                          return <td key={key} className="border border-slate-800 border-black p-0.5 align-middle text-center">{count > 0 ? count : '-'}</td>;
+                          return <td key={key} className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black border-black dark:border-white print:border-black p-0.5 align-middle text-center">{count > 0 ? count : '-'}</td>;
                         })}
-                        <td className="border border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
-                        <td className="border border-slate-800 p-1 font-black bg-slate-100 text-center align-middle">{stats.onPtParadeCount}</td>
-                        <td className="border border-slate-800 p-1 text-center align-middle">-</td>
+                        <td className="border border-black dark:border-white print:border-black p-0.5 font-bold text-center align-middle">{stats.totalOutPt}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 font-black bg-slate-100 dark:bg-slate-800 print:bg-slate-100 text-center align-middle">{stats.onPtParadeCount}</td>
+                        <td className="border border-slate-800 dark:border-white print:border-black dark:border-white print:border-black p-1 text-center align-middle">-</td>
                       </tr>
                     );
                   })()}
@@ -1605,7 +1669,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               <div className="flex flex-wrap items-start justify-between gap-6">
                 {/* 1ST COLUMN: ON PARADE / ON PT (1 TO 15 ON LEFT, 16+ ON RIGHT, NIL IF EMPTY) */}
                 <div className="min-w-[240px] flex-shrink-0">
-                  <h3 className="font-bold underline text-slate-900 mb-1.5 capitalize tracking-wide">
+                  <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1.5 capitalize tracking-wide">
                     {isPtDocument ? 'On PT' : 'On Parade'}
                   </h3>
 
@@ -1643,7 +1707,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       )}
                     </div>
                   ) : (
-                    <div className="font-bold text-slate-900">Nil</div>
+                    <div className="font-bold text-slate-900 dark:text-white print:text-black">Nil</div>
                   )}
                 </div>
 
@@ -1655,31 +1719,31 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {bakeBiteList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Bake & Bite</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Bake & Bite</h3>
                           {renderDisposalAirmenList(bakeBiteList, 'BAKE_N_BITE', 'Bake & Bite')}
                         </div>
                       )}
                       {tdyList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Det/ Tdy</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Det/ Tdy</h3>
                           {renderDisposalAirmenList(tdyList, 'TDY', 'Det/Tdy')}
                         </div>
                       )}
                       {canteenList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Canteen</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Canteen</h3>
                           {renderDisposalAirmenList(canteenList, 'CANTEEN', 'Canteen')}
                         </div>
                       )}
                       {leaveList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Leave</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Leave</h3>
                           {renderDisposalAirmenList(leaveList, 'LEAVE', 'Leave')}
                         </div>
                       )}
                       {essnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">
                             ESSN
                           </h3>
                           {renderDisposalAirmenList(essnList, 'ESSN', 'ESSN')}
@@ -1693,7 +1757,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {cmhList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">
                             CMH/BNS/BSH
                           </h3>
                           {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
@@ -1701,25 +1765,25 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       )}
                       {sickReportList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Sick Report</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Sick Report</h3>
                           {renderDisposalAirmenList(sickReportList, 'SICK_REPORT', 'Sick Report')}
                         </div>
                       )}
                       {drillCatCList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Drill Cat-C</h3>
-                          {renderDisposalAirmenList(drillCatCList, 'ADMIN_ORDER', 'Drill Cat-C')}
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Drill Cat-C</h3>
+                          {renderDisposalAirmenList(drillCatCList, 'CAT_C', 'Drill Cat-C')}
                         </div>
                       )}
                       {receptionList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">K/O & Reception</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">K/O & Reception</h3>
                           {renderDisposalAirmenList(receptionList, 'RECEPTION', 'K/O & Reception')}
                         </div>
                       )}
                       {gamesList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Guard of Honour</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Guard of Honour</h3>
                           {renderDisposalAirmenList(gamesList, 'GAMES', 'Guard of Honour')}
                         </div>
                       )}
@@ -1731,13 +1795,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     <div className="w-48 flex flex-col space-y-3">
                       {dutyOnList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty On</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Duty On</h3>
                           {renderDisposalAirmenList(dutyOnList, 'DUTY_ON', 'Duty On')}
                         </div>
                       )}
                       {!isPtDocument && dutyOffList.length > 0 && (
                         <div>
-                          <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">Duty Off</h3>
+                          <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">Duty Off</h3>
                           {renderDisposalAirmenList(dutyOffList, 'DUTY_OFF', 'Duty Off')}
                         </div>
                       )}
@@ -1747,7 +1811,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                         if (!airmenList || airmenList.length === 0) return null;
                         return (
                           <div key={catName}>
-                            <h3 className="font-bold underline text-slate-900 mb-1 capitalize tracking-wide">
+                            <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">
                               {catName}
                             </h3>
                             {renderDisposalAirmenList(airmenList, 'OTHERS', catName)}
@@ -1764,13 +1828,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
             {/* OFFICIAL SIGNATURE FOOTER */}
             <div
-              className="flex justify-between items-end pt-1 text-slate-900 text-xs"
+              className="flex justify-between items-end pt-1 text-slate-900 dark:text-white print:text-black text-xs"
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
               {/* LEFT SIGNATURE BLOCK (Prepared By) */}
               <div className="text-center font-bold min-w-[210px]">
                 {preparedBy.signDigitally && (
-                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 select-none">
+                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 dark:text-white print:text-black select-none">
                     <span className="font-bold underline">
                       {preparedBy.digitalSignatureText || preparedBy.name}
                     </span>
@@ -1779,7 +1843,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     </span>
                   </div>
                 )}
-                <div className="border-t border-slate-900 pt-1.5">
+                <div className="border-t border-slate-900 dark:border-white print:border-black dark:border-white print:border-black pt-1.5">
                   <div className="text-xs uppercase font-black">{preparedBy.name}</div>
                   <div className="text-[11px] font-normal">{preparedBy.rank}</div>
                   <div className="text-[11px] font-normal">{preparedBy.designation}</div>
@@ -1790,7 +1854,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               {/* RIGHT SIGNATURE BLOCK (Authorized By) */}
               <div className="text-center font-bold min-w-[210px]">
                 {authorizedBy.signDigitally && (
-                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 select-none">
+                  <div className="mb-1 text-center font-serif italic text-xs text-slate-900 dark:text-white print:text-black select-none">
                     <span className="font-bold underline">
                       {authorizedBy.digitalSignatureText || authorizedBy.name}
                     </span>
@@ -1799,7 +1863,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     </span>
                   </div>
                 )}
-                <div className="border-t border-slate-900 pt-1.5">
+                <div className="border-t border-slate-900 dark:border-white print:border-black dark:border-white print:border-black pt-1.5">
                   <div className="text-xs uppercase font-black">{authorizedBy.name}</div>
                   <div className="text-[11px] font-normal">{authorizedBy.rank}</div>
                   <div className="text-[11px] font-normal">{authorizedBy.designation}</div>
@@ -1830,15 +1894,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       {/* Add Disposal Modal */}
       {showAddDisposalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black shadow-2xl max-w-xl w-full p-6 space-y-5 relative overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black pb-4">
               <div className="flex items-center space-x-3">
                 <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
                   <UserPlus className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white print:text-black dark:text-slate-100">
                     Add Personnel Disposal
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -1849,7 +1913,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
               <button
                 onClick={() => setShowAddDisposalModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1866,7 +1930,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             <form onSubmit={handleAddDisposalSubmit} className="space-y-4">
               
               {/* 1. Date Selection */}
-              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
                   1. Select Date
                 </label>
@@ -1877,7 +1941,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       setDisposalFromDate(e.target.value);
                       setDisposalToDate(e.target.value);
                     }}
-                    className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
+                    className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black dark:text-slate-100 outline-none focus:border-emerald-500 shadow-xs"
                     required
                   />
                 </div>
@@ -1972,7 +2036,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       placeholder="e.g. Special Escort, VVIP Detail..."
                       value={disposalCustomTitle}
                       onChange={(e) => setDisposalCustomTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
                       required
                     />
                   </div>
@@ -1987,25 +2051,34 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   </label>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => (
+                  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
+                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (role === 'ADMIN' && selectedDate < todayStr);
+                    return (
                     <button
                       key={fl}
                       type="button"
-                      onClick={() => setDisposalFlight(fl)}
-                      className={`py-1 px-2 text-xs font-bold rounded-lg border text-center transition-all cursor-pointer ${
+                      onClick={() => !isDisabledFlt && setDisposalFlight(fl)}
+                      disabled={isDisabledFlt}
+                      className={`py-1 px-2 text-xs font-bold rounded-lg border text-center transition-all ${
+                        isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
                         disposalFlight === fl
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-xs cursor-pointer'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400 cursor-pointer'
                       }`}
                     >
                       {fl}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Multi-Select Airmen List */}
                 {(() => {
-                  const flightAirmen = airmen.filter((a) => a.flightName === disposalFlight);
+                  const flightAirmen = airmen.filter((a) => {
+                    if (a.dateJoined && a.dateJoined > disposalFromDate) return false;
+                    if (a.dateLeft && a.dateLeft < disposalFromDate) return false;
+                    return a.flightName === disposalFlight;
+                  });
 
                   const getAirmanStatusLabel = (airmanId: string) => {
                     const st = disposalPersonnelStatusMap[airmanId];
@@ -2036,8 +2109,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     if (['SICK_REPORT', 'SICK', 'EX_PPGF', 'ED'].includes(codeUpper) || notesLower.includes('sick')) {
                       return { isOnParade: false, label: 'Sick Report', dutyCode: 'SICK_REPORT', notes, dutyName: 'Sick Report' };
                     }
-                    if (['ADMIN_ORDER', 'CAT_C', 'DRILL'].includes(codeUpper)) {
-                      return { isOnParade: false, label: "Admin Order", dutyCode: 'ADMIN_ORDER', notes, dutyName: "Admin Order" };
+                    if (['CAT_C', 'DRILL'].includes(codeUpper)) {
+                      return { isOnParade: false, label: "Drill Cat-C", dutyCode: 'CAT_C', notes, dutyName: "Drill Cat-C" };
                     }
                     if (codeUpper === 'RECEPTION' || notesLower.includes('reception')) {
                       return { isOnParade: false, label: 'Reception / KO', dutyCode: 'RECEPTION', notes, dutyName: 'Reception / KO' };
@@ -2147,7 +2220,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                                       className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer border-slate-300 dark:border-slate-600 dark:bg-slate-800"
                                     />
                                     <span className="truncate">
-                                      <span className="font-bold text-slate-900 dark:text-white">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
+                                      <span className="font-bold text-slate-900 dark:text-white print:text-black dark:text-white">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
                                     </span>
                                   </div>
                                   <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
@@ -2161,7 +2234,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                             return (
                               <div
                                 key={a.id}
-                                className="flex items-center justify-between p-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
+                                className="flex items-center justify-between p-2 rounded-lg border border-slate-200/80 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black bg-slate-100 dark:bg-slate-800 print:bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
                               >
                                 <div className="flex items-center space-x-2.5 min-w-0">
                                   <span className="truncate text-slate-700 dark:text-slate-300">
@@ -2194,7 +2267,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black">
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
                   {selectedDisposalAirmenIds.length === 0 ? (
                     'Select personnel above'
@@ -2208,28 +2281,11 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                   <button
                     type="button"
                     onClick={() => setShowAddDisposalModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    disabled={disposalLoading || selectedDisposalAirmenIds.length === 0}
-                    className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
-                  >
-                    {disposalLoading ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )}
-                    <span>
-                      {selectedDisposalAirmenIds.length > 1
-                        ? `Add Disposal (${selectedDisposalAirmenIds.length})`
-                        : selectedDisposalAirmenIds.length === 1
-                        ? 'Add Disposal (1 Airman)'
-                        : 'Select Airmen'}
-                    </span>
-                  </button>
+                  
                 </div>
               </div>
             </form>
@@ -2240,10 +2296,10 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
       {/* Edit / Change Disposal Modal */}
       {editDisposalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn print:hidden">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center space-x-2">
+                <h3 className="text-base font-black text-slate-900 dark:text-white print:text-black dark:text-white flex items-center space-x-2">
                   <span>✏️ Edit / Change Disposal</span>
                 </h3>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
@@ -2252,7 +2308,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
               <button
                 onClick={() => setEditDisposalModal(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2263,7 +2319,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               <div className="bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl border border-purple-200 dark:border-purple-800 flex items-center justify-between">
                 <div>
                   <span className="text-[11px] text-purple-700 dark:text-purple-300 font-semibold block">Current Assignment:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white print:text-black dark:text-white text-xs">
                     {editDisposalModal.currentDutyName || editDisposalModal.currentDutyCode}
                     {editDisposalModal.notes && <span className="text-slate-500 dark:text-slate-400 ml-1">({editDisposalModal.notes})</span>}
                   </span>
@@ -2279,7 +2335,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
               </div>
 
               {/* Date Range for Edit */}
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black">
                 <div>
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                     From Date:
@@ -2288,7 +2344,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     
                     value={editDisposalFromDate}
                     onChange={(e) => setEditDisposalFromDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
                   />
                 </div>
                 <div>
@@ -2300,7 +2356,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                     value={editDisposalToDate}
                     min={editDisposalFromDate}
                     onChange={(e) => setEditDisposalToDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black dark:text-slate-100 outline-none focus:border-purple-500 shadow-xs"
                   />
                 </div>
               </div>
@@ -2347,7 +2403,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
                       placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
                       value={editDisposalCustomTitle}
                       onChange={(e) => setEditDisposalCustomTitle(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black dark:text-slate-100 outline-none focus:border-amber-500 shadow-xs"
                       required
                     />
                   </div>
@@ -2356,27 +2412,15 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
             </div>
 
             {/* Modal Action Buttons */}
-            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800 dark:border-white print:border-black dark:border-white print:border-black">
               <button
                 type="button"
                 onClick={() => setEditDisposalModal(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-800 print:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleSaveEditDisposal}
-                disabled={editDisposalLoading}
-                className="px-5 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
-              >
-                {editDisposalLoading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Check className="w-4 h-4" />
-                )}
-                <span>Save Changes</span>
-              </button>
+              
             </div>
           </div>
         </div>
@@ -2394,7 +2438,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
       {/* Internal Printable Parade State Modal (Fallback) */}
       {isInternalPrintOpen && (
-        <PrintableParadeStateModal
+        <PrintableParadeStateModal userFlight={userFlight} 
           date={fromDate}
           shift="Morning"
           flight={selectedFlight}

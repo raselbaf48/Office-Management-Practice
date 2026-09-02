@@ -166,20 +166,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
 
             {(collapsed || openSections.overview) && (
-              <div className="mt-1 space-y-1">
+              <div className="mt-2 space-y-2 sm:space-y-1">
                 {/* Dashboard */}
                 <button
                   onClick={() => handleSelectTab('overview')}
                   className={`w-full flex items-center ${
-                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                   } rounded-xl text-xs font-bold transition-all duration-150 ${
                     activeTab === 'overview'
-                      ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                      : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                      : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                   }`}
                   title="Dashboard & Strength Overview"
                 >
-                  <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeTab === 'overview' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                  <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeTab === 'overview' ? 'text-white' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">Dashboard</span>}
                 </button>
 
@@ -187,15 +187,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={() => handleSelectTab('parade-state')}
                   className={`w-full flex items-center ${
-                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                   } rounded-xl text-xs font-bold transition-all duration-150 ${
                     activeTab === 'parade-state'
-                      ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                      : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                      : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                   }`}
                   title="Daily Parade State (Official BAF Format)"
                 >
-                  <ClipboardList className={`w-4 h-4 shrink-0 ${activeTab === 'parade-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                  <ClipboardList className={`w-4 h-4 shrink-0 ${activeTab === 'parade-state' ? 'text-white' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">Parade State</span>}
                 </button>
 
@@ -203,30 +203,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={() => handleSelectTab('pt-state')}
                   className={`w-full flex items-center ${
-                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                   } rounded-xl text-xs font-bold transition-all duration-150 ${
                     activeTab === 'pt-state'
-                      ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                      : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                      : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                   }`}
                   title="Daily PT State"
                 >
-                  <Activity className={`w-4 h-4 shrink-0 ${activeTab === 'pt-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                  <Activity className={`w-4 h-4 shrink-0 ${activeTab === 'pt-state' ? 'text-white' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">PT State</span>}
                 </button>
                 {/* Night Count State */}
                 <button
                   onClick={() => handleSelectTab('night-count-state')}
                   className={`w-full flex items-center ${
-                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                    collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                   } rounded-xl text-xs font-bold transition-all duration-150 ${
                     activeTab === 'night-count-state'
-                      ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                      : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                      : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                   }`}
                   title="Night Count State (Airmen)"
                 >
-                  <Moon className={`w-4 h-4 shrink-0 ${activeTab === 'night-count-state' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                  <Moon className={`w-4 h-4 shrink-0 ${activeTab === 'night-count-state' ? 'text-white' : 'text-emerald-300'}`} />
                   {!collapsed && <span className="ml-3 truncate">Night Count State</span>}
                 </button>
               </div>
@@ -253,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {(collapsed || openSections.orgStructure) && (
-                  <div className="mt-1 space-y-1">
+                  <div className="mt-2 space-y-2 sm:space-y-1">
                     {/* Nominal Roll */}
                     <button
                       onClick={() => handleSelectTab('nominal')}
@@ -261,13 +261,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'nominal'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="Nominal Roll (48 Airmen)"
                     >
                       <div className="flex items-center truncate">
-                        <Layers className={`w-4 h-4 shrink-0 ${activeTab === 'nominal' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                        <Layers className={`w-4 h-4 shrink-0 ${activeTab === 'nominal' ? 'text-white' : 'text-emerald-300'}`} />
                         {!collapsed && <span className="ml-3 truncate">Nominal Roll (Airmen)</span>}
                       </div>
                       {!collapsed && (
@@ -283,15 +283,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       onClick={() => handleSelectTab('flights')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'flights'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="Flight Structure (Avionics, Mechanics, GCS, Admin)"
                     >
-                      <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'flights' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'flights' ? 'text-white' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">Flights & Sections</span>}
                     </button>
                   </div>
@@ -315,20 +315,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {(collapsed || openSections.workforce) && (
-                  <div className="mt-1 space-y-1">
+                  <div className="mt-2 space-y-2 sm:space-y-1">
                     {/* Leave Register */}
                     <button
                       onClick={() => handleSelectTab('leave-register')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'leave-register'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="Leave Register (Casual & Annual Leave)"
                     >
-                      <Users className={`w-4 h-4 shrink-0 ${activeTab === 'leave-register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      <Users className={`w-4 h-4 shrink-0 ${activeTab === 'leave-register' ? 'text-white' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">Leave Register</span>}
                     </button>
 
@@ -336,31 +336,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       onClick={() => handleSelectTab('tdy-register')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'tdy-register'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="TDY Register (Temporary Duty Outstation)"
                     >
-                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'tdy-register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'tdy-register' ? 'text-white' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">TDY Register</span>}
                     </button>
-                    {/* Attachment Register */}
+                    {/* Deployment Register */}
                     <button
                       onClick={() => handleSelectTab('attachment-register')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'attachment-register'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
-                      title="Attachment Register (Outstation & Bake N Bite)"
+                      title="Deployment Register (Bake N Bite, Canteen, Custom)"
                     >
-                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'attachment-register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
-                      {!collapsed && <span className="ml-3 truncate">Attachment Register</span>}
+                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'attachment-register' ? 'text-white' : 'text-emerald-300'}`} />
+                      {!collapsed && <span className="ml-3 truncate">Deployment Register</span>}
                     </button>
 {/* Monthly Duty Register */}
                         <button
@@ -369,13 +369,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
                           } rounded-xl text-xs font-bold transition-all duration-150 ${
                             activeTab === 'register'
-                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                              : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                           }`}
                           title="Duty Register"
                         >
                           <div className="flex items-center truncate">
-                            <Calendar className={`w-4 h-4 shrink-0 ${activeTab === 'register' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                            <Calendar className={`w-4 h-4 shrink-0 ${activeTab === 'register' ? 'text-white' : 'text-emerald-300'}`} />
                             {!collapsed && <span className="ml-3 truncate">Duty Register</span>}
                           </div>
                           {conflictCount > 0 && (
@@ -389,15 +389,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <button
                           onClick={() => handleSelectTab('duty-ratio')}
                           className={`w-full flex items-center ${
-                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                           } rounded-xl text-xs font-bold transition-all duration-150 ${
                             activeTab === 'duty-ratio'
-                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                              : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                           }`}
                           title="Duty Ratio Matrix"
                         >
-                          <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                          <Sliders className={`w-4 h-4 shrink-0 ${activeTab === 'duty-ratio' ? 'text-white' : 'text-emerald-300'}`} />
                           {!collapsed && <span className="ml-3 truncate">Duty Ratio Matrix</span>}
                         </button>
 
@@ -425,20 +425,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {(collapsed || openSections.schedule) && (
-                  <div className="mt-1 space-y-1">
+                  <div className="mt-2 space-y-2 sm:space-y-1">
                     {/* IDA Center Duty (Visible to all) */}
                     <button
                       onClick={() => handleSelectTab('ida-center')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'ida-center'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="IDA Center Duty (Standby & Shifts)"
                     >
-                      <Shield className={`w-4 h-4 shrink-0 ${activeTab === 'ida-center' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      <Shield className={`w-4 h-4 shrink-0 ${activeTab === 'ida-center' ? 'text-white' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">IDA Center Duty</span>}
                     </button>
 
@@ -446,15 +446,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       onClick={() => handleSelectTab('duty-roster')}
                       className={`w-full flex items-center ${
-                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                        collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                       } rounded-xl text-xs font-bold transition-all duration-150 ${
                         activeTab === 'duty-roster'
-                          ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                          : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                          : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
                       title="Duty Roster Period & Export"
                     >
-                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'duty-roster' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                      <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'duty-roster' ? 'text-white' : 'text-emerald-300'}`} />
                       {!collapsed && <span className="ml-3 truncate">Duty Roster</span>}
                     </button>
 
@@ -472,20 +472,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>ANALYSIS</span>
               </div>
             )}
-            <div className="mt-1 space-y-1">
+            <div className="mt-2 space-y-2 sm:space-y-1">
               {/* Duty Analytics & Working Hours */}
                         <button
                           onClick={() => handleSelectTab('analytics')}
                           className={`w-full flex items-center ${
-                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-2.5'
+                            collapsed ? 'justify-center px-0 py-3' : 'justify-start px-3 py-3 sm:py-2.5'
                           } rounded-xl text-xs font-bold transition-all duration-150 ${
                             activeTab === 'analytics'
-                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                              : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                           }`}
                           title="Duty Analytics & Load Balance"
                         >
-                          <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                          <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics' ? 'text-white' : 'text-emerald-300'}`} />
                           {!collapsed && <span className="ml-3 truncate">Duty Analysis</span>}
                         </button>
 
@@ -497,13 +497,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             collapsed ? 'justify-center px-0 py-3' : 'justify-between px-3 py-2.5'
                           } rounded-xl text-xs font-bold transition-all duration-150 ${
                             activeTab === 'conflicts'
-                              ? 'bg-white text-emerald-950 shadow-md scale-[1.01]'
-                              : 'text-emerald-100 hover:bg-[#0b4a2d] hover:text-white'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
+                              : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                           }`}
                           title="Conflict Monitor & Rules"
                         >
                           <div className="flex items-center truncate">
-                            <ShieldAlert className={`w-4 h-4 shrink-0 ${activeTab === 'conflicts' ? 'text-emerald-800' : 'text-emerald-300'}`} />
+                            <ShieldAlert className={`w-4 h-4 shrink-0 ${activeTab === 'conflicts' ? 'text-white' : 'text-emerald-300'}`} />
                             {!collapsed && <span className="ml-3 truncate">Conflict Monitor</span>}
                           </div>
                           {conflictCount > 0 && !collapsed && (

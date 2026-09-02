@@ -22,7 +22,6 @@ export type DutyCategoryCode =
   | 'CMH'          // BNS / BSH / CMH / Medical
   | 'SICK_REPORT'  // Sick Report / S/Q
   | 'ADMIN_ORDER'  // Admin Order
-  | 'ADMIN_ORDER'  // Admin Order
   | 'CLASS_TRG'    // Class / Training
   | 'RECEPTION'    // K/O & Reception
   | 'GAMES'        // G/H & Games
@@ -45,6 +44,9 @@ export interface Airman {
   flightName: FlightName;
   remarks: string;
   active: boolean;
+  dateJoined?: string; // YYYY-MM-DD
+  dateLeft?: string;   // YYYY-MM-DD
+  leaveReason?: string;
 }
 
 export interface DutyTypeInfo {

@@ -363,7 +363,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                   disabled={!addAdminBd || !addAdminPass.trim()}
                   className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold transition-colors shadow-sm"
                 >
-                  Promote to Admin
+                  Admin
                 </button>
               </div>
             </div>
@@ -531,7 +531,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                             user.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
                             'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                           }`}>
-                            {user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.role === 'ADMIN' ? 'Admin' : 'Normal User'}
+                            {user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.role === 'ADMIN' ? 'Admin' : 'User'}
                           </span>
                         </td>
 

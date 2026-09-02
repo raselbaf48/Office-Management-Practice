@@ -1,0 +1,3 @@
+sed -i 's/className="bg-white text-black border border-slate-300 rounded-2xl shadow-lg p-6 overflow-x-auto /className="bg-white dark:bg-slate-900 text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-2xl shadow-lg p-6 overflow-x-auto print:bg-white print:text-black print:border-none print:shadow-none /g' src/components/NightCountStateView.tsx
+sed -i 's/border-b border-black bg-white/border-b border-black dark:border-slate-500 print:border-black bg-white dark:bg-slate-900 print:bg-white/g' src/components/NightCountStateView.tsx
+sed -i 's/tr className="bg-white"/tr className="bg-white dark:bg-slate-900 print:bg-white"/g' src/components/NightCountStateView.tsx
