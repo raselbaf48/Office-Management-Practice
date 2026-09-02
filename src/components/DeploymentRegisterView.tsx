@@ -32,6 +32,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
   const session = getCurrentUserSession();
   const isAdmin = session?.assignedRole === 'ADMIN';
   const adminFlight = session?.flightName;
+  const todayStr = new Date().toISOString().split('T')[0];
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
@@ -553,7 +554,8 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
-                    const isDisabledFlt = isAdmin && adminFlight && flt !== adminFlight;
+                    const isPastDate = attFromDate < todayStr;
+                    const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || isPastDate;
                     const setterStateValue = grantAttFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file
                     return (
                     <button
@@ -585,7 +587,13 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                     {grantAirmenList.length} Airmen in {grantAttFlight}
                   </span>
                 </div>
-                <select
+                
+                {attFromDate < todayStr ? (
+                  <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-xs font-bold text-slate-500 text-center">
+                    🚫 Cannot modify past dates.
+                  </div>
+                ) : (
+                  <select
                   value={attAirmanId}
                   onChange={(e) => setAttAirmanId(e.target.value)}
                   className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${
@@ -604,6 +612,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                     </option>
                   ))}
                 </select>
+                )}
               </div>
 
                             {/* Deployment Destination */}

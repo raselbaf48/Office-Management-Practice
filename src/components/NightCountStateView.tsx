@@ -549,7 +549,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       return;
     }
     const todayStr = new Date().toISOString().split('T')[0];
-    if (role === 'ADMIN' && selectedDate < todayStr) {
+    if (disposalFromDate < todayStr) {
       alert("You cannot edit disposals for past dates.");
       return;
     }
@@ -1909,7 +1909,8 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
-                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (role === 'ADMIN' && selectedDate < todayStr);
+                    const isPastDate = disposalFromDate < todayStr;
+                    const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || isPastDate;
                     return (
                     <button
                       key={fl}
@@ -2019,6 +2020,15 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                     const flightIds = flightAirmen.map((a) => a.id);
                     setSelectedDisposalAirmenIds((prev) => prev.filter((id) => !flightIds.includes(id)));
                   };
+                  
+                  if (disposalFromDate < todayStr) {
+                    return (
+                      <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <div className="mb-2">🚫</div>
+                        Modifications are disabled for past dates.
+                      </div>
+                    );
+                  }
 
                   return (
                     <div className="space-y-1.5">

@@ -16,6 +16,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'USER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL');
+  const [flightFilter, setFlightFilter] = useState<string>('ALL');
   
   const [detailedUsers, setDetailedUsers] = useState<DetailedUserLogin[]>(() => getDetailedUsers(nominalAirmen));
   
@@ -30,7 +31,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const isOwner = userSessionRole === 'SUPER_ADMIN';
   const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'ADMIN';
 
-  const activeAirmen = useMemo(() => nominalAirmen.filter(a => a.active && (!(userSessionRole === 'ADMIN' && userFlight) || a.flightName === userFlight)), [nominalAirmen, userSessionRole, userFlight]);
+  const activeAirmen = useMemo(() => nominalAirmen.filter(a => a.active), [nominalAirmen]);
 
   const mergedUsers = useMemo(() => {
     return activeAirmen.map((airman, index) => {
@@ -59,6 +60,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const filteredUsers = useMemo(() => {
     return mergedUsers.filter(u => {
       if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
+      if (flightFilter !== 'ALL' && u.airman.flightName !== flightFilter) return false;
       
       const query = searchQuery.toLowerCase();
       if (!query) return true;
@@ -69,7 +71,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
         u.airman.rank.toLowerCase().includes(query)
       );
     });
-  }, [mergedUsers, searchQuery, roleFilter]);
+  }, [mergedUsers, searchQuery, roleFilter, flightFilter]);
 
   const [selectedUser, setSelectedUser] = useState<typeof mergedUsers[0] | null>(null);
   
@@ -257,31 +259,28 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 />
               </div>
               
-              <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
-                <button 
-                  onClick={() => setRoleFilter('ALL')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'ALL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <select 
+                  value={flightFilter}
+                  onChange={(e) => setFlightFilter(e.target.value)}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer"
                 >
-                  All Users
-                </button>
-                <button 
-                  onClick={() => setRoleFilter('USER')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'USER' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                  <option value="ALL">All Flights</option>
+                  <option value="Avionics">Avionics</option>
+                  <option value="Mechanics">Mechanics</option>
+                  <option value="GCS">GCS</option>
+                  <option value="Admin">Admin</option>
+                </select>
+                <select 
+                  value={roleFilter}
+                  onChange={(e: any) => setRoleFilter(e.target.value)}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl px-3 py-2 outline-none cursor-pointer"
                 >
-                  User
-                </button>
-                <button 
-                  onClick={() => setRoleFilter('ADMIN')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'ADMIN' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                >
-                  Admin
-                </button>
-                <button 
-                  onClick={() => setRoleFilter('SUPER_ADMIN')}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${roleFilter === 'SUPER_ADMIN' ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                >
-                  Super Admin
-                </button>
+                  <option value="ALL">All Roles</option>
+                  <option value="USER">User</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                </select>
               </div>
             </div>
           </div>

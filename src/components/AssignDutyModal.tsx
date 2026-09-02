@@ -65,11 +65,11 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
   const isAdmin = session?.assignedRole === 'ADMIN';
   const adminFlight = session?.flightName;
-  const isPastDate = (selectedDate || new Date().toISOString().split('T')[0]) < new Date().toISOString().split('T')[0];
-  const isReadOnly = isAdmin && isPastDate;
-
   const [dateMode, setDateMode] = useState<'single' | 'multi'>('single');
   const [fromDate, setFromDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
+
+  const isPastDate = fromDate < new Date().toISOString().split('T')[0];
+  const isReadOnly = isPastDate;
   const [toDate, setToDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
 
   // Active duty & flight filters
@@ -952,7 +952,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 2. Flight:
               </span>
               {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((flt) => {
-                const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isAdmin && isPastDate);
+                const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || isPastDate;
                 return (
                 <button
                   key={flt}
@@ -1010,7 +1010,13 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
             {/* Candidate Grid: Clean display showing strictly Rank & Name + Duty Badge */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto p-1 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
-              {candidatePersonnel.length === 0 ? (
+              
+              {isReadOnly ? (
+                <div className="col-span-full py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                  <div className="mb-2">🚫</div>
+                  Modifications are disabled for past dates.
+                </div>
+              ) : candidatePersonnel.length === 0 ? (
                 <div className="col-span-full py-8 text-center text-xs text-slate-400">
                   No matching candidates found for this duty & flight.
                 </div>

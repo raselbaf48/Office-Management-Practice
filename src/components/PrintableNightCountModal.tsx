@@ -1884,6 +1884,15 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                     const flightIds = flightAirmen.map((a) => a.id);
                     setSelectedDisposalAirmenIds((prev) => prev.filter((id) => !flightIds.includes(id)));
                   };
+                  
+                  if (role === 'ADMIN' && selectedDate < todayStr) {
+                    return (
+                      <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <div className="mb-2">🚫</div>
+                        Modifications are disabled for past dates.
+                      </div>
+                    );
+                  }
 
                   return (
                     <div className="space-y-1.5">
