@@ -8,6 +8,7 @@ export interface DutyRatioTable {
   shiftLabel?: string; // e.g. 'Morning', 'Afternoon', 'Night'
   totalRequiredMonth: number;
   totalRequiredDaily?: number;
+  dailyRequirements?: number[];
   flightTargets?: {
     Mechanics?: number;
     Avionics?: number;

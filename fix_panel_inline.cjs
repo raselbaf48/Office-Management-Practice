@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect } from 'react';
 import { AlertCircle, Info } from 'lucide-react';
 
 const DEFAULT_TOTAL_DUTY = {
@@ -75,33 +77,17 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     airfield: airfieldCapableSgtAndBelow > 0 ? totalDuty.airfieldDuty / airfieldCapableSgtAndBelow : 0,
   };
 
-  // Use Largest Remainder Method (LRM) with fair tie-breakers
-  const getLrmDistribution = (target: number, capacities: number[], dutyIndex: number) => {
+  // Use Largest Remainder Method (LRM) to perfectly distribute targets without rounding mismatch
+  const getLrmDistribution = (target: number, capacities: number[]) => {
     const totalCapacity = capacities.reduce((sum, cap) => sum + cap, 0);
     if (totalCapacity === 0) return capacities.map(() => 0);
 
     const exacts = capacities.map(c => (c / totalCapacity) * target);
     const results = exacts.map(e => Math.floor(e));
-    const remainders = exacts.map((e, i) => ({ 
-      index: i, 
-      rem: e - Math.floor(e), 
-      exact: e,
-      intVal: Math.floor(e)
-    }));
+    const remainders = exacts.map((e, i) => ({ index: i, rem: e - Math.floor(e) }));
     
     // Sort by largest remainder descending
-    remainders.sort((a, b) => {
-      // 1. Largest remainder gets priority
-      if (Math.abs(b.rem - a.rem) > 0.0001) {
-        return b.rem - a.rem;
-      }
-      // 2. Tie-breaker: If remainders are equal, prioritize the flight with a smaller base duty
-      if (a.intVal !== b.intVal) {
-        return a.intVal - b.intVal;
-      }
-      // 3. If still equal, alternate priority based on duty type
-      return dutyIndex % 2 === 0 ? a.index - b.index : b.index - a.index;
-    });
+    remainders.sort((a, b) => b.rem - a.rem);
 
     const currentSum = results.reduce((a, b) => a + b, 0);
     const shortfall = target - currentSum;
@@ -121,14 +107,14 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     manpower.adminSgt + manpower.adminCpl
   ];
 
-  const syDist = getLrmDistribution(totalDuty.syDuty, cplCapacities, 0);
-  const btfDist = getLrmDistribution(totalDuty.btfDuty, sgtAndBelowCapacities, 1);
-  const ntfDist = getLrmDistribution(totalDuty.ntfDuty, sgtAndBelowCapacities, 2);
-  const morningDist = getLrmDistribution(totalDuty.idacMorning, sgtAndBelowCapacities, 3);
-  const afternoonDist = getLrmDistribution(totalDuty.idacAfternoon, sgtAndBelowCapacities, 4);
-  const nightDist = getLrmDistribution(totalDuty.idacNight, sgtAndBelowCapacities, 5);
-  const receptionDist = getLrmDistribution(totalDuty.reception, sgtAndBelowCapacities, 6);
-  const airfieldDist = getLrmDistribution(totalDuty.airfieldDuty, airfieldCapacities, 7);
+  const syDist = getLrmDistribution(totalDuty.syDuty, cplCapacities);
+  const btfDist = getLrmDistribution(totalDuty.btfDuty, sgtAndBelowCapacities);
+  const ntfDist = getLrmDistribution(totalDuty.ntfDuty, sgtAndBelowCapacities);
+  const morningDist = getLrmDistribution(totalDuty.idacMorning, sgtAndBelowCapacities);
+  const afternoonDist = getLrmDistribution(totalDuty.idacAfternoon, sgtAndBelowCapacities);
+  const nightDist = getLrmDistribution(totalDuty.idacNight, sgtAndBelowCapacities);
+  const receptionDist = getLrmDistribution(totalDuty.reception, sgtAndBelowCapacities);
+  const airfieldDist = getLrmDistribution(totalDuty.airfieldDuty, airfieldCapacities);
 
   const flightNames = ['MECHANICS FLT', 'AVIONICS FLT', 'GCS FLT', 'ADMIN FLT'];
   
@@ -425,9 +411,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
           <div className="overflow-x-auto pb-4">
             <div className="flex flex-col items-center mb-4 relative w-full">
               
-              <div className="font-bold underline text-sm mb-2 md:mb-0.5 mt-1 md:mt-0">DISTRIBUTION AS PER FLIGHT</div>
-              
-              <div className="w-full flex justify-center md:absolute md:right-0 md:top-0 mb-3 md:mb-0 md:w-auto">
+              <div className="absolute right-0 top-0">
                 <button 
                   onClick={() => setShowExactRatio(!showExactRatio)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors ${showExactRatio ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'}`}
@@ -438,6 +422,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                 </button>
               </div>
 
+              <div className="font-bold underline text-sm mb-0.5 mt-1">DISTRIBUTION AS PER FLIGHT</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-2 max-w-xl text-center">
                 Values auto-generate intelligently to exactly match the target total. You can edit cells manually. Delete manual values to revert to auto.
               </div>
@@ -529,3 +514,5 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     </div>
   );
 };
+`
+fs.writeFileSync('src/components/DutyRatioConfigPanel.tsx', code);

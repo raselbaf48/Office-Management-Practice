@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Info } from 'lucide-react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect } from 'react';
+import { AlertCircle, Info, X } from 'lucide-react';
 
 const DEFAULT_TOTAL_DUTY = {
   syDuty: 88,
@@ -43,7 +45,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [showExactRatio, setShowExactRatio] = useState(false);
+  const [viewDetailsIdx, setViewDetailsIdx] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_total_duty', JSON.stringify(totalDuty));
@@ -75,33 +77,17 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     airfield: airfieldCapableSgtAndBelow > 0 ? totalDuty.airfieldDuty / airfieldCapableSgtAndBelow : 0,
   };
 
-  // Use Largest Remainder Method (LRM) with fair tie-breakers
-  const getLrmDistribution = (target: number, capacities: number[], dutyIndex: number) => {
+  // Use Largest Remainder Method (LRM) to perfectly distribute targets without rounding mismatch
+  const getLrmDistribution = (target: number, capacities: number[]) => {
     const totalCapacity = capacities.reduce((sum, cap) => sum + cap, 0);
     if (totalCapacity === 0) return capacities.map(() => 0);
 
     const exacts = capacities.map(c => (c / totalCapacity) * target);
     const results = exacts.map(e => Math.floor(e));
-    const remainders = exacts.map((e, i) => ({ 
-      index: i, 
-      rem: e - Math.floor(e), 
-      exact: e,
-      intVal: Math.floor(e)
-    }));
+    const remainders = exacts.map((e, i) => ({ index: i, rem: e - Math.floor(e) }));
     
     // Sort by largest remainder descending
-    remainders.sort((a, b) => {
-      // 1. Largest remainder gets priority
-      if (Math.abs(b.rem - a.rem) > 0.0001) {
-        return b.rem - a.rem;
-      }
-      // 2. Tie-breaker: If remainders are equal, prioritize the flight with a smaller base duty
-      if (a.intVal !== b.intVal) {
-        return a.intVal - b.intVal;
-      }
-      // 3. If still equal, alternate priority based on duty type
-      return dutyIndex % 2 === 0 ? a.index - b.index : b.index - a.index;
-    });
+    remainders.sort((a, b) => b.rem - a.rem);
 
     const currentSum = results.reduce((a, b) => a + b, 0);
     const shortfall = target - currentSum;
@@ -121,14 +107,14 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     manpower.adminSgt + manpower.adminCpl
   ];
 
-  const syDist = getLrmDistribution(totalDuty.syDuty, cplCapacities, 0);
-  const btfDist = getLrmDistribution(totalDuty.btfDuty, sgtAndBelowCapacities, 1);
-  const ntfDist = getLrmDistribution(totalDuty.ntfDuty, sgtAndBelowCapacities, 2);
-  const morningDist = getLrmDistribution(totalDuty.idacMorning, sgtAndBelowCapacities, 3);
-  const afternoonDist = getLrmDistribution(totalDuty.idacAfternoon, sgtAndBelowCapacities, 4);
-  const nightDist = getLrmDistribution(totalDuty.idacNight, sgtAndBelowCapacities, 5);
-  const receptionDist = getLrmDistribution(totalDuty.reception, sgtAndBelowCapacities, 6);
-  const airfieldDist = getLrmDistribution(totalDuty.airfieldDuty, airfieldCapacities, 7);
+  const syDist = getLrmDistribution(totalDuty.syDuty, cplCapacities);
+  const btfDist = getLrmDistribution(totalDuty.btfDuty, sgtAndBelowCapacities);
+  const ntfDist = getLrmDistribution(totalDuty.ntfDuty, sgtAndBelowCapacities);
+  const morningDist = getLrmDistribution(totalDuty.idacMorning, sgtAndBelowCapacities);
+  const afternoonDist = getLrmDistribution(totalDuty.idacAfternoon, sgtAndBelowCapacities);
+  const nightDist = getLrmDistribution(totalDuty.idacNight, sgtAndBelowCapacities);
+  const receptionDist = getLrmDistribution(totalDuty.reception, sgtAndBelowCapacities);
+  const airfieldDist = getLrmDistribution(totalDuty.airfieldDuty, airfieldCapacities);
 
   const flightNames = ['MECHANICS FLT', 'AVIONICS FLT', 'GCS FLT', 'ADMIN FLT'];
   
@@ -220,45 +206,32 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     />
   );
 
-  const formatExact = (val: number) => Math.round(val * 100) / 100;
-
-  const FltInput = ({ 
-    flightName, field, val, autoVal, exactVal, showExactRatio, disabled = false 
-  }: { 
-    flightName: string, field: string, val: number, autoVal: number, exactVal?: number, showExactRatio?: boolean, disabled?: boolean 
-  }) => (
-    <div className="flex items-center justify-center w-full px-1">
-      {showExactRatio && !disabled && exactVal !== undefined && (
-        <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold whitespace-nowrap mr-0.5" title="Exact Ratio">
-          {formatExact(exactVal)} ➤
-        </span>
-      )}
-      <input 
-        type="number"
-        value={val === 0 ? '' : val}
-        disabled={disabled}
-        onChange={(e) => {
-          const valStr = e.target.value;
-          if (valStr === '') {
-            handleCustomChange(flightName, field, undefined);
-          } else {
-            handleCustomChange(flightName, field, parseInt(valStr) || 0);
-          }
-        }}
-        placeholder={autoVal.toString()}
-        className={`w-10 text-center bg-transparent focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-800 rounded ${disabled ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed' : 'text-slate-900 dark:text-slate-100 font-medium'} py-1`}
-      />
-    </div>
+  const FltInput = ({ flightName, field, val, autoVal, disabled = false }: { flightName: string, field: string, val: number, autoVal: number, disabled?: boolean }) => (
+    <input 
+      type="number"
+      value={val === 0 ? '' : val}
+      disabled={disabled}
+      onChange={(e) => {
+        const valStr = e.target.value;
+        if (valStr === '') {
+          handleCustomChange(flightName, field, undefined);
+        } else {
+          handleCustomChange(flightName, field, parseInt(valStr) || 0);
+        }
+      }}
+      placeholder={autoVal.toString()}
+      className={\`w-full text-center bg-transparent focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-800 \${disabled ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed' : 'text-slate-900 dark:text-slate-100'} py-1\`}
+    />
   );
 
   const ThCell = ({ children, rowSpan, colSpan, className = '' }: any) => (
-    <th className={`border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold ${className}`} rowSpan={rowSpan} colSpan={colSpan}>
+    <th className={\`border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold \${className}\`} rowSpan={rowSpan} colSpan={colSpan}>
       {children}
     </th>
   );
 
   const TdCell = ({ children, warning = false, className = '' }: any) => (
-    <td className={`border border-slate-400 dark:border-slate-700 px-0 py-0 ${warning ? 'bg-red-100 dark:bg-red-900/40' : ''} ${className}`}>
+    <td className={\`border border-slate-400 dark:border-slate-700 px-0 py-0 \${warning ? 'bg-red-100 dark:bg-red-900/40' : ''} \${className}\`}>
       {children}
     </td>
   );
@@ -423,22 +396,9 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
 
           {/* DISTRIBUTION AS PER FLIGHT */}
           <div className="overflow-x-auto pb-4">
-            <div className="flex flex-col items-center mb-4 relative w-full">
-              
-              <div className="font-bold underline text-sm mb-2 md:mb-0.5 mt-1 md:mt-0">DISTRIBUTION AS PER FLIGHT</div>
-              
-              <div className="w-full flex justify-center md:absolute md:right-0 md:top-0 mb-3 md:mb-0 md:w-auto">
-                <button 
-                  onClick={() => setShowExactRatio(!showExactRatio)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors ${showExactRatio ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'}`}
-                  title="Toggle view of exact mathematical ratio before rounding"
-                >
-                  <Info className="w-4 h-4" />
-                  <span>{showExactRatio ? 'Hide Exact Ratio' : 'View Exact Ratio'}</span>
-                </button>
-              </div>
-
-              <div className="text-xs text-slate-500 dark:text-slate-400 mb-2 max-w-xl text-center">
+            <div className="flex flex-col items-center mb-4">
+              <div className="font-bold underline text-sm mb-0.5">DISTRIBUTION AS PER FLIGHT</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                 Values auto-generate intelligently to exactly match the target total. You can edit cells manually. Delete manual values to revert to auto.
               </div>
               
@@ -450,10 +410,10 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
               )}
             </div>
 
-            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[1000px] text-[13px] bg-white dark:bg-slate-900">
+            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[900px] text-[13px] bg-white dark:bg-slate-900">
               <thead>
                 <tr>
-                  <ThCell rowSpan={3} className="w-32 text-left"><div className="text-center">DUTY PER FLIGHT</div></ThCell>
+                  <ThCell rowSpan={3} className="w-40 text-left"><div className="text-center">DUTY PER FLIGHT</div></ThCell>
                   <ThCell rowSpan={2}>Base Security Duty</ThCell>
                   <ThCell rowSpan={2}>Base Taskforce Duty</ThCell>
                   <ThCell rowSpan={2}>Nazirpara Taskforce<br/>Duty</ThCell>
@@ -481,20 +441,29 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                 {fltRows.map((row, idx) => (
                   <tr key={idx}>
                     <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold text-left bg-slate-50 dark:bg-slate-800">
-                      {row.name}
+                      <div className="flex items-center justify-between">
+                        <span>{row.name}</span>
+                        <button 
+                          onClick={() => setViewDetailsIdx(idx)}
+                          className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex-shrink-0"
+                          title="View Exact Ratios"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
-                    <TdCell warning={customFltDist[row.name]?.syDuty !== undefined && warnings.syDuty}><FltInput flightName={row.name} field="syDuty" val={row.syDuty} autoVal={row.autoVals.syDuty} exactVal={row.exactVals.syDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.btfDuty !== undefined && warnings.btfDuty}><FltInput flightName={row.name} field="btfDuty" val={row.btfDuty} autoVal={row.autoVals.btfDuty} exactVal={row.exactVals.btfDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.ntfDuty !== undefined && warnings.ntfDuty}><FltInput flightName={row.name} field="ntfDuty" val={row.ntfDuty} autoVal={row.autoVals.ntfDuty} exactVal={row.exactVals.ntfDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.morning !== undefined && warnings.morning}><FltInput flightName={row.name} field="morning" val={row.morning} autoVal={row.autoVals.morning} exactVal={row.exactVals.morning} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.afternoon !== undefined && warnings.afternoon}><FltInput flightName={row.name} field="afternoon" val={row.afternoon} autoVal={row.autoVals.afternoon} exactVal={row.exactVals.afternoon} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.night !== undefined && warnings.night}><FltInput flightName={row.name} field="night" val={row.night} autoVal={row.autoVals.night} exactVal={row.exactVals.night} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.reception !== undefined && warnings.reception}><FltInput flightName={row.name} field="reception" val={row.reception} autoVal={row.autoVals.reception} exactVal={row.exactVals.reception} showExactRatio={showExactRatio} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.syDuty !== undefined && warnings.syDuty}><FltInput flightName={row.name} field="syDuty" val={row.syDuty} autoVal={row.autoVals.syDuty} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.btfDuty !== undefined && warnings.btfDuty}><FltInput flightName={row.name} field="btfDuty" val={row.btfDuty} autoVal={row.autoVals.btfDuty} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.ntfDuty !== undefined && warnings.ntfDuty}><FltInput flightName={row.name} field="ntfDuty" val={row.ntfDuty} autoVal={row.autoVals.ntfDuty} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.morning !== undefined && warnings.morning}><FltInput flightName={row.name} field="morning" val={row.morning} autoVal={row.autoVals.morning} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.afternoon !== undefined && warnings.afternoon}><FltInput flightName={row.name} field="afternoon" val={row.afternoon} autoVal={row.autoVals.afternoon} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.night !== undefined && warnings.night}><FltInput flightName={row.name} field="night" val={row.night} autoVal={row.autoVals.night} /></TdCell>
+                    <TdCell warning={customFltDist[row.name]?.reception !== undefined && warnings.reception}><FltInput flightName={row.name} field="reception" val={row.reception} autoVal={row.autoVals.reception} /></TdCell>
                     <TdCell warning={customFltDist[row.name]?.airfield !== undefined && warnings.airfield}>
                       {row.name === 'ADMIN FLT' ? (
                         <div className="w-full text-center text-slate-400 bg-slate-100 dark:bg-slate-800/50 py-1">N/A</div>
                       ) : (
-                        <FltInput flightName={row.name} field="airfield" val={row.airfield} autoVal={row.autoVals.airfield} exactVal={row.exactVals.airfield} showExactRatio={showExactRatio} />
+                        <FltInput flightName={row.name} field="airfield" val={row.airfield} autoVal={row.autoVals.airfield} />
                       )}
                     </TdCell>
                   </tr>
@@ -502,14 +471,14 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                 
                 <tr className="font-bold bg-slate-100 dark:bg-slate-800">
                   <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">TOTAL</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.syDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.syDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.btfDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.btfDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.ntfDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.ntfDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.morning ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.morning}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.afternoon ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.afternoon}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.night ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.night}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.reception ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.reception}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.airfield ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.airfield}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.syDuty ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.syDuty}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.btfDuty ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.btfDuty}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.ntfDuty ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.ntfDuty}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.morning ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.morning}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.afternoon ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.afternoon}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.night ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.night}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.reception ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.reception}</td>
+                  <td className={\`border border-slate-400 dark:border-slate-700 px-2 py-1 \${warnings.airfield ? 'text-red-600 dark:text-red-400' : ''}\`}>{sums.airfield}</td>
                 </tr>
               </tbody>
             </table>
@@ -526,6 +495,79 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
         </>
       )}
 
+      {/* Details Modal */}
+      {viewDetailsIdx !== null && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Info className="w-5 h-5 text-blue-500" />
+                {fltRows[viewDetailsIdx].name} - Duty Ratio Breakdown
+              </h3>
+              <button 
+                onClick={() => setViewDetailsIdx(null)}
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <table className="w-full border-collapse border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-800 text-left">
+                    <th className="border border-slate-300 dark:border-slate-700 p-2">Duty Type</th>
+                    <th className="border border-slate-300 dark:border-slate-700 p-2 text-right">Exact Ratio (Formula)</th>
+                    <th className="border border-slate-300 dark:border-slate-700 p-2 text-right">Auto Rounded</th>
+                    <th className="border border-slate-300 dark:border-slate-700 p-2 text-right">Current Applied</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: 'Security Duty', key: 'syDuty' },
+                    { label: 'Base Taskforce Duty', key: 'btfDuty' },
+                    { label: 'Nazirpara Taskforce Duty', key: 'ntfDuty' },
+                    { label: 'IDA Morning', key: 'morning' },
+                    { label: 'IDA Afternoon', key: 'afternoon' },
+                    { label: 'IDA Night', key: 'night' },
+                    { label: 'Reception', key: 'reception' },
+                    { label: 'Airfield Duty', key: 'airfield' },
+                  ].map(({ label, key }) => {
+                    const row = fltRows[viewDetailsIdx];
+                    const exact = row.exactVals[key as keyof typeof row.exactVals];
+                    const auto = row.autoVals[key as keyof typeof row.autoVals];
+                    const current = row[key as keyof typeof row.autoVals];
+                    
+                    if (row.name === 'ADMIN FLT' && key === 'airfield') return null;
+                    
+                    const isManual = customFltDist[row.name]?.[key] !== undefined;
+                    
+                    return (
+                      <tr key={key} className="border-b border-slate-200 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="border border-slate-300 dark:border-slate-700 p-2 font-medium">{label}</td>
+                        <td className="border border-slate-300 dark:border-slate-700 p-2 text-right text-slate-600 dark:text-slate-400">
+                          {exact.toFixed(4)}
+                        </td>
+                        <td className="border border-slate-300 dark:border-slate-700 p-2 text-right">{auto}</td>
+                        <td className={\`border border-slate-300 dark:border-slate-700 p-2 text-right font-bold \${isManual ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10' : ''}\`}>
+                          {current}
+                          {isManual && <span className="text-xs ml-1 font-normal block text-blue-500">(Manual)</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                <p><strong>Exact Ratio:</strong> The mathematically accurate distribution before rounding.</p>
+                <p><strong>Auto Rounded:</strong> The LRM algorithm applied distribution matching the exact target sum.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+`
+fs.writeFileSync('src/components/DutyRatioConfigPanel.tsx', code);
