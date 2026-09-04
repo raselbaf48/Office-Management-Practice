@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Info } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AlertCircle, Info, Users, ChevronDown, ChevronUp, Calendar, X, Save, Power, PowerOff, Trash, Filter } from 'lucide-react';
+import { localDb } from '../services/localDatabase';
+import { Airman, Rank, FlightName } from '../types';
 
 const DEFAULT_TOTAL_DUTY = {
   syDuty: 88,
@@ -23,11 +25,16 @@ const DEFAULT_MANPOWER = {
   adminCpl: 1,
 };
 
+import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
+
 export interface DutyRatioConfigPanelProps {
-  activeTab?: 'DUTY_DISTRIBUTION' | 'MANPOWER' | 'TOTAL_DUTY';
+  matrix?: DutyRatioTable[];
+  onMatrixChange?: (newMatrix: DutyRatioTable[]) => void;
+  activeTab?: 'DUTY_DISTRIBUTION' | 'MANPOWER' | 'DUTY_LIST';
+  targetDate?: string;
 }
 
-export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ activeTab }) => {
+export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ activeTab, matrix, onMatrixChange, targetDate }) => {
   const [totalDuty, setTotalDuty] = useState(() => {
     const savedDuty = localStorage.getItem('baf_duty_distribution_total_duty');
     return savedDuty ? JSON.parse(savedDuty) : DEFAULT_TOTAL_DUTY;
@@ -47,221 +54,121 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
 
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_total_duty', JSON.stringify(totalDuty));
-    localStorage.setItem('baf_duty_distribution_manpower', JSON.stringify(manpower));
     localStorage.setItem('baf_duty_distribution_custom_flt', JSON.stringify(customFltDist));
-  }, [totalDuty, manpower, customFltDist]);
+  }, [totalDuty, customFltDist]);
 
-  const totalSgt = manpower.mechSgt + manpower.aviSgt + manpower.gcsSgt + manpower.adminSgt;
-  const totalCpl = manpower.mechCpl + manpower.aviCpl + manpower.gcsCpl + manpower.adminCpl;
-  const totalSgtAndBelow = totalSgt + totalCpl;
 
-  const airfieldCapacities = [
-    manpower.mechSgt + manpower.mechCpl,
-    manpower.aviSgt + manpower.aviCpl,
-    manpower.gcsSgt + manpower.gcsCpl,
-    0 // Admin excluded
-  ];
   
-  const airfieldCapableSgtAndBelow = airfieldCapacities.reduce((a, b) => a + b, 0);
-
-  const dpp = {
-    syDuty: totalCpl > 0 ? totalDuty.syDuty / totalCpl : 0,
-    btfDuty: totalSgtAndBelow > 0 ? totalDuty.btfDuty / totalSgtAndBelow : 0,
-    ntfDuty: totalSgtAndBelow > 0 ? totalDuty.ntfDuty / totalSgtAndBelow : 0,
-    morning: totalSgtAndBelow > 0 ? totalDuty.idacMorning / totalSgtAndBelow : 0,
-    afternoon: totalSgtAndBelow > 0 ? totalDuty.idacAfternoon / totalSgtAndBelow : 0,
-    night: totalSgtAndBelow > 0 ? totalDuty.idacNight / totalSgtAndBelow : 0,
-    reception: totalSgtAndBelow > 0 ? totalDuty.reception / totalSgtAndBelow : 0,
-    airfield: airfieldCapableSgtAndBelow > 0 ? totalDuty.airfieldDuty / airfieldCapableSgtAndBelow : 0,
-  };
-
-  // Use Largest Remainder Method (LRM) with fair tie-breakers
-  const getLrmDistribution = (target: number, capacities: number[], dutyIndex: number) => {
-    const totalCapacity = capacities.reduce((sum, cap) => sum + cap, 0);
-    if (totalCapacity === 0) return capacities.map(() => 0);
-
-    const exacts = capacities.map(c => (c / totalCapacity) * target);
-    const results = exacts.map(e => Math.floor(e));
-    const remainders = exacts.map((e, i) => ({ 
-      index: i, 
-      rem: e - Math.floor(e), 
-      exact: e,
-      intVal: Math.floor(e)
-    }));
-    
-    // Sort by largest remainder descending
-    remainders.sort((a, b) => {
-      // 1. Largest remainder gets priority
-      if (Math.abs(b.rem - a.rem) > 0.0001) {
-        return b.rem - a.rem;
-      }
-      // 2. Tie-breaker: If remainders are equal, prioritize the flight with a smaller base duty
-      if (a.intVal !== b.intVal) {
-        return a.intVal - b.intVal;
-      }
-      // 3. If still equal, alternate priority based on duty type
-      return dutyIndex % 2 === 0 ? a.index - b.index : b.index - a.index;
-    });
-
-    const currentSum = results.reduce((a, b) => a + b, 0);
-    const shortfall = target - currentSum;
-    
-    // Distribute the shortfall to the ones with largest fractional parts
-    for (let i = 0; i < shortfall && i < remainders.length; i++) {
-      results[remainders[i].index]++;
-    }
-    return results;
-  };
-
-  const cplCapacities = [manpower.mechCpl, manpower.aviCpl, manpower.gcsCpl, manpower.adminCpl];
-  const sgtAndBelowCapacities = [
-    manpower.mechSgt + manpower.mechCpl,
-    manpower.aviSgt + manpower.aviCpl,
-    manpower.gcsSgt + manpower.gcsCpl,
-    manpower.adminSgt + manpower.adminCpl
-  ];
-
-  const syDist = getLrmDistribution(totalDuty.syDuty, cplCapacities, 0);
-  const btfDist = getLrmDistribution(totalDuty.btfDuty, sgtAndBelowCapacities, 1);
-  const ntfDist = getLrmDistribution(totalDuty.ntfDuty, sgtAndBelowCapacities, 2);
-  const morningDist = getLrmDistribution(totalDuty.idacMorning, sgtAndBelowCapacities, 3);
-  const afternoonDist = getLrmDistribution(totalDuty.idacAfternoon, sgtAndBelowCapacities, 4);
-  const nightDist = getLrmDistribution(totalDuty.idacNight, sgtAndBelowCapacities, 5);
-  const receptionDist = getLrmDistribution(totalDuty.reception, sgtAndBelowCapacities, 6);
-  const airfieldDist = getLrmDistribution(totalDuty.airfieldDuty, airfieldCapacities, 7);
-
-  const flightNames = ['MECHANICS FLT', 'AVIONICS FLT', 'GCS FLT', 'ADMIN FLT'];
-  
-  const exactValsArray = flightNames.map((name, idx) => ({
-    syDuty: cplCapacities[idx] * dpp.syDuty,
-    btfDuty: sgtAndBelowCapacities[idx] * dpp.btfDuty,
-    ntfDuty: sgtAndBelowCapacities[idx] * dpp.ntfDuty,
-    morning: sgtAndBelowCapacities[idx] * dpp.morning,
-    afternoon: sgtAndBelowCapacities[idx] * dpp.afternoon,
-    night: sgtAndBelowCapacities[idx] * dpp.night,
-    reception: sgtAndBelowCapacities[idx] * dpp.reception,
-    airfield: airfieldCapacities[idx] * dpp.airfield,
-  }));
-
-  const fltRows = flightNames.map((name, idx) => {
-    const autoVals = {
-      syDuty: syDist[idx],
-      btfDuty: btfDist[idx],
-      ntfDuty: ntfDist[idx],
-      morning: morningDist[idx],
-      afternoon: afternoonDist[idx],
-      night: nightDist[idx],
-      reception: receptionDist[idx],
-      airfield: airfieldDist[idx],
-    };
-    
-    const custom = customFltDist[name] || {};
-    
-    return {
-      name,
-      autoVals,
-      exactVals: exactValsArray[idx],
-      syDuty: custom.syDuty !== undefined ? custom.syDuty : autoVals.syDuty,
-      btfDuty: custom.btfDuty !== undefined ? custom.btfDuty : autoVals.btfDuty,
-      ntfDuty: custom.ntfDuty !== undefined ? custom.ntfDuty : autoVals.ntfDuty,
-      morning: custom.morning !== undefined ? custom.morning : autoVals.morning,
-      afternoon: custom.afternoon !== undefined ? custom.afternoon : autoVals.afternoon,
-      night: custom.night !== undefined ? custom.night : autoVals.night,
-      reception: custom.reception !== undefined ? custom.reception : autoVals.reception,
-      airfield: custom.airfield !== undefined ? custom.airfield : autoVals.airfield,
-    };
+  const [showNominalRoll, setShowNominalRoll] = useState(false);
+  const [nominalRollFlightFilter, setNominalRollFlightFilter] = useState<FlightName | 'All'>('All');
+  const [disposals, setDisposals] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('baf_duty_distribution_disposals_' + (targetDate || 'default'));
+    return saved ? JSON.parse(saved) : {};
   });
 
-  const sums = fltRows.reduce((acc, row) => {
-    acc.syDuty += row.syDuty;
-    acc.btfDuty += row.btfDuty;
-    acc.ntfDuty += row.ntfDuty;
-    acc.morning += row.morning;
-    acc.afternoon += row.afternoon;
-    acc.night += row.night;
-    acc.reception += row.reception;
-    acc.airfield += row.airfield;
-    return acc;
-  }, { syDuty: 0, btfDuty: 0, ntfDuty: 0, morning: 0, afternoon: 0, night: 0, reception: 0, airfield: 0 });
+  useEffect(() => {
+    const saved = localStorage.getItem('baf_duty_distribution_disposals_' + (targetDate || 'default'));
+    setDisposals(saved ? JSON.parse(saved) : {});
+  }, [targetDate]);
 
-  const warnings = {
-    syDuty: sums.syDuty !== totalDuty.syDuty,
-    btfDuty: sums.btfDuty !== totalDuty.btfDuty,
-    ntfDuty: sums.ntfDuty !== totalDuty.ntfDuty,
-    morning: sums.morning !== totalDuty.idacMorning,
-    afternoon: sums.afternoon !== totalDuty.idacAfternoon,
-    night: sums.night !== totalDuty.idacNight,
-    reception: sums.reception !== totalDuty.reception,
-    airfield: sums.airfield !== totalDuty.airfieldDuty,
-  };
+  const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null);
+  const [settingsTableIdx, setSettingsTableIdx] = useState<number | null>(null);
+  const [airmen, setAirmen] = useState<Airman[]>([]);
+  useEffect(() => {
+    const allAirmen = localDb.getAirmen().filter(a => a.active);
+    const sgtAndBelow = allAirmen.filter(a => !['MWO', 'SWO', 'WO'].includes(a.rank));
+    setAirmen(sgtAndBelow);
+  }, []);
 
-  const hasAnyWarning = Object.values(warnings).some(v => v);
+  useEffect(() => {
+    localStorage.setItem('baf_duty_distribution_disposals_' + (targetDate || 'default'), JSON.stringify(disposals));
+  }, [disposals, targetDate]);
 
-  const handleCustomChange = (flightName: string, field: string, value: number | undefined) => {
-    setCustomFltDist(prev => ({
-      ...prev,
-      [flightName]: {
-        ...(prev[flightName] || {}),
-        [field]: value
-      }
-    }));
-  };
+  const airmanDefaults = useMemo(() => {
+    const map: Record<string, string> = {};
+    let gcsTdyCount = 0;
+    const assignments = targetDate ? (localDb.getRoster(targetDate.substring(0, 7)).assignments || []).filter(a => a.date === targetDate) : [];
 
-  const resetCustomDistributions = () => {
-    setCustomFltDist({});
-  };
+    airmen.forEach(a => {
+      const myAssignments = assignments.filter(assign => assign.airmanId === a.id);
+      const bake = myAssignments.find(assign => assign.dutyCode === 'BAKE_N_BITE');
+      const canteen = myAssignments.find(assign => assign.dutyCode === 'CANTEEN');
 
-  const InputTD = ({ val, onChange }: { val: number, onChange: (v: number) => void }) => (
-    <input 
-      type="number" 
-      value={val === 0 ? '' : val} 
-      onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-      className="w-full text-center bg-transparent focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
-    />
-  );
-
-  const formatExact = (val: number) => Math.round(val * 100) / 100;
-
-  const FltInput = ({ 
-    flightName, field, val, autoVal, exactVal, showExactRatio, disabled = false 
-  }: { 
-    flightName: string, field: string, val: number, autoVal: number, exactVal?: number, showExactRatio?: boolean, disabled?: boolean 
-  }) => (
-    <div className="flex items-center justify-center w-full px-1">
-      {showExactRatio && !disabled && exactVal !== undefined && (
-        <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold whitespace-nowrap mr-0.5" title="Exact Ratio">
-          {formatExact(exactVal)} ➤
-        </span>
-      )}
-      <input 
-        type="number"
-        value={val === 0 ? '' : val}
-        disabled={disabled}
-        onChange={(e) => {
-          const valStr = e.target.value;
-          if (valStr === '') {
-            handleCustomChange(flightName, field, undefined);
+      if (bake) {
+        map[a.id] = 'Bake & Bite';
+      } else if (canteen) {
+        map[a.id] = 'Canteen';
+      } else if (myAssignments.some(assign => assign.dutyCode === 'TDY')) {
+        if (a.flightName === 'GCS' && ['Cpl', 'LAC', 'AC-1', 'AC-2'].includes(a.rank)) {
+          if (gcsTdyCount < 1) {
+            map[a.id] = 'TDY';
+            gcsTdyCount++;
           } else {
-            handleCustomChange(flightName, field, parseInt(valStr) || 0);
+            map[a.id] = '-';
           }
-        }}
-        placeholder={autoVal.toString()}
-        className={`w-10 text-center bg-transparent focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-800 rounded ${disabled ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed' : 'text-slate-900 dark:text-slate-100 font-medium'} py-1`}
-      />
-    </div>
-  );
+        } else {
+          map[a.id] = '-';
+        }
+      } else if (a.rank === 'Sgt' && (a.trade === 'Sec Asst GD' || (a.trade && a.trade.toLowerCase().includes('sec asst')))) {
+        map[a.id] = 'Orderly Room';
+      } else if (a.rank === 'Sgt' && (a.trade === 'Admin asst' || a.trade === 'Admin Asst' || (a.trade && a.trade.toLowerCase().includes('admin asst')))) {
+        map[a.id] = 'UWO';
+      } else {
+        map[a.id] = '-';
+      }
+    });
 
-  const ThCell = ({ children, rowSpan, colSpan, className = '' }: any) => (
-    <th className={`border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold ${className}`} rowSpan={rowSpan} colSpan={colSpan}>
-      {children}
-    </th>
-  );
+    return map;
+  }, [airmen, targetDate]);
 
-  const TdCell = ({ children, warning = false, className = '' }: any) => (
-    <td className={`border border-slate-400 dark:border-slate-700 px-0 py-0 ${warning ? 'bg-red-100 dark:bg-red-900/40' : ''} ${className}`}>
-      {children}
-    </td>
-  );
+  const filteredAirmen = useMemo(() => {
+    if (nominalRollFlightFilter === 'All') return airmen;
+    return airmen.filter(a => a.flightName === nominalRollFlightFilter);
+  }, [airmen, nominalRollFlightFilter]);
+
+  const getEffectiveManpower = () => {
+    const counts = {
+      mechSgt: 0, mechCpl: 0,
+      aviSgt: 0, aviCpl: 0,
+      gcsSgt: 0, gcsCpl: 0,
+      adminSgt: 0, adminCpl: 0,
+    };
+
+    airmen.forEach(a => {
+      let disp = disposals[a.id];
+      // For migration of existing bad data
+      if (disp === 'Deployment' || disp === 'Deployment (Bake & Bite)' || disp === 'Deployment (Canteen)') {
+         disp = undefined; // Force recalculation if it's the generic word
+      }
+      
+      if (disp === undefined || disp === '') {
+        disp = airmanDefaults[a.id];
+      }
+
+      if (!disp || disp.trim() === '' || disp.trim() === '-') {
+        const isSgt = a.rank === 'Sgt';
+        if (a.flightName === 'Mechanics') isSgt ? counts.mechSgt++ : counts.mechCpl++;
+        if (a.flightName === 'Avionics') isSgt ? counts.aviSgt++ : counts.aviCpl++;
+        if (a.flightName === 'GCS') isSgt ? counts.gcsSgt++ : counts.gcsCpl++;
+        if (a.flightName === 'Admin') isSgt ? counts.adminSgt++ : counts.adminCpl++;
+      }
+    });
+    return counts;
+  };
+
+  const effManpower = getEffectiveManpower();
+  // Override manpower with calculated effManpower so that totalSgt etc uses it!
+  const currentManpower = effManpower;
+  
+  const totalSgt = currentManpower.mechSgt + currentManpower.aviSgt + currentManpower.gcsSgt + currentManpower.adminSgt;
+  const totalCpl = currentManpower.mechCpl + currentManpower.aviCpl + currentManpower.gcsCpl + currentManpower.adminCpl;
+  const totalSgtAndBelow = totalSgt + totalCpl;
+
+  useEffect(() => {
+    localStorage.setItem('baf_duty_distribution_manpower', JSON.stringify(currentManpower));
+  }, [JSON.stringify(currentManpower)]);
+
+
 
   return (
     <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 md:p-8 min-h-max overflow-auto text-sm font-sans relative" style={{ fontFamily: 'Arial, sans-serif' }}>
@@ -275,102 +182,373 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
       {/* Conditionally rendered Top Tables Flex */}
       <div className="flex flex-col md:flex-row justify-center gap-12 mb-8">
         
-        {(!activeTab || activeTab === 'TOTAL_DUTY') && (
-          <div>
-            <div className="font-bold underline text-center mb-1">TOTAL DUTY</div>
-            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center bg-white dark:bg-slate-900" style={{ minWidth: '200px' }}>
-              <thead>
-                <tr>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Duty Name</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">Sy Duty</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.syDuty} onChange={(v) => setTotalDuty({...totalDuty, syDuty: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">BTF Duty</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.btfDuty} onChange={(v) => setTotalDuty({...totalDuty, btfDuty: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">NTF Duty</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.ntfDuty} onChange={(v) => setTotalDuty({...totalDuty, ntfDuty: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">IDAC Morning</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.idacMorning} onChange={(v) => setTotalDuty({...totalDuty, idacMorning: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">IDAC Afternoon</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.idacAfternoon} onChange={(v) => setTotalDuty({...totalDuty, idacAfternoon: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">IDAC Night</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.idacNight} onChange={(v) => setTotalDuty({...totalDuty, idacNight: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">Receiption</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.reception} onChange={(v) => setTotalDuty({...totalDuty, reception: v})} /></td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">Airfield Duty</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={totalDuty.airfieldDuty} onChange={(v) => setTotalDuty({...totalDuty, airfieldDuty: v})} /></td>
-                </tr>
-              </tbody>
-            </table>
+                {(!activeTab || activeTab === 'DUTY_LIST' || activeTab === 'TOTAL_DUTY') && (
+          <div className="w-full max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-bold underline text-center flex-1">DUTY LIST</div>
+              <button
+                onClick={() => {
+                  if (matrix && onMatrixChange) {
+                    const newMatrix = [...matrix];
+                    newMatrix.push({
+                      id: `custom_${Date.now()}`,
+                      title: 'New Duty',
+                      dutyCode: 'GD',
+                      totalRequiredMonth: 0,
+                      totalRequiredDaily: 0,
+                      data: {
+                        Mechanics: Array(31).fill(0),
+                        Avionics: Array(31).fill(0),
+                        GCS: Array(31).fill(0),
+                        Admin: Array(31).fill(0),
+                      }
+                    });
+                    onMatrixChange(newMatrix);
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+              >
+                + Add New
+              </button>
+            </div>
+            
+            
+            {/* Box Type Duty List */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {matrix && matrix.map((table, idx) => {
+                const maxDaily = Math.max(...(table.dailyRequirements || []), table.totalRequiredDaily || 0);
+                return (
+                  <div key={table.id} className={`relative p-4 rounded-xl border transition-colors ${table.isDisabled ? 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 opacity-60' : 'bg-white border-indigo-100 shadow-sm dark:bg-slate-900 dark:border-indigo-900/50'}`}>
+                    
+                    {/* Action buttons */}
+                    <div className="absolute top-2 right-2 flex items-center space-x-1">
+                      <button 
+                        onClick={() => {
+                          if (onMatrixChange) {
+                            const newMatrix = [...matrix];
+                            newMatrix[idx] = { ...newMatrix[idx], isDisabled: !newMatrix[idx].isDisabled };
+                            onMatrixChange(newMatrix);
+                          }
+                        }}
+                        className={`p-1.5 rounded-md transition-colors ${table.isDisabled ? 'text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`}
+                        title={table.isDisabled ? 'Enable Duty' : 'Disable Duty (Temporary)'}
+                      >
+                        {table.isDisabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                      </button>
+                      <button 
+                        onClick={() => setDeleteConfirmIdx(idx)}
+                        className="p-1.5 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                        title="Delete Duty"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Duty Name */}
+                    <div className="pr-16 mb-4">
+                      <input
+                        type="text"
+                        value={table.title}
+                        onChange={(e) => {
+                          if (onMatrixChange) {
+                            const newMatrix = [...matrix];
+                            newMatrix[idx] = { ...newMatrix[idx], title: e.target.value };
+                            onMatrixChange(newMatrix);
+                          }
+                        }}
+                        className={`w-full bg-transparent outline-none font-bold text-base ${table.isDisabled ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-slate-200'}`}
+                        placeholder="Duty Name"
+                      />
+                    </div>
+
+                    {/* Daily Req Box */}
+                    <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Daily Max Req</span>
+                        <div className="flex items-baseline space-x-1">
+                          <span className={`font-mono text-xl font-black ${table.isDisabled ? 'text-slate-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{maxDaily}</span>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => setSettingsTableIdx(idx)}
+                        className={`p-2 rounded-full transition-colors ${table.isDisabled ? 'text-slate-400 cursor-not-allowed' : 'text-indigo-500 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50'}`}
+                        disabled={table.isDisabled}
+                        title="Configure Daily Requirements"
+                      >
+                        <Calendar className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Monthly Total:</span>
+                      <span className={`text-sm font-bold font-mono ${table.isDisabled ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>{table.totalRequiredMonth || 0}</span>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal for Calendar configuration */}
+            {settingsTableIdx !== null && matrix && matrix[settingsTableIdx] && (
+              <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                  
+                  {/* Modal Header */}
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-white">Configure Daily Requirements</h3>
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">{matrix[settingsTableIdx].title}</p>
+                    </div>
+                    <button 
+                      onClick={() => setSettingsTableIdx(null)}
+                      className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                    >
+                      <X className="w-5 h-5 text-slate-500" />
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 overflow-y-auto">
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-5 border border-indigo-100 dark:border-indigo-900/50">
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                        <div>
+                           <h4 className="font-bold text-sm text-indigo-900 dark:text-indigo-300 mb-1">Set Requirement for All Days</h4>
+                           <p className="text-xs text-indigo-700/80 dark:text-indigo-300/70">Applies a default value to the entire month.</p>
+                        </div>
+                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <input 
+                            type="number"
+                            min="0"
+                            id="panelGlobalReqInput"
+                            className="w-16 px-2 py-1.5 text-sm font-bold font-mono text-center bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:border-indigo-500"
+                            defaultValue={matrix[settingsTableIdx]?.totalRequiredDaily || 0}
+                          />
+                          <button 
+                            onClick={() => {
+                              const val = parseInt((document.getElementById('panelGlobalReqInput') as HTMLInputElement).value, 10);
+                              if (isNaN(val)) return;
+                              if (onMatrixChange) {
+                                const updated = [...matrix];
+                                updated[settingsTableIdx].dailyRequirements = new Array(31).fill(val);
+                                updated[settingsTableIdx].totalRequiredDaily = val;
+                                updated[settingsTableIdx].totalRequiredMonth = val * 31;
+                                onMatrixChange(updated);
+                              }
+                            }}
+                            className="px-4 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-md hover:bg-indigo-700 transition-colors shadow-sm"
+                          >
+                            Apply to All
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-2 sm:gap-3">
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((dayNum, idx) => {
+                          const req = matrix[settingsTableIdx]?.dailyRequirements?.[idx] ?? (matrix[settingsTableIdx]?.totalRequiredDaily || 0);
+                          return (
+                            <div key={dayNum} className="flex flex-col">
+                              <label className="text-[10px] font-bold text-slate-500 mb-1 text-center">Day {dayNum}</label>
+                              <input 
+                                type="number"
+                                min="0"
+                                value={req}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10) || 0;
+                                  if (onMatrixChange) {
+                                    const updated = [...matrix];
+                                    const currentReqs = updated[settingsTableIdx].dailyRequirements || new Array(31).fill(updated[settingsTableIdx].totalRequiredDaily || 0);
+                                    currentReqs[idx] = val;
+                                    updated[settingsTableIdx].dailyRequirements = currentReqs;
+                                    updated[settingsTableIdx].totalRequiredMonth = currentReqs.reduce((a, b) => a + b, 0);
+                                    onMatrixChange(updated);
+                                  }
+                                }}
+                                className="w-full text-center px-1 py-1.5 text-sm font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end bg-slate-50 dark:bg-slate-800/50">
+                    <button 
+                      onClick={() => setSettingsTableIdx(null)}
+                      className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md rounded-xl transition-colors flex items-center space-x-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Done</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
+        </div>
+
         {(!activeTab || activeTab === 'MANPOWER') && (
-          <div>
-            <div className="font-bold underline text-center mb-1">EFFECTIVE MANPOWER</div>
-            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center bg-white dark:bg-slate-900" style={{ minWidth: '300px' }}>
-              <thead>
-                <tr>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Sgt</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Cpl & Below</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">Mech</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.mechSgt} onChange={(v) => setManpower({...manpower, mechSgt: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.mechCpl} onChange={(v) => setManpower({...manpower, mechCpl: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{manpower.mechSgt + manpower.mechCpl}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">Avi</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.aviSgt} onChange={(v) => setManpower({...manpower, aviSgt: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.aviCpl} onChange={(v) => setManpower({...manpower, aviCpl: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{manpower.aviSgt + manpower.aviCpl}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">GCS</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.gcsSgt} onChange={(v) => setManpower({...manpower, gcsSgt: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.gcsCpl} onChange={(v) => setManpower({...manpower, gcsCpl: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{manpower.gcsSgt + manpower.gcsCpl}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">Admin</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.adminSgt} onChange={(v) => setManpower({...manpower, adminSgt: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-0 py-0"><InputTD val={manpower.adminCpl} onChange={(v) => setManpower({...manpower, adminCpl: v})} /></td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{manpower.adminSgt + manpower.adminCpl}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Total</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">{totalSgt}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">{totalCpl}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">{totalSgt + totalCpl}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          <>
+          <div className="w-full max-w-4xl mx-auto space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+              <div className="font-bold underline text-center mb-4 text-slate-800 dark:text-slate-200">EFFECTIVE MANPOWER</div>
+              <div className="overflow-x-auto mb-6">
+                <table className="w-full border-collapse border border-slate-400 dark:border-slate-700 text-center bg-white dark:bg-slate-900 text-sm">
+                  <thead className="bg-slate-100 dark:bg-slate-800">
+                    <tr>
+                      <th className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-bold">Flight</th>
+                      <th className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-bold">Sgt</th>
+                      <th className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-bold">Cpl & Below</th>
+                      <th className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-bold text-indigo-700 dark:text-indigo-400">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Mechanics', 'Avionics', 'GCS', 'Admin'].map(fl => {
+                       const sgtKey = fl === 'Mechanics' ? 'mechSgt' : fl === 'Avionics' ? 'aviSgt' : fl === 'GCS' ? 'gcsSgt' : 'adminSgt';
+                       const cplKey = fl === 'Mechanics' ? 'mechCpl' : fl === 'Avionics' ? 'aviCpl' : fl === 'GCS' ? 'gcsCpl' : 'adminCpl';
+                       const sgtCount = currentManpower[sgtKey as keyof typeof currentManpower];
+                       const cplCount = currentManpower[cplKey as keyof typeof currentManpower];
+                       return (
+                        <tr key={fl}>
+                          <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-semibold text-slate-700 dark:text-slate-300">{fl}</td>
+                          <td className="border border-slate-400 dark:border-slate-700 px-3 py-2">{sgtCount}</td>
+                          <td className="border border-slate-400 dark:border-slate-700 px-3 py-2">{cplCount}</td>
+                          <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-bold text-indigo-600 dark:text-indigo-400">{sgtCount + cplCount}</td>
+                        </tr>
+                       );
+                    })}
+                    <tr className="bg-slate-50 dark:bg-slate-800/50">
+                      <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-black">Total</td>
+                      <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-black">{totalSgt}</td>
+                      <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-black">{totalCpl}</td>
+                      <td className="border border-slate-400 dark:border-slate-700 px-3 py-2 font-black text-indigo-700 dark:text-indigo-400">{totalSgtAndBelow}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowNominalRoll(!showNominalRoll)}
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <div className="flex items-center space-x-2 font-bold text-slate-700 dark:text-slate-300">
+                    <Users className="w-5 h-5 text-indigo-500" />
+                    <span>Nominal Roll</span>
+                  </div>
+                  {showNominalRoll ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                </button>
+                
+                {showNominalRoll && (
+                  <div className="p-0 overflow-x-auto">
+                    {/* Flight Filter Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center space-x-2 text-xs">
+                        <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Filter className="w-3.5 h-3.5 text-indigo-500" />
+                          Flight:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {(['All', 'Mechanics', 'Avionics', 'GCS', 'Admin'] as const).map(flt => (
+                            <button
+                              key={flt}
+                              type="button"
+                              onClick={() => setNominalRollFlightFilter(flt)}
+                              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                                nominalRollFlightFilter === flt
+                                  ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
+                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600'
+                              }`}
+                            >
+                              {flt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        Total: <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredAirmen.length}</span> Airmen
+                      </div>
+                    </div>
+
+                    <table className="w-full text-xs border-collapse table-auto">
+                      <thead className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">
+                        <tr>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Ser No</th>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Rank</th>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Name</th>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Trade</th>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Flight</th>
+                          <th className="px-3 py-2 text-center border-b border-slate-300 dark:border-slate-600 whitespace-nowrap">Disposal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {filteredAirmen.map((a, idx) => {
+                          const defaultDisp = airmanDefaults[a.id] || '-';
+                          let currentVal = (disposals[a.id] !== undefined && disposals[a.id] !== '') ? disposals[a.id] : defaultDisp;
+                          
+                          // Migration for old bad state
+                          if (currentVal === 'Deployment' || currentVal === 'Deployment (Bake & Bite)' || currentVal === 'Deployment (Canteen)') {
+                             currentVal = defaultDisp;
+                          }
+
+                          if (!currentVal || currentVal.trim() === '') {
+                             currentVal = '-';
+                          }
+
+                          const isEven = idx % 2 === 0;
+
+                          return (
+                            <tr 
+                              key={a.id} 
+                              className={`transition-colors hover:bg-indigo-50/50 dark:hover:bg-slate-700/50 ${
+                                isEven ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/40'
+                              }`}
+                            >
+                              <td className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{idx + 1}</td>
+                              <td className="px-3 py-2 text-center font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.rank}</td>
+                              <td className="px-3 py-2 text-left text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.name}</td>
+                              <td className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.trade}</td>
+                              <td className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.flightName}</td>
+                              <td className="px-3 py-2 text-center whitespace-nowrap">
+                                <select
+                                  value={currentVal}
+                                  onChange={(e) => setDisposals({ ...disposals, [a.id]: e.target.value })}
+                                  className="w-full min-w-[120px] px-2 py-1 text-xs text-center bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-indigo-500 text-slate-800 dark:text-slate-200 outline-none focus:ring-0 transition-colors cursor-pointer"
+                                >
+                                  <option value="-" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">-</option>
+                                  <option value="Orderly Room" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Orderly Room</option>
+                                  <option value="UWO" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">UWO</option>
+                                  <option value="TDY" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">TDY</option>
+                                  <option value="Bake & Bite" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Bake & Bite</option>
+                                  <option value="Canteen" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Canteen</option>
+                                  {currentVal && !['-', 'Orderly Room', 'UWO', 'TDY', 'Bake & Bite', 'Canteen'].includes(currentVal) && (
+                                    <option value={currentVal} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">{currentVal}</option>
+                                  )}
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            </div>
+
+                    </>
+      )}
 
       {(!activeTab || activeTab === 'DUTY_DISTRIBUTION') && (
         <>
@@ -383,39 +561,33 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
             <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[900px] text-[13px] bg-white dark:bg-slate-900">
               <thead>
                 <tr>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold" rowSpan={2}>Security Duty</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold" rowSpan={2}>Base Taskforce<br/>Duty</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold" rowSpan={2}>Najirpara<br/>Taskforce Duty</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold" colSpan={3}>IDA Center</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold" rowSpan={2}>Receiption</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold" rowSpan={2}>Airfield Duty</th>
-                </tr>
-                <tr>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Morning</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Afternoon</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold">Night</th>
+                  {matrix && matrix.map(t => (
+                    <th key={t.id} className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold">{t.title}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 <tr className="text-[10px]">
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Sy Duty ÷ Total<br/>Cpl & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total BTF Duty ÷<br/>Total Sgt & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total NTF Duty ÷ Total<br/>Sgt & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Morning Duty ÷<br/>Total Sgt & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Afternoon Duty ÷<br/>Total Sgt & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Night Duty ÷ Total<br/>Sgt & Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Receiption<br/>Duty ÷ Total Sgt &<br/>Below</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-1 py-1">Total Airfield Duty ÷ Total<br/>Sgt & Below (Excl Admin)</td>
+                  {matrix && matrix.map(t => {
+                     const isSecurity = t.id === 'security_duty';
+                     return (
+                       <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-1 py-1">
+                         Total {t.title} ÷ Total<br/>{isSecurity ? 'Cpl & Below' : 'Sgt & Below'}
+                       </td>
+                     );
+                  })}
                 </tr>
                 <tr>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.syDuty.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.btfDuty.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.ntfDuty.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.morning.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.afternoon.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.night.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.reception.toFixed(2)}</td>
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1">{dpp.airfield.toFixed(2)}</td>
+                  {matrix && matrix.map(t => {
+                     const isSecurity = t.id === 'security_duty';
+                     const poolSize = isSecurity ? totalCpl : totalSgtAndBelow;
+                     const val = poolSize > 0 ? ((t.totalRequiredMonth || 0) / poolSize) : 0;
+                     return (
+                       <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-mono">
+                         {val.toFixed(2)}
+                       </td>
+                     );
+                  })}
                 </tr>
               </tbody>
             </table>
@@ -424,9 +596,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
           {/* DISTRIBUTION AS PER FLIGHT */}
           <div className="overflow-x-auto pb-4">
             <div className="flex flex-col items-center mb-4 relative w-full">
-              
               <div className="font-bold underline text-sm mb-2 md:mb-0.5 mt-1 md:mt-0">DISTRIBUTION AS PER FLIGHT</div>
-              
               <div className="w-full flex justify-center md:absolute md:right-0 md:top-0 mb-3 md:mb-0 md:w-auto">
                 <button 
                   onClick={() => setShowExactRatio(!showExactRatio)}
@@ -437,86 +607,132 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                   <span>{showExactRatio ? 'Hide Exact Ratio' : 'View Exact Ratio'}</span>
                 </button>
               </div>
-
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-2 max-w-xl text-center">
                 Values auto-generate intelligently to exactly match the target total. You can edit cells manually. Delete manual values to revert to auto.
               </div>
-              
-              {hasAnyWarning && (
-                <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-md text-xs font-bold mb-2 border border-red-200 dark:border-red-800">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Warning: Total duties assigned across flights doesn't match Requirements. Please adjust values.</span>
-                </div>
-              )}
             </div>
-
-            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[1000px] text-[13px] bg-white dark:bg-slate-900">
+            
+            <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[900px] bg-white dark:bg-slate-900 text-sm">
               <thead>
                 <tr>
-                  <ThCell rowSpan={3} className="w-32 text-left"><div className="text-center">DUTY PER FLIGHT</div></ThCell>
-                  <ThCell rowSpan={2}>Base Security Duty</ThCell>
-                  <ThCell rowSpan={2}>Base Taskforce Duty</ThCell>
-                  <ThCell rowSpan={2}>Nazirpara Taskforce<br/>Duty</ThCell>
-                  <ThCell colSpan={3}>IDA Center Duty</ThCell>
-                  <ThCell rowSpan={2}>Receiption</ThCell>
-                  <ThCell rowSpan={2}>Airfield Duty</ThCell>
-                </tr>
-                <tr>
-                  <ThCell>Morning</ThCell>
-                  <ThCell>Afternoon</ThCell>
-                  <ThCell>Night</ThCell>
-                </tr>
-                <tr className="text-[10px]">
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person Sy Duty x Total<br/>Cpl & Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person BTF Duty x Total<br/>Sgt & Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person NTF Duty x Total<br/>Sgt & Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person Morning<br/>Duty x Total Sgt &<br/>Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person Afternoon<br/>Duty x Total Sgt &<br/>Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person Night Duty x<br/>Total Sgt & Below of<br/>Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person Receiption Duty x<br/>Total Sgt & Below of Flight</th>
-                  <th className="border border-slate-400 dark:border-slate-700 px-1 py-1 font-normal bg-slate-50 dark:bg-slate-800">Per Person AFLD Duty x<br/>Total Sgt & Below of<br/>Flight</th>
+                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-left w-32">DUTY PER FLIGHT</th>
+                  {matrix && matrix.map(t => (
+                    <th key={t.id} className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold bg-slate-100 dark:bg-slate-800">{t.title}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {fltRows.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold text-left bg-slate-50 dark:bg-slate-800">
-                      {row.name}
-                    </td>
-                    <TdCell warning={customFltDist[row.name]?.syDuty !== undefined && warnings.syDuty}><FltInput flightName={row.name} field="syDuty" val={row.syDuty} autoVal={row.autoVals.syDuty} exactVal={row.exactVals.syDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.btfDuty !== undefined && warnings.btfDuty}><FltInput flightName={row.name} field="btfDuty" val={row.btfDuty} autoVal={row.autoVals.btfDuty} exactVal={row.exactVals.btfDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.ntfDuty !== undefined && warnings.ntfDuty}><FltInput flightName={row.name} field="ntfDuty" val={row.ntfDuty} autoVal={row.autoVals.ntfDuty} exactVal={row.exactVals.ntfDuty} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.morning !== undefined && warnings.morning}><FltInput flightName={row.name} field="morning" val={row.morning} autoVal={row.autoVals.morning} exactVal={row.exactVals.morning} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.afternoon !== undefined && warnings.afternoon}><FltInput flightName={row.name} field="afternoon" val={row.afternoon} autoVal={row.autoVals.afternoon} exactVal={row.exactVals.afternoon} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.night !== undefined && warnings.night}><FltInput flightName={row.name} field="night" val={row.night} autoVal={row.autoVals.night} exactVal={row.exactVals.night} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.reception !== undefined && warnings.reception}><FltInput flightName={row.name} field="reception" val={row.reception} autoVal={row.autoVals.reception} exactVal={row.exactVals.reception} showExactRatio={showExactRatio} /></TdCell>
-                    <TdCell warning={customFltDist[row.name]?.airfield !== undefined && warnings.airfield}>
-                      {row.name === 'ADMIN FLT' ? (
-                        <div className="w-full text-center text-slate-400 bg-slate-100 dark:bg-slate-800/50 py-1">N/A</div>
-                      ) : (
-                        <FltInput flightName={row.name} field="airfield" val={row.airfield} autoVal={row.autoVals.airfield} exactVal={row.exactVals.airfield} showExactRatio={showExactRatio} />
-                      )}
-                    </TdCell>
-                  </tr>
-                ))}
-                
+                {['Mechanics', 'Avionics', 'GCS', 'Admin'].map(fl => {
+                  return (
+                    <tr key={fl}>
+                      <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold text-left bg-slate-50 dark:bg-slate-800">
+                        {fl} FLT
+                      </td>
+                      {matrix && matrix.map(t => {
+                        const isSecurity = t.id === 'security_duty';
+                        const poolSize = isSecurity ? totalCpl : totalSgtAndBelow;
+                        const dutyTotal = t.totalRequiredMonth || 0;
+                        const dppVal = poolSize > 0 ? (dutyTotal / poolSize) : 0;
+                        
+                        let fltCpl = 0, fltSgt = 0;
+                        if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
+                        if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
+                        if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
+                        if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
+                        
+                        // For airfield duty, Admin is excluded (fltPool = 0 if Admin)
+                        let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
+                        if (t.id === 'airfield_duty' && fl === 'Admin') {
+                          fltPool = 0;
+                        }
+                        
+                        const exactVal = dppVal * fltPool;
+                        
+                        const manualVal = t.flightTargets?.[fl as keyof typeof t.flightTargets];
+                        
+                        // LRM logic is usually complex to do inline, but since we just need integer targets that sum to dutyTotal, 
+                        // doing round() inline might cause the sum to deviate. For now, let's just use round() as autoVal.
+                        // (We will let the warning show if sum != total)
+                        const autoVal = Math.round(exactVal);
+                        
+                        return (
+                          <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-0 py-0 relative">
+                            {t.id === 'airfield_duty' && fl === 'Admin' ? (
+                                <div className="w-full text-center text-slate-400 bg-slate-100 dark:bg-slate-800/50 py-1">N/A</div>
+                            ) : (
+                              <>
+                                <input
+                                  type="number"
+                                  className={`w-full h-full min-h-[30px] px-1 text-center bg-transparent outline-none focus:bg-indigo-50 dark:focus:bg-indigo-900/30 ${manualVal !== undefined ? 'text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}
+                                  placeholder={autoVal.toString()}
+                                  value={manualVal !== undefined ? manualVal : ''}
+                                  onChange={(e) => {
+                                    if (onMatrixChange) {
+                                       const val = e.target.value ? parseInt(e.target.value) : undefined;
+                                       const newMatrix = [...matrix];
+                                       const tIdx = newMatrix.findIndex(x => x.id === t.id);
+                                       if (tIdx >= 0) {
+                                          const newTargets = { ...(newMatrix[tIdx].flightTargets || {}) };
+                                          if (val !== undefined) newTargets[fl] = val;
+                                          else delete newTargets[fl];
+                                          newMatrix[tIdx] = { ...newMatrix[tIdx], flightTargets: newTargets };
+                                          onMatrixChange(newMatrix);
+                                       }
+                                    }
+                                  }}
+                                />
+                                {showExactRatio && <div className="text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 absolute bottom-0 left-0 right-0">{exactVal.toFixed(2)}</div>}
+                              </>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
                 <tr className="font-bold bg-slate-100 dark:bg-slate-800">
                   <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">TOTAL</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.syDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.syDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.btfDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.btfDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.ntfDuty ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.ntfDuty}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.morning ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.morning}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.afternoon ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.afternoon}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.night ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.night}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.reception ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.reception}</td>
-                  <td className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warnings.airfield ? 'text-red-600 dark:text-red-400' : ''}`}>{sums.airfield}</td>
+                  {matrix && matrix.map(t => {
+                    let totalVal = 0;
+                    ['Mechanics', 'Avionics', 'GCS', 'Admin'].forEach(fl => {
+                       const manual = t.flightTargets?.[fl as keyof typeof t.flightTargets];
+                       if (manual !== undefined) {
+                         totalVal += manual;
+                       } else {
+                         const isSecurity = t.id === 'security_duty';
+                         const poolSize = isSecurity ? totalCpl : totalSgtAndBelow;
+                         const dutyTotal = t.totalRequiredMonth || 0;
+                         const dppVal = poolSize > 0 ? (dutyTotal / poolSize) : 0;
+                         let fltCpl = 0, fltSgt = 0;
+                         if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
+                         if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
+                         if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
+                         if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
+                         let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
+                         if (t.id === 'airfield_duty' && fl === 'Admin') fltPool = 0;
+                         totalVal += Math.round(dppVal * fltPool);
+                       }
+                    });
+                    
+                    const warning = totalVal !== t.totalRequiredMonth;
+                    return (
+                      <td key={t.id} className={`border border-slate-400 dark:border-slate-700 px-2 py-1 ${warning ? 'text-red-600 dark:text-red-400' : ''}`}>
+                        {totalVal}
+                      </td>
+                    );
+                  })}
                 </tr>
               </tbody>
             </table>
             
             <div className="flex justify-end mt-2">
               <button 
-                onClick={resetCustomDistributions}
+                onClick={() => {
+                  if (onMatrixChange && matrix) {
+                    const newMatrix = matrix.map(t => ({ ...t, flightTargets: {} }));
+                    onMatrixChange(newMatrix);
+                  }
+                }}
                 className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               >
                 Reset All Manual Edits to Auto
@@ -526,6 +742,24 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
         </>
       )}
 
+      {deleteConfirmIdx !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 transform transition-all">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Delete Duty</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">Are you sure you want to delete this duty? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteConfirmIdx(null)} className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
+              <button onClick={() => {
+                if (onMatrixChange && matrix) {
+                  const newMatrix = matrix.filter((_, i) => i !== deleteConfirmIdx);
+                  onMatrixChange(newMatrix);
+                }
+                setDeleteConfirmIdx(null);
+              }} className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

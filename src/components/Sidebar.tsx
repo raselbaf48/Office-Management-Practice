@@ -264,7 +264,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-900/50 scale-[1.02] border border-emerald-400/30'
                           : 'bg-[#084228]/50 text-emerald-100 hover:bg-[#0b4a2d] hover:text-white border border-[#0d5635]/50'
                       }`}
-                      title="Nominal Roll (48 Airmen)"
+                      title={`Nominal Roll (${airmenCount} Airmen)`}
                     >
                       <div className="flex items-center truncate">
                         <Layers className={`w-4 h-4 shrink-0 ${activeTab === 'nominal' ? 'text-white' : 'text-emerald-300'}`} />

@@ -6,6 +6,7 @@ import { exportNominalRollDocx } from '../utils/docxExport';
 import { BulkImportAirmenModal } from './BulkImportAirmenModal';
 import { EntryHistoryModal } from './EntryHistoryModal';
 import { History } from 'lucide-react';
+import { localDb } from '../services/localDatabase';
 
 interface NominalRollProps {
   airmen: Airman[];
@@ -114,8 +115,6 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          
-
           <button
             onClick={() => exportNominalRollDocx(filteredAirmen)}
             className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
@@ -240,20 +239,20 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                 <th className="py-3 px-4 w-12 text-center">Ser</th>
                 <th className="py-3 px-4">BD No</th>
                 <th className="py-3 px-4">Rank</th>
-                <th className="py-3 px-4">Name (Click for History)</th>
+                <th className="py-3 px-4">Name</th>
                 <th className="py-3 px-4">Trade</th>
                 <th className="py-3 px-4">Flight</th>
                 <th className="py-3 px-4">Quarter / Block</th>
                 <th className="py-3 px-4">Contact</th>
                 <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               {filteredAirmen.map((airman, idx) => (
                 <tr
                   key={airman.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  onClick={() => onViewProfile(airman)}
+                  className="hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors even:bg-slate-50 odd:bg-white dark:even:bg-slate-800/20 dark:odd:bg-slate-900 cursor-pointer"
                 >
                   <td className="py-3 px-4 font-mono font-bold text-slate-400 text-center">
                     {String(idx + 1).padStart(2, '0')}
@@ -267,13 +266,9 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <button
-                      onClick={() => onViewProfile(airman)}
-                      className="font-black text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer text-left flex items-center space-x-1"
-                      title="Click to view duty & leave history"
-                    >
-                      <span>{airman.name}</span>
-                    </button>
+                    <span className="font-black text-slate-900 dark:text-slate-100 text-left">
+                      {airman.name}
+                    </span>
                   </td>
                   <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
                     {airman.trade}
@@ -299,39 +294,6 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${airman.active !== false ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'}`}>
                       {airman.active !== false ? 'Active' : (airman.leaveReason || 'Inactive')}
                     </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end space-x-1">
-                      <button
-                        onClick={() => onViewProfile(airman)}
-                        className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
-                        title="View Full History & Profile"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-
-                      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-                        <>
-                          
-
-                          <button
-                            onClick={() => onEditAirman(airman)}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
-                            title="Edit Airman Details"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => setAirmanToDelete(airman)}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
-                            title="Delete Airman"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
                   </td>
                 </tr>
               ))}

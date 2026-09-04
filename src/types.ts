@@ -60,6 +60,9 @@ export interface DutyTypeInfo {
   isCountedAsDuty: boolean;
   requiresShift?: boolean;
   description: string;
+  isCustom?: boolean;
+  eligibleFlights?: FlightName[];
+  eligibleRanks?: Rank[];
 }
 
 export interface DutyAssignment {

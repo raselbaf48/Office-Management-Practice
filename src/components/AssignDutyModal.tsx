@@ -547,6 +547,17 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         const isAssigned = isAirmanAssignedToActiveDuty(airman.id);
         if (isAssigned) return true;
 
+        const dutyConfig = DUTY_TYPE_MAP.get(activeDutyCode as any);
+        if (dutyConfig?.isCustom) {
+          if (dutyConfig.eligibleFlights && dutyConfig.eligibleFlights.length > 0) {
+            if (!dutyConfig.eligibleFlights.includes(airman.flightName)) return false;
+          }
+          if (dutyConfig.eligibleRanks && dutyConfig.eligibleRanks.length > 0) {
+            if (!dutyConfig.eligibleRanks.includes(airman.rank)) return false;
+          }
+          return true;
+        }
+
         const rankLower = (airman.rank || '').toLowerCase();
         const isWO = ['wo', 'swo', 'mwo', 'w/o'].some((r) => rankLower.includes(r));
 

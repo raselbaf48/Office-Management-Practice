@@ -1,15 +1,17 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
 import { Airman, DutyAssignment } from '../types';
-import { X, Shield, Phone, MapPin, Award, Calendar, FileText, User, Filter, Printer, Clock } from 'lucide-react';
+import { X, Shield, Phone, MapPin, Award, Calendar, FileText, User, Filter, Printer, Clock, Settings } from 'lucide-react';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 
 interface AirmanProfileModalProps {
   airman: Airman;
   onClose: () => void;
+  onEditAirman?: (airman: Airman) => void;
+  role?: string;
 }
 
-export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, onClose }) => {
+export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, onClose, onEditAirman, role }) => {
   const [activeTab, setActiveTab] = useState<'history' | 'profile'>('history');
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
@@ -139,6 +141,15 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
             >
               <Printer className="w-4 h-4" />
             </button>
+            {onEditAirman && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+              <button
+                onClick={() => { onClose(); onEditAirman(airman); }}
+                className="p-2 rounded-xl text-emerald-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Edit Airman Profile"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

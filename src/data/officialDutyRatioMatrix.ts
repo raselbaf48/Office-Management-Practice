@@ -9,6 +9,7 @@ export interface DutyRatioTable {
   totalRequiredMonth: number;
   totalRequiredDaily?: number;
   dailyRequirements?: number[];
+  isDisabled?: boolean;
   flightTargets?: {
     Mechanics?: number;
     Avionics?: number;

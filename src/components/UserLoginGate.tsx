@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
-import { X, Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Fingerprint } from 'lucide-react';
+import { X, Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { getAppConfig, isFeatureActive } from '../utils/appConfig';
 import { setUserSession, validateUserLogin, getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
@@ -16,6 +16,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
 }) => {
   const [bdInput, setBdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPin, setShowPin] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
@@ -232,23 +233,22 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
                 />
                 {isUserIdFocused && recentLogins.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1 w-full z-10 flex flex-col bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-1 w-max min-w-[160px] z-10 flex flex-col bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto">
                     {recentLogins.map(id => (
-                      <div key={id} className="flex items-center justify-between px-4 py-3 hover:bg-slate-700/50 cursor-pointer border-b border-slate-700/50 last:border-0"
+                      <div key={id} className="flex items-center justify-between px-3 py-2 hover:bg-slate-700/50 cursor-pointer border-b border-slate-700/50 last:border-0"
                            onMouseDown={(e) => {
                              e.preventDefault();
                              setBdInput(id);
                              setErrorMsg('');
                              setIsUserIdFocused(false);
                            }}>
-                        <div className="flex items-center space-x-3">
-                          <Fingerprint className="w-4 h-4 text-emerald-400" />
+                        <div className="flex items-center space-x-2">
                           <span className="text-sm font-mono font-bold text-slate-200">
                             {id}
                           </span>
                         </div>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); removeRecent(id); }} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-slate-700 transition-colors">
-                          <X className="w-4 h-4" />
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeRecent(id); }} className="text-slate-500 hover:text-red-400 p-1 rounded-full hover:bg-slate-700 transition-colors ml-4">
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
@@ -260,12 +260,18 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Password</label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPin ? "text" : "password"}
                   value={passwordInput}
                   onChange={(e) => { setPasswordInput(e.target.value); setErrorMsg(''); }}
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 pr-12 text-sm font-mono font-bold text-white outline-none transition-all"
                 />
-                
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-400 transition-colors"
+                >
+                  {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
             <button

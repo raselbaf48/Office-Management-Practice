@@ -370,6 +370,18 @@ export class LocalDatabaseEngine {
     return sortAirmenBySeniority(list);
   }
 
+  public clearAllAirmen(): void {
+    this.db.airmen = [];
+    this.saveToStorage();
+    this.recordActivity({
+      type: 'Airman_Status',
+      airmanId: 'ALL',
+      dutyCode: 'OFF',
+      details: 'Cleared all airmen from Nominal Roll',
+      timestamp: new Date().toISOString()
+    } as any);
+  }
+
   public addAirman(data: Partial<Airman>): Airman {
     const newSerNo = this.db.airmen.length > 0 ? Math.max(...this.db.airmen.map((a) => a.serNo)) + 1 : 1;
     const id = `airman-${Date.now()}`;

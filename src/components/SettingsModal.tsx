@@ -1,4 +1,4 @@
-import { getAppConfig, saveAppConfig, AppConfig, getAppConfigHistory, addAppConfigHistory, AppConfigHistoryItem, updateAppConfigHistoryItemActiveStatus, deleteAppConfigHistoryItem } from '../utils/appConfig';
+import { getAppConfig, saveAppConfig, AppConfig, getAppConfigHistory, addAppConfigHistory, AppConfigHistoryItem, updateAppConfigHistoryItemActiveStatus, deleteAppConfigHistoryItem, clearAppConfigHistory } from '../utils/appConfig';
 import { Megaphone, Wrench, Clock, Trash2 as TrashIcon, Power, PowerOff } from 'lucide-react';
 
 import React, { useState, useEffect } from 'react';
@@ -28,6 +28,7 @@ import {
   Search,
   Trash2,
   ShieldCheck,
+  Shield,
   Smartphone,
   Laptop,
   Globe,
@@ -37,10 +38,13 @@ import {
 , Activity} from 'lucide-react';
 import {   Logo155UASU } from './Logo155UASU';
 import {   UserManagementTab } from './UserManagementTab';
-import {   UserRole, ThemePreference, DetailedUserLogin, UserLoginStatus, UserLoginRole } from '../types';
+import {   UserRole, ThemePreference, DetailedUserLogin, UserLoginStatus, UserLoginRole, Rank, FlightName } from '../types';
+import { getCustomDuties, saveCustomDuties, addCustomDuty, removeCustomDuty, CustomDutyConfig } from '../utils/customDuties';
 import {   subscribeToActiveUsers, subscribeToLoginHistory } from '../services/presenceService';
 import {   getLoginHistory, clearLoginHistory, UserLoginLog, getDetailedUsers, toggleUserLoginStatus, saveDetailedUsers, changeUserPassword, changeAdminPassword, changeUserRole, getCurrentUserSession } from '../utils/authSession';
 import {   localDb, getSyncLogs, SyncLog } from '../services/localDatabase';
+
+import { CustomDutiesTab } from './CustomDutiesTab';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -56,7 +60,7 @@ interface SettingsModalProps {
   onRosterUpdated?: () => void;
 }
 
-type SettingSection = 'appearance' | 'cloudsync' | 'users' | 'security' | 'database' | 'history' | 'appNotice' | 'appMaintenance';
+type SettingSection = 'appearance' | 'cloudsync' | 'users' | 'security' | 'database' | 'history' | 'appNotice' | 'appMaintenance' | 'duties';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   nominalAirmen,
@@ -72,10 +76,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<SettingSection | null>(null);
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
-
-  // Logo Change State
-  const [customLogo, setCustomLogo] = useState<string | null>(() => localStorage.getItem('baf_custom_logo'));
-  const [logoSuccess, setLogoSuccess] = useState<string>('');
 
   // Security Tab State
   const [adminCurrentPasscode, setAdminCurrentPasscode] = useState('');
@@ -161,6 +161,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
     saveAppConfig(updatedConfig);
     setAppConfig(updatedConfig);
+    localStorage.removeItem('baf_dismissed_notice_sig');
     
     const history = addAppConfigHistory({
       type: 'NOTICE',
@@ -228,7 +229,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setAppConfigHistory(history);
   };
   
-  const handleDeleteHistory = (id: string) => {
+  const confirmDeleteHistory = (id: string) => {
+    const itemToDelete = appConfigHistory.find(item => item.id === id);
+    if (itemToDelete) {
+      if (itemToDelete.type === 'NOTICE' && appConfig.notice.isActive && appConfig.notice.message === itemToDelete.message) {
+         const updatedConfig = { ...appConfig, notice: { ...appConfig.notice, isActive: false } };
+         saveAppConfig(updatedConfig);
+         setAppConfig(updatedConfig);
+      }
+      if (itemToDelete.type === 'MAINTENANCE' && appConfig.maintenance.isActive && appConfig.maintenance.message === itemToDelete.message) {
+         const updatedConfig = { ...appConfig, maintenance: { ...appConfig.maintenance, isActive: false } };
+         saveAppConfig(updatedConfig);
+         setAppConfig(updatedConfig);
+      }
+    }
     const history = deleteAppConfigHistoryItem(id);
     setAppConfigHistory(history);
   };
@@ -236,6 +250,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   
   const [historySearch, setHistorySearch] = useState<string>('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [clearAllConfirmType, setClearAllConfirmType] = useState<'NOTICE' | 'MAINTENANCE' | null>(null);
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
   const [realtimeHistory, setRealtimeHistory] = useState<any[]>([]);
   const [selectedHistoryUser, setSelectedHistoryUser] = useState<any>(null);
@@ -279,54 +295,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setCurrentPasscode('');
       setNewPasscode('');
       setConfirmPasscode('');
-      setLogoSuccess('');
       setRestoreStatus('');
-      setCustomLogo(localStorage.getItem('baf_custom_logo'));
       setLoginHistory(getLoginHistory());
       setDetailedUsersList(getDetailedUsers());
       setActiveSection(null);
     }
   }, [isOpen]);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        localStorage.setItem('baf_custom_logo', dataUrl);
-        setCustomLogo(dataUrl);
-        setLogoSuccess('Unit crest logo updated successfully.');
-        window.dispatchEvent(new CustomEvent('baf_logo_updated', { detail: { logoUrl: dataUrl } }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveLogo = () => {
-    if (customLogo && customLogo.trim() !== '') {
-      const trimmedUrl = customLogo.trim();
-      localStorage.setItem('baf_custom_logo', trimmedUrl);
-      setCustomLogo(trimmedUrl);
-      setLogoSuccess('Logo URL updated successfully.');
-      window.dispatchEvent(new CustomEvent('baf_logo_updated', { detail: { logoUrl: trimmedUrl } }));
-    } else {
-      localStorage.removeItem('baf_custom_logo');
-      setCustomLogo('');
-      setLogoSuccess('Default 155 UASU BAF crest restored.');
-      window.dispatchEvent(new CustomEvent('baf_logo_updated', { detail: { logoUrl: null } }));
-    }
-  };
-
-  const handleResetLogo = () => {
-    localStorage.removeItem('baf_custom_logo');
-    setCustomLogo(null);
-    setLogoSuccess('Default 155 UASU BAF crest restored.');
-    window.dispatchEvent(new CustomEvent('baf_logo_updated', { detail: { logoUrl: null } }));
-  };
-
-  
 
   const handleUpdateAdminPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -496,6 +470,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'appearance', label: 'Theme & Appearance', icon: <Palette className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'cloudsync', label: 'Database Cloud Sync', icon: <Cloud className="w-5 h-5" />, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' }] : []),
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'users', label: 'User Management', icon: <ShieldCheck className="w-5 h-5" />, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' }] : []),
+    ...(role === 'SUPER_ADMIN' ? [{ id: 'duties', label: 'Custom Duties', icon: <Shield className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' }] : []),
     { id: 'security', label: 'Security & Passcode', icon: <Lock className="w-5 h-5" />, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950 dark:text-amber-400' },
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'database', label: 'Backup & Restore', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' }] : []),
     ...(role === 'SUPER_ADMIN' ? [{ id: 'history', label: 'Login History', icon: <History className="w-5 h-5" />, color: 'text-sky-500 bg-sky-100 dark:bg-sky-950 dark:text-sky-400' }] : []),
@@ -583,6 +558,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               
               {activeSection === 'appNotice' && role === 'SUPER_ADMIN' && (
                 <div className="space-y-8 animate-fadeIn">
+                  {appConfig.notice.isActive && (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                          <Megaphone className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Notice is Currently Live</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                              Active
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+                            {appConfig.notice.heading ? `${appConfig.notice.heading}: ` : ''}{appConfig.notice.message}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedConfig = { ...appConfig, notice: { ...appConfig.notice, isActive: false } };
+                          saveAppConfig(updatedConfig);
+                          setAppConfig(updatedConfig);
+                          const activeItem = appConfigHistory.find(i => i.type === 'NOTICE' && i.isActive);
+                          if (activeItem) {
+                            setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                      >
+                        <PowerOff className="w-3.5 h-3.5" /> Stop / Deactivate Notice
+                      </button>
+                    </div>
+                  )}
+
                   <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 flex items-center justify-center">
@@ -652,9 +663,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {/* Notice History */}
                   <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <History className="w-4 h-4 text-slate-400" /> Notice History
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <History className="w-4 h-4 text-slate-400" /> Notice History
+                      </h3>
+                      <button onClick={() => setClearAllConfirmType('NOTICE')} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">
+                        Clear All
+                      </button>
+                    </div>
                     
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {appConfigHistory.filter(i => i.type === 'NOTICE').length === 0 ? (
@@ -675,7 +691,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="text-xs font-medium text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
-                                <button onClick={() => handleDeleteHistory(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
+                                <button onClick={() => setDeleteConfirmId(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
                                   <TrashIcon className="w-4 h-4" />
                                 </button>
                               </div>
@@ -714,6 +730,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               {activeSection === 'appMaintenance' && role === 'SUPER_ADMIN' && (
                 <div className="space-y-8 animate-fadeIn">
+                  {appConfig.maintenance.isActive && (
+                    <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+                          <Wrench className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black uppercase tracking-wider text-red-800 dark:text-red-300">Maintenance Mode is Active</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
+                              Live
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+                            {appConfig.maintenance.message}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedConfig = { ...appConfig, maintenance: { ...appConfig.maintenance, isActive: false } };
+                          saveAppConfig(updatedConfig);
+                          setAppConfig(updatedConfig);
+                          const activeItem = appConfigHistory.find(i => i.type === 'MAINTENANCE' && i.isActive);
+                          if (activeItem) {
+                            setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                      >
+                        <PowerOff className="w-3.5 h-3.5" /> Deactivate Maintenance
+                      </button>
+                    </div>
+                  )}
+
                   <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-500 flex items-center justify-center">
@@ -772,9 +824,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {/* Maintenance History */}
                   <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <History className="w-4 h-4 text-slate-400" /> Maintenance History
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <History className="w-4 h-4 text-slate-400" /> Maintenance History
+                      </h3>
+                      <button onClick={() => setClearAllConfirmType('MAINTENANCE')} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">
+                        Clear All
+                      </button>
+                    </div>
                     
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {appConfigHistory.filter(i => i.type === 'MAINTENANCE').length === 0 ? (
@@ -795,7 +852,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="text-xs font-medium text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
-                                <button onClick={() => handleDeleteHistory(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
+                                <button onClick={() => setDeleteConfirmId(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
                                   <TrashIcon className="w-4 h-4" />
                                 </button>
                               </div>
@@ -857,27 +914,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Custom Logo URL</h4>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="https://example.com/logo.png"
-                        value={customLogo || ''}
-                        onChange={(e) => setCustomLogo(e.target.value)}
-                        className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500 dark:text-white" />
-                      <button
-                        onClick={handleSaveLogo}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 rounded-xl font-bold transition-colors cursor-pointer"
-                      >
-                        Save
-                      </button>
-                    </div>
-                    {logoSuccess && <p className="text-emerald-500 text-xs mt-2 font-bold">{logoSuccess}</p>}
-                  </div>
                 </div>
               )}
-
 
 {activeSection === 'cloudsync' && (
             <div className="space-y-4">
@@ -937,8 +975,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-
-
+          {activeSection === 'duties' && role === 'SUPER_ADMIN' && (
+            <CustomDutiesTab />
+          )}
 
               {activeSection === 'security' && (
                 <div className="space-y-6">
@@ -1234,9 +1273,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}            </div>
           </div>
         </div>
+
+        {/* Delete Single History Item Confirmation Modal */}
+        {deleteConfirmId && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">Delete Record?</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to delete this record from history? If this notice or maintenance is currently live, it will also be stopped.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    confirmDeleteHistory(deleteConfirmId);
+                    setDeleteConfirmId(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Clear All Confirmation Modal */}
+        {clearAllConfirmType && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">
+                Clear All {clearAllConfirmType === 'NOTICE' ? 'Notices' : 'Maintenance Records'}?
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+                This will delete all {clearAllConfirmType === 'NOTICE' ? 'notice' : 'maintenance'} history items and immediately deactivate any live {clearAllConfirmType === 'NOTICE' ? 'notice' : 'maintenance'} popup.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setClearAllConfirmType(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (clearAllConfirmType === 'NOTICE') {
+                      const updatedConfig = { ...appConfig, notice: { ...appConfig.notice, isActive: false, message: '' } };
+                      saveAppConfig(updatedConfig);
+                      setAppConfig(updatedConfig);
+                    } else {
+                      const updatedConfig = { ...appConfig, maintenance: { ...appConfig.maintenance, isActive: false, message: '' } };
+                      saveAppConfig(updatedConfig);
+                      setAppConfig(updatedConfig);
+                    }
+                    const remaining = appConfigHistory.filter(i => i.type !== clearAllConfirmType);
+                    localStorage.setItem('baf_app_config_history', JSON.stringify(remaining));
+                    setAppConfigHistory(remaining);
+                    setClearAllConfirmType(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       
-      
-</div>
+      </div>
     </div>
   );
 };

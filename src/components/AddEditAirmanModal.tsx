@@ -453,28 +453,52 @@ export const AddEditAirmanModal: React.FC<AddEditAirmanModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Date Joined Unit <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
-              <input
-                type="date"
-                value={dateJoined}
-                onChange={(e) => setDateJoined(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="date"
+                  value={dateJoined}
+                  onChange={(e) => setDateJoined(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 pr-10"
+                />
+                {dateJoined && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setDateJoined(''); }}
+                    className="absolute right-2 p-1.5 text-slate-400 hover:text-red-500 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    title="Clear Date"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Date Left Unit <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
-              <input
-                type="date"
-                value={dateLeft}
-                onChange={(e) => {
-                  setDateLeft(e.target.value);
-                  if (e.target.value && !leaveReason) {
-                    setLeaveReason('Posted Out'); // Default selection
-                  }
-                }}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="date"
+                  value={dateLeft}
+                  onChange={(e) => {
+                    setDateLeft(e.target.value);
+                    if (e.target.value && !leaveReason) {
+                      setLeaveReason('Posted Out'); // Default selection
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 pr-10"
+                />
+                {dateLeft && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setDateLeft(''); }}
+                    className="absolute right-2 p-1.5 text-slate-400 hover:text-red-500 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    title="Clear Date"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             {dateLeft && (
               <div>

@@ -1,6 +1,7 @@
 import { DutyTypeInfo } from '../types';
+import { getCustomDuties } from '../utils/customDuties';
 
-export const DUTY_TYPES: DutyTypeInfo[] = [
+export const INITIAL_DUTY_TYPES: DutyTypeInfo[] = [
   {
     code: 'GD',
     name: 'Base Security Duty',
@@ -279,4 +280,14 @@ export const DUTY_TYPES: DutyTypeInfo[] = [
   },
 ];
 
-export const DUTY_TYPE_MAP = new Map(DUTY_TYPES.map((dt) => [dt.code, dt]));
+export let DUTY_TYPES: DutyTypeInfo[] = [...INITIAL_DUTY_TYPES, ...getCustomDuties()];
+export let DUTY_TYPE_MAP = new Map(DUTY_TYPES.map((dt) => [dt.code, dt]));
+
+export const reloadCustomDuties = () => {
+  DUTY_TYPES = [...INITIAL_DUTY_TYPES, ...getCustomDuties()];
+  DUTY_TYPE_MAP = new Map(DUTY_TYPES.map((dt) => [dt.code, dt]));
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('baf_custom_duties_updated', reloadCustomDuties);
+}

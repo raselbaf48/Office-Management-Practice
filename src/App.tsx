@@ -9,7 +9,7 @@ import { TopHeader } from './components/TopHeader';
 import { DashboardParadeState } from './components/DashboardParadeState';
 import { ParadeStateFormattedView } from './components/ParadeStateFormattedView';
 import { updatePresence } from './services/presenceService';
-import { getAppConfig, isFeatureActive, AppConfig } from './utils/appConfig';
+import { getAppConfig, saveAppConfig, isFeatureActive, AppConfig } from './utils/appConfig';
 import { NightCountStateView } from './components/NightCountStateView';
 import { NominalRoll } from './components/NominalRoll';
 import { FlightsMiniView } from './components/FlightsMiniView';
@@ -48,34 +48,70 @@ export default function App() {
   const [hasSeenNotice, setHasSeenNotice] = useState<boolean>(false);
   
   useEffect(() => {
+    // One-time cleanup for old test notice "Gg" or empty notices
+    if (!localStorage.getItem('baf_cleared_notices_v4')) {
+      const cfg = getAppConfig();
+      if (cfg.notice.message === 'Gg' || !cfg.notice.message || cfg.notice.message.trim() === 'Gg') {
+        cfg.notice.isActive = false;
+        cfg.notice.message = '';
+        saveAppConfig(cfg);
+      }
+      localStorage.setItem('baf_cleared_notices_v4', 'true');
+    }
+
     setAppConfig(getAppConfig());
     const handleConfigChange = (e: any) => setAppConfig(e.detail);
     window.addEventListener('baf_app_config_changed', handleConfigChange);
     return () => window.removeEventListener('baf_app_config_changed', handleConfigChange);
   }, []);
 
+  const dismissNotice = () => {
+    if (appConfig?.notice) {
+      const sig = (appConfig.notice.heading || '') + '::' + (appConfig.notice.message || '');
+      localStorage.setItem('baf_dismissed_notice_sig', sig);
+    }
+    setHasSeenNotice(true);
+  };
+
   const renderNoticeModal = () => {
     if (!userSession || !appConfig || hasSeenNotice) return null;
     if (!isFeatureActive(appConfig.notice)) return null;
-    
+    if (!appConfig.notice.message || appConfig.notice.message.trim() === '' || appConfig.notice.message.trim() === 'Gg') return null;
+
+    // Check if user already dismissed this specific notice
+    const sig = (appConfig.notice.heading || '') + '::' + (appConfig.notice.message || '');
+    if (localStorage.getItem('baf_dismissed_notice_sig') === sig) return null;
+
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-fadeIn border border-slate-200 dark:border-slate-700 relative">
-          <button onClick={() => setHasSeenNotice(true)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+          <button 
+            onClick={dismissNotice} 
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+            title="Close"
+          >
             <X className="w-5 h-5" />
           </button>
           
-          <div className="flex flex-col items-center text-center space-y-4 mb-4">
+          <div className="flex flex-col items-center text-center space-y-4 mb-2">
             <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-500">
               <AlertCircle className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white">{appConfig.notice.heading || "Important Notice"}</h2>
-            <div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+            <div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto px-1">
               {appConfig.notice.message}
             </div>
           </div>
-          
 
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={dismissNotice}
+              className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-sm"
+            >
+              ঠিক আছে (Close Notice)
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -424,7 +460,7 @@ return () => mediaQuery.removeEventListener('change', listener);
         setCollapsed={setSidebarCollapsed}
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
-        airmenCount={airmen.length}
+        airmenCount={airmen.filter(a => a.active).length}
         userSession={userSession}
         onOpenImportModal={() => setIsPdfImportModalOpen(true)}
                         onLogoutUser={handleUserLogout}
@@ -638,6 +674,11 @@ return () => mediaQuery.removeEventListener('change', listener);
         <AirmanProfileModal
           airman={selectedAirmanProfile}
           onClose={() => setSelectedAirmanProfile(null)}
+          onEditAirman={(a) => {
+            setAirmanToEdit(a);
+            setIsAddEditOpen(true);
+          }}
+          role={role}
         />
       )}
 

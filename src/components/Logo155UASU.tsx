@@ -1,49 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface LogoProps {
   className?: string;
   size?: number | 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
-  customLogoUrl?: string | null;
 }
 
 export const Logo155UASU: React.FC<LogoProps> = ({
   className = 'h-14 w-14',
   size,
-  customLogoUrl,
 }) => {
-  const [logoSrc, setLogoSrc] = useState<string>(() => {
-    if (customLogoUrl) return customLogoUrl;
-    const stored = localStorage.getItem('baf_custom_logo');
-    return (stored && stored.trim() !== '') ? stored : '/new-logo.png';
-  });
-
-  useEffect(() => {
-    if (customLogoUrl !== undefined && customLogoUrl !== null && customLogoUrl.trim() !== '') {
-      setLogoSrc(customLogoUrl);
-    } else {
-      const stored = localStorage.getItem('baf_custom_logo');
-      setLogoSrc((stored && stored.trim() !== '') ? stored : '/new-logo.png');
-    }
-  }, [customLogoUrl]);
-
-  useEffect(() => {
-    const handleLogoUpdated = (e: any) => {
-      const newLogo = e?.detail?.logoUrl;
-      if (newLogo && newLogo.trim() !== '') {
-        setLogoSrc(newLogo);
-      } else {
-        const stored = localStorage.getItem('baf_custom_logo');
-        setLogoSrc((stored && stored.trim() !== '') ? stored : '/new-logo.png');
-      }
-    };
-
-    window.addEventListener('baf_logo_updated', handleLogoUpdated);
-    return () => window.removeEventListener('baf_logo_updated', handleLogoUpdated);
-  }, []);
-
   let sizeStyle: React.CSSProperties = {};
-
   if (typeof size === 'number') {
     sizeStyle = { width: size, height: size };
   }
@@ -63,15 +30,9 @@ export const Logo155UASU: React.FC<LogoProps> = ({
       style={sizeStyle}
     >
       <img
-        src={logoSrc}
+        src="/new-logo.png"
         alt="155 UASU BAF Crest"
         className="h-full w-full aspect-square object-contain drop-shadow-md"
-        onError={(e) => {
-          // Fallback if custom upload fails
-          if (logoSrc !== '/new-logo.png') {
-            setLogoSrc('/new-logo.png');
-          }
-        }}
       />
     </div>
   );
