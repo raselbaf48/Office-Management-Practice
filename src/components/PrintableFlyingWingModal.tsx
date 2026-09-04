@@ -3,9 +3,10 @@ import { FlyingWingStateView } from './FlyingWingStateView';
 import { Printer, X } from 'lucide-react';
 
 export const PrintableFlyingWingModal = ({ date, uasuStats, onClose }: any) => {
+  const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: '2-digit'}).replace(/ /g, ' ');
  useEffect(() => {
  const originalTitle = document.title;
- const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: 'numeric'}).replace(/ /g, ' '); 
+ // moved outside.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: '2-digit'}).replace(/ /g, ' '); 
  document.title = `Consolidated Night Count State - Flg Wg (${formatted})`;
  return () => {
  document.title = originalTitle;
@@ -23,7 +24,7 @@ export const PrintableFlyingWingModal = ({ date, uasuStats, onClose }: any) => {
  </div>
  <div className="flex space-x-3">
  <button
- onClick={() => window.print()}
+ onClick={() => { document.title = `Consolidated Night Count State - Flg Wg (${formatted})`; window.print(); }}
  className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer"
  >
  <Printer className="w-5 h-5" />

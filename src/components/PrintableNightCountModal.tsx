@@ -1042,7 +1042,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  </div>
  <div className="flex items-center space-x-3">
  <button
- onClick={() => window.print()}
+ onClick={() => { document.title = getPdfTitle(); window.print(); }}
  className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer"
  >
  <Printer className="w-5 h-5" />
