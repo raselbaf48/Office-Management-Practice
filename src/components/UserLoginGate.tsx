@@ -191,8 +191,8 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         
         {/* Header */}
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-16 h-20 bg-emerald-950/50 border border-emerald-500/30 rounded-2xl flex items-center justify-center p-2 shadow-lg">
-            <Logo155UASU className="h-16 w-16" />
+          <div className="flex items-center justify-center p-2">
+            <Logo155UASU size="lg" />
           </div>
           <div>
             <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-widest mb-1.5">

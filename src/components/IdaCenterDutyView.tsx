@@ -84,12 +84,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
         })
       );
       setCurrentDateFormatted(
-        now.toLocaleDateString('en-GB', {
-          weekday: 'long',
-          year: '2-digit',
-          month: 'long',
-          day: '2-digit',
-        })
+        now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short' })
       );
     };
 
@@ -171,7 +166,7 @@ export const IdaCenterDutyView: React.FC<IdaCenterDutyViewProps> = ({
         const pData = paradeResults[idx];
         const [y, m, d] = dStr.split('-').map(Number);
         const dObj = new Date(y, m - 1, d);
-        const dateDisplay = dObj.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: '2-digit' });
+        const dateDisplay = dObj.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: 'numeric' });
         const dayDisplay = dObj.toLocaleDateString('en-GB', { weekday: 'short' });
 
         const pList = pData?.personnelStatusList || [];

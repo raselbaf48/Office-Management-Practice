@@ -136,6 +136,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
   // Compute day of week
   const dateObj = new Date(selectedDate);
   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+  const dateDisplay = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
   const flightsList: (FlightName | 'Overall')[] = [
     'Overall',
@@ -159,7 +160,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {dayName}, {selectedDate} • Unit Strength: {data?.summary?.totalStrength || 48} Airmen
+            {dayName}, {dateDisplay} • Unit Strength: {data?.summary?.totalStrength || 48} Airmen
           </p>
         </div>
 

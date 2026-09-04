@@ -5,7 +5,7 @@ import { Printer, X } from 'lucide-react';
 export const PrintableFlyingWingModal = ({ date, uasuStats, onClose }: any) => {
   useEffect(() => {
     const originalTitle = document.title;
-    const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"2-digit"}).replace(/ /g, ' '); 
+    const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: 'numeric'}).replace(/ /g, ' '); 
     document.title = `Consolidated Night Count State - Flg Wg (${formatted})`;
     return () => {
       document.title = originalTitle;

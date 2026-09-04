@@ -763,7 +763,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
   const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleString('en-US', {
     month: 'long',
-    year: '2-digit',
+    year: 'numeric',
   });
 
   return (
