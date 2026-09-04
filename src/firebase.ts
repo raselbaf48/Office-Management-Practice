@@ -4,7 +4,7 @@ import { getFirestore, initializeFirestore, doc, setDoc, getDoc, disableNetwork,
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 
 function removeUndefinedValues(obj: any): any {
@@ -25,15 +25,7 @@ function removeUndefinedValues(obj: any): any {
 const todayDate = new Date().toDateString();
 let quotaExceeded = false;
 if (typeof window !== "undefined") {
-  const saved = window.localStorage.getItem("firebase_quota_exceeded");
-  if (saved === todayDate) {
-    quotaExceeded = true;
-  }
-}
-
-if (quotaExceeded && typeof window !== "undefined") {
-  setLogLevel('silent');
-  disableNetwork(db).catch(() => {});
+  window.localStorage.removeItem("firebase_quota_exceeded");
 }
 
 export async function saveDbToFirebase(dbData: any) {

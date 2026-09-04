@@ -3,13 +3,13 @@
   "name": "155 UASU BAF | Duty & Office Management System",
   "icons": [
     {
-      "src": "/app-logo-v2.png",
+      "src": "/155-uasu-baf-logo.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/app-logo-v2.png",
+      "src": "/155-uasu-baf-logo.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"

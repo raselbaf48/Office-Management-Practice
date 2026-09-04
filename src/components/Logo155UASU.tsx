@@ -30,7 +30,7 @@ export const Logo155UASU: React.FC<LogoProps> = ({
       style={sizeStyle}
     >
       <img
-        src="/new-logo.png"
+        src="/155-uasu-baf-logo.png"
         alt="155 UASU BAF Crest"
         className="h-full w-full aspect-square object-contain drop-shadow-md"
       />
