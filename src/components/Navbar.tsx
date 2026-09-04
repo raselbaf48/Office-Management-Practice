@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center space-x-2">
                 <span className="font-extrabold text-lg tracking-wider text-white">155 UASU BAF</span>
                 <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full">
-                  Duty & Office System
+                  Office System
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">

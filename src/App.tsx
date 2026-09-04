@@ -659,7 +659,7 @@ return () => mediaQuery.removeEventListener('change', listener);
             <div className="flex items-center space-x-2.5">
               <Logo155UASU className="h-6 w-6" />
               <span className="font-bold text-slate-700 dark:text-slate-300">
-                155 UASU BAF • Duty & Office Management System
+                155 UASU BAF • Office Management System
               </span>
             </div>
             <p>© 2026 Bangladesh Air Force • Confidential Personnel Duty Register</p>

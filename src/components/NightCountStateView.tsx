@@ -1116,8 +1116,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   setShowAddDisposalModal(true);
                 }
               }}
-              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
-              title="Add or update personnel disposal"
+              className="flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer" title="Add or update personnel disposal"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Add Disposal</span>
@@ -1791,10 +1790,10 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
               {/* 1. Date Selection */}
               <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                  1. Select Date
-                </label>
-                <div>
-                  <DateNavigator
+                      1. Select Date
+                    </label>
+                    <div className="w-56">
+                      <DateNavigator
                     value={disposalFromDate}
                     onChange={(e) => {
                       setDisposalFromDate(e.target.value);
@@ -2162,10 +2161,18 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                   >
                     Cancel
                   </button>
+              <button
+                type="submit"
+                disabled={selectedDisposalAirmenIds.length === 0 || disposalLoading || (disposalCategory === 'OTHERS' && !disposalCustomTitle.trim())}
+                className="px-5 py-2 text-xs font-black text-white bg-rose-600 hover:bg-rose-500 rounded-xl disabled:opacity-50 transition-all shadow-md shadow-rose-900/20 cursor-pointer"
+              >
+                {disposalLoading ? 'Applying...' : 'Apply Disposal'}
+              </button>
+
                   
                 </div>
-              </div>
-            </form>
+          </div>
+        </form>
           </div>
         </div>
       )}

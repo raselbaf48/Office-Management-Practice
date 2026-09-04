@@ -26,7 +26,7 @@ export function DateNavigator({ hideArrows, className, value, disabled, onChange
         const day = String(d.getDate()).padStart(2, '0');
         const month = d.toLocaleString('en-US', { month: 'short' });
         const year = String(d.getFullYear()).slice(-2);
-        return `${day} ${month} ${year}`;
+        return `${day} ${month}`;
       })()
     : '';
 

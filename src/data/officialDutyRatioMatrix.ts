@@ -10,6 +10,8 @@ export interface DutyRatioTable {
   totalRequiredDaily?: number;
   dailyRequirements?: number[];
   isDisabled?: boolean;
+  eligibleFlights?: import('../types').FlightName[];
+  eligibleRanks?: import('../types').Rank[];
   flightTargets?: {
     Mechanics?: number;
     Avionics?: number;
