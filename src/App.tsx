@@ -252,11 +252,16 @@ return () => mediaQuery.removeEventListener('change', listener);
           if (myDetail.status !== 'ACTIVE') {
             handleUserLogout();
             alert('Your account has been suspended or disabled by admin.');
-          } else if (myDetail.role !== userSession.assignedRole) {
-            handleRoleChange(myDetail.role);
-            const updatedSession = { ...userSession, assignedRole: myDetail.role };
-            setUserSession(updatedSession);
-            localStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+          } else {
+            // Only demote if their current active role is higher than what's allowed in myDetail
+            const roleHierarchy = { 'SUPER_ADMIN': 3, 'ADMIN': 2, 'USER': 1 };
+            const currentActiveRole = sessionStorage.getItem('baf_user_role') || 'USER';
+            if (roleHierarchy[currentActiveRole] > roleHierarchy[myDetail.role]) {
+              handleRoleChange(myDetail.role);
+              const updatedSession = { ...userSession, assignedRole: myDetail.role };
+              setUserSession(updatedSession);
+              sessionStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+            }
           }
         }
       }
@@ -466,7 +471,14 @@ return () => mediaQuery.removeEventListener('change', listener);
                         onLogoutUser={handleUserLogout}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
-                onLogoutAdmin={() => handleRoleChange('USER')}
+                onLogoutAdmin={() => {
+            handleRoleChange('USER');
+            if (userSession) {
+               const updatedSession = { ...userSession, assignedRole: 'USER' };
+               setUserSession(updatedSession);
+               sessionStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+            }
+          }}
       />
 
       {/* Right Content Wrapper */}
@@ -480,7 +492,14 @@ return () => mediaQuery.removeEventListener('change', listener);
           userSession={userSession}
                               onLogoutUser={handleUserLogout}
           onOpenAdminLogin={() => setIsAdminLoginModalOpen(true)}
-          onLogoutAdmin={() => handleRoleChange('USER')}
+          onLogoutAdmin={() => {
+            handleRoleChange('USER');
+            if (userSession) {
+               const updatedSession = { ...userSession, assignedRole: 'USER' };
+               setUserSession(updatedSession);
+               sessionStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+            }
+          }}
         />
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
@@ -728,6 +747,11 @@ return () => mediaQuery.removeEventListener('change', listener);
         onClose={() => setIsAdminLoginModalOpen(false)}
         onSuccess={(newRole) => {
           handleRoleChange(newRole);
+          if (userSession) {
+             const updatedSession = { ...userSession, assignedRole: newRole };
+             setUserSession(updatedSession);
+             sessionStorage.setItem('baf_user_session', JSON.stringify(updatedSession));
+          }
           setIsAdminLoginModalOpen(false);
         }}
         assignedRole={userSession?.assignedRole || 'USER'}

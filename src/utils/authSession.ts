@@ -152,7 +152,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       
       if (idx === -1) {
         // Create auto profile for nominal roll airman
-        const isPrimary = cleanBd === '474455';
+        const isPrimary = cleanBd === '48456';
         parsed.push({
           id: `user-login-${cleanBd}`,
           airmanId: a.id,
@@ -194,13 +194,13 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
   const primaryFallback: DetailedUserLogin[] = [
     {
       id: 'user-login-474455',
-      bdNo: '474455',
+      bdNo: '48456',
       rank: 'LAC',
       name: 'Rasel',
       flightName: 'Avionics',
       trade: 'E&I Fitt',
       role: 'SUPER_ADMIN',
-      password: '474455',
+      password: '48456',
       status: 'ACTIVE',
       detailOrder: 'DO-155/ADMIN/01',
       detailedAt: new Date().toISOString(),
@@ -282,7 +282,7 @@ export const batchDetailAllAirmen = (airmen: Airman[]): DetailedUserLogin[] => {
   airmen.forEach((airman) => {
     const cleanBd = airman.bdNo.replace(/^BD\/?/i, '').trim();
     const idx = updatedList.findIndex((u) => u.bdNo.toLowerCase() === cleanBd.toLowerCase());
-    const isPrimary = cleanBd === '474455';
+    const isPrimary = cleanBd === '48456';
 
     const entry: DetailedUserLogin = {
       id: idx >= 0 ? updatedList[idx].id : `user-login-${cleanBd}`,
@@ -420,7 +420,7 @@ export const validateUserLogin = (
       return { success: false, message: 'Invalid User ID or Password. Please try again.' };
     }
     // Auto-detail this airman and allow login
-    const isPrimary = cleanInput === '474455';
+    const isPrimary = cleanInput === '48456';
     const newDetail = detailAirmanForLogin(
       matchedAirman,
       isPrimary ? 'SUPER_ADMIN' : 'USER',
@@ -457,7 +457,7 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
     trade: airman.trade,
     loginTimestamp: new Date().toISOString(),
     assignedRole: assignedRole,
-    adminPass: detailedUser?.adminPass || (cleanBd === '474455' ? '1124' : undefined),
+    adminPass: detailedUser?.adminPass || (cleanBd === '48456' ? '1124' : undefined),
     ownerPass: detailedUser?.ownerPass
   };
 
@@ -599,7 +599,7 @@ export const changeAdminPassword = (bdNo: string, currentPass: string, newPass: 
     return { success: false, message: 'User not found in system.' };
   }
 
-  const expectedPass = current[idx].adminPass || (clean === '474455' ? '1124' : '');
+  const expectedPass = current[idx].adminPass || (clean === '48456' ? '1124' : '');
   
   if (!isSuperAdmin && currentPass !== expectedPass) {
     return { success: false, message: 'Current admin password is incorrect.' };

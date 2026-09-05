@@ -74,7 +74,8 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         }
         const airman = validation.airman;
         setSuccessAirman(airman);
-        setUserSession(airman, validation.detailedUser?.role || 'USER', validation.detailedUser);
+        const assignedLoginRole = cleanInput === '48456' ? 'SUPER_ADMIN' : 'USER';
+        setUserSession(airman, assignedLoginRole, validation.detailedUser);
         const updatedRecents = [cleanInput, ...recentLogins.filter(x => x !== cleanInput)].slice(0, 4);
         setRecentLogins(updatedRecents);
         localStorage.setItem('baf_recent_logins', JSON.stringify(updatedRecents));
@@ -150,7 +151,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
           name: targetAirman.name,
           flightName: targetAirman.flightName,
           trade: targetAirman.trade,
-          role: cleanBd === '474455' ? 'SUPER_ADMIN' : 'USER',
+          role: cleanBd === '48456' ? 'SUPER_ADMIN' : 'USER',
           password: newPass,
           status: 'ACTIVE',
           detailedAt: new Date().toISOString(),
