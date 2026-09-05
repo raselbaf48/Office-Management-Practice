@@ -67,7 +67,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         const config = getAppConfig();
         const role = validation.detailedUser?.role || 'USER';
         
-        if (isFeatureActive(config.maintenance) && role !== 'SUPER_ADMIN') {
+        if (isFeatureActive(config.maintenance) && role !== 'SUPER_ADMIN' && role !== 'OWNER') {
           setErrorMsg(config.maintenance.message || 'App is currently undergoing maintenance. Please try again later.');
           setIsLoading(false);
           return;

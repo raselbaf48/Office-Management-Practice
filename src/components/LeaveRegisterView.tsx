@@ -9,7 +9,7 @@ import { EntryHistoryModal } from './EntryHistoryModal';
 interface LeaveRegisterViewProps {
   role?: UserRole;
   airmen: Airman[];
-  onViewProfile?: (airman: Airman) => void;
+  onViewProfile?: (airman: Airman, config?: any) => void;
 }
 
 interface LeaveRecord {
@@ -17,14 +17,15 @@ interface LeaveRecord {
   casualLeaveDays: number;
   annualLeaveDays: number;
   recreationLeaveDays: number;
+  sickLeaveDays: number;
   totalLeaveDays: number;
   f295Days: number;
   currentlyOnLeave: boolean;
-  currentLeaveType?: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Leave';
+  currentLeaveType?: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Sick Leave' | 'Leave';
   currentLeaveRange?: string;
   leaveEntries: Array<{
     date: string;
-    type: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Leave';
+    type: 'Casual Leave' | 'Annual Leave' | 'Recreation Leave' | 'Sick Leave' | 'Leave';
     notes?: string;
     isF295?: boolean;
   }>;
@@ -126,6 +127,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
+  const [summaryFilter, setSummaryFilter] = useState<'Casual' | 'Annual' | 'Recreation' | 'Total' | 'OnLeave' | null>(null);
   const [leaveData, setLeaveData] = useState<Record<string, LeaveRecord>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
@@ -134,7 +136,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   const [showGrantLeaveModal, setShowGrantLeaveModal] = useState<boolean>(false);
   const [grantLeaveFlight, setGrantLeaveFlight] = useState<FlightName>('Avionics');
   const [leaveAirmanId, setLeaveAirmanId] = useState<string>('');
-  const [leaveType, setLeaveType] = useState<'Casual' | 'Annual' | 'Recreation'>('Casual');
+  const [leaveType, setLeaveType] = useState<'Casual' | 'Annual' | 'Recreation' | 'Sick' | ''>('');
   const [leaveFromDate, setLeaveFromDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [leaveToDate, setLeaveToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [savingLeave, setSavingLeave] = useState<boolean>(false);
@@ -162,13 +164,21 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
     }
   }, [leaveFromDate, leaveToDate]);
 
-  // Auto-select Leave Type based on duration (<=10 days => Casual Leave, >10 days => Annual/Recreation)
+  // Auto-select Leave Type based on duration
   useEffect(() => {
-    if (leaveDurationDays <= 10) {
-      setLeaveType('Casual');
-    } else if (leaveType === 'Casual') {
-      setLeaveType('Annual');
-    }
+    setLeaveType((prev) => {
+      // If duration > 10, Casual is invalid. Force it to Annual if it was Casual.
+      if (leaveDurationDays > 10) {
+        if (prev === 'Casual' || prev === '') return 'Annual';
+        return prev;
+      }
+      // If duration <= 10, auto select Casual ONLY if nothing is currently selected
+      if (leaveDurationDays <= 10) {
+        if (prev === '') return 'Casual';
+        return prev;
+      }
+      return prev;
+    });
   }, [leaveDurationDays]);
 
   // Filter airmen for Grant Leave Modal (Strictly 4 flights: Avionics, Mechanics, GCS, Admin)
@@ -298,6 +308,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           casualLeaveDays: 0,
           annualLeaveDays: 0,
           recreationLeaveDays: 0,
+                    sickLeaveDays: 0,
           totalLeaveDays: 0,
           f295Days: 0,
           currentlyOnLeave: false,
@@ -439,7 +450,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
     setSavingLeave(true);
     try {
-      const fullTypeName = leaveType === 'Casual' ? 'Casual Leave' : leaveType === 'Annual' ? 'Annual Leave' : 'Recreation Leave';
+      const fullTypeName = leaveType === 'Casual' ? 'Casual Leave' : leaveType === 'Annual' ? 'Annual Leave' : leaveType === 'Sick' ? 'Sick Leave' : leaveType === 'Recreation' ? 'Recreation Leave' : 'Leave';
       const f295Extra = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
       const notesWithF295 = f295Extra > 0 ? `${fullTypeName} (F-295: ${f295Extra} Free Days)` : fullTypeName;
 
@@ -495,6 +506,16 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
         a.rank.toLowerCase().includes(q) ||
         a.trade.toLowerCase().includes(q);
       if (!match) return false;
+    }
+    
+    if (summaryFilter) {
+      const rec = leaveData[a.id];
+      if (!rec) return false;
+      if (summaryFilter === 'Casual' && rec.casualLeaveDays <= 0) return false;
+      if (summaryFilter === 'Annual' && rec.annualLeaveDays <= 0) return false;
+      if (summaryFilter === 'Recreation' && rec.recreationLeaveDays <= 0) return false;
+      if (summaryFilter === 'Total' && rec.totalLeaveDays <= 0) return false;
+      if (summaryFilter === 'OnLeave' && !rec.currentlyOnLeave) return false;
     }
     return true;
   });
@@ -591,7 +612,9 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Casual' ? null : 'Casual')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs cursor-pointer transition-all ${summaryFilter === 'Casual' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
             Casual Leave
           </div>
@@ -601,7 +624,9 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           <div className="text-[11px] text-slate-500 mt-0.5">Casual leave in {selectedYear}</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Annual' ? null : 'Annual')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs cursor-pointer transition-all ${summaryFilter === 'Annual' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
             Annual Leave
           </div>
@@ -611,7 +636,9 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           <div className="text-[11px] text-slate-500 mt-0.5">Annual privilege leave</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Recreation' ? null : 'Recreation')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs cursor-pointer transition-all ${summaryFilter === 'Recreation' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
             Recreation Leave
           </div>
@@ -621,9 +648,11 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           <div className="text-[11px] text-slate-500 mt-0.5">Recreation leave balance</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Total' ? null : 'Total')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs cursor-pointer transition-all ${summaryFilter === 'Total' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-            Net Leave Consumed
+            Total Leave
           </div>
           <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {totalNetLeave} <span className="text-xs font-semibold text-slate-400">Days</span>
@@ -638,30 +667,21 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           const currentList = leaveRecords.filter((r: any) => r.currentlyOnLeave);
           return (
             
-  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px]">
+  <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'OnLeave' ? null : 'OnLeave')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px] cursor-pointer transition-all ${summaryFilter === 'OnLeave' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
     <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 shrink-0 flex justify-between">
       <span>Currently On Leave</span>
-      <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px]">{currentList.length}</span>
+      
     </div>
-    {currentList.length > 0 ? (
-      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-        
-        {currentList.map((r: any) => {
-          const airman = airmen.find(a => a.id === r.airmanId);
-          return (
-          <div key={r.airmanId} className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex justify-between bg-slate-50 dark:bg-slate-800 p-1.5 rounded-md">
-            <span>{airman ? `${airman.rank} ${airman.name}` : 'Unknown Airman'}</span>
-            <span className="text-[10px] text-slate-400">{airman ? airman.flightName : ''}</span>
-          </div>
-          );
-        })}
-  
+    <div className="flex-1 flex flex-col justify-end">
+      <div className="flex items-baseline space-x-2">
+        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          {currentList.length}
+        </span>
+        <span className="text-xs font-bold text-slate-500 uppercase">Men</span>
       </div>
-    ) : (
-      <div className="flex-1 flex items-center justify-center text-xs text-slate-400 font-medium">
-        Nobody on Leave today
-      </div>
-    )}
+    </div>
   </div>
           );
         })()}
@@ -728,20 +748,20 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   F-295
                 </th>
                 <th className="py-3 px-4 text-center">Current Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={13} className="py-8 text-center text-slate-400">
+                  <td colSpan={12} className="py-8 text-center text-slate-400">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-500" />
                     Loading Leave Register...
                   </td>
                 </tr>
               ) : filteredAirmen.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-8 text-center text-slate-400">
+                  <td colSpan={12} className="py-8 text-center text-slate-400">
                     No airmen match your search criteria.
                   </td>
                 </tr>
@@ -751,6 +771,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                     casualLeaveDays: 0,
                     annualLeaveDays: 0,
                     recreationLeaveDays: 0,
+                    sickLeaveDays: 0,
                     totalLeaveDays: 0,
                     f295Days: 0,
                     currentlyOnLeave: false,
@@ -760,7 +781,8 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   return (
                     <tr
                       key={airman.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'LEAVE', historyOnly: true })}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                     >
                       <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
                         {String(idx + 1).padStart(2, '0')}
@@ -775,7 +797,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                       </td>
                       <td className="py-3 px-4 font-black text-slate-900 dark:text-white">
                         <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
+                          onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'LEAVE', historyOnly: true })}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"
                           title="Click to view full duty & leave history"
                         >
@@ -844,15 +866,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
-                          className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center space-x-1 ml-auto cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3 text-slate-500" />
-                          <span>History</span>
-                        </button>
-                      </td>
+                      
                     </tr>
                   );
                 })
@@ -981,6 +995,15 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                       setLeaveFromDate(newFrom);
                       if (!leaveToDate || leaveToDate < newFrom) {
                         setLeaveToDate(newFrom);
+                      }
+                      if (selectedPresetDays !== null) {
+                        const d = new Date(newFrom);
+                        d.setDate(d.getDate() + selectedPresetDays - 1);
+                        setLeaveToDate(d.toISOString().split('T')[0]);
+                      } else if (isCustomPresetActive) {
+                        const d = new Date(newFrom);
+                        d.setDate(d.getDate() + customLeaveDays - 1);
+                        setLeaveToDate(d.toISOString().split('T')[0]);
                       }
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
@@ -1148,7 +1171,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 </div>
               </div>
 
-              {/* Leave Type Section (Auto-Select <=10 days => Casual Leave, >10 days => Annual/Recreation options) */}
+              {/* Leave Type Section */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
@@ -1159,50 +1182,62 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                   </span>
                 </div>
 
-                {leaveDurationDays <= 10 ? (
-                  <div className="p-3 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2.5 py-1 rounded-lg bg-sky-600 text-white font-black text-xs">
-                        Casual Leave
-                      </span>
-                      <span className="text-xs text-sky-800 dark:text-sky-300 font-semibold">
-                        Auto-selected (≤ 10 days)
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-bold text-sky-700 dark:text-sky-400">
-                      Casual
-                    </span>
-                  </div>
+                <div className="grid grid-cols-2 gap-2 mb-1.5">
+                  <button
+                    type="button"
+                    disabled={leaveDurationDays > 10}
+                    onClick={() => setLeaveType('Casual')}
+                    className={`py-2 text-xs font-black rounded-xl border transition-all ${
+                      leaveDurationDays > 10 ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
+                      leaveType === 'Casual'
+                        ? 'bg-sky-600 text-white border-sky-600 shadow-xs cursor-pointer'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 cursor-pointer'
+                    }`}
+                  >
+                    Casual Leave
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaveType('Annual')}
+                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                      leaveType === 'Annual'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Annual Leave
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaveType('Recreation')}
+                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                      leaveType === 'Recreation'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Recreation Leave
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaveType('Sick')}
+                    className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                      leaveType === 'Sick'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Sick Leave
+                  </button>
+                </div>
+                {leaveDurationDays > 10 ? (
+                  <p className="text-[10.5px] text-slate-400">
+                    Duration is &gt; 10 days: Casual Leave disabled. Selected {leaveType || 'None'}.
+                  </p>
                 ) : (
-                  <div className="space-y-1.5">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setLeaveType('Annual')}
-                        className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                          leaveType === 'Annual'
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        Annual Leave
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLeaveType('Recreation')}
-                        className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                          leaveType === 'Recreation'
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        Recreation Leave
-                      </button>
-                    </div>
-                    <p className="text-[10.5px] text-slate-400">
-                      Duration is &gt; 10 days: select either Annual Leave or Recreation Leave.
-                    </p>
-                  </div>
+                  <p className="text-[10.5px] text-slate-400">
+                    Duration is &le; 10 days: Casual Leave auto-selected. Selected {leaveType || 'None'}.
+                  </p>
                 )}
               </div>
 

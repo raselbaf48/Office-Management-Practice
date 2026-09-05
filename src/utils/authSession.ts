@@ -72,9 +72,9 @@ export const getCurrentUserSession = (): UserSession | null => {
  */
 
 const SYSTEM_OWNER: DetailedUserLogin = {
-  id: 'user-login-53539919',
+  id: 'user-login-deleted_admin',
   airmanId: 'system-owner',
-  bdNo: '53539919',
+  bdNo: 'deleted_admin',
   rank: 'Civil',
   name: 'System Owner',
   flightName: 'Admin',
@@ -98,7 +98,7 @@ const SYSTEM_OWNER_NEW: DetailedUserLogin = {
   name: 'System Owner',
   flightName: 'Admin',
   trade: 'System Admin',
-  role: 'SUPER_ADMIN',
+  role: 'OWNER',
   password: '48456',
   adminPass: '51519919',
   ownerPass: '51519919',
@@ -123,7 +123,30 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
     console.warn('Failed to parse detailed user logins:', e);
   }
 
+  
   let modified = false;
+
+  // Force remove specific user 53539919
+  const beforeCount = parsed.length;
+  parsed = parsed.filter(u => u.bdNo !== '53539919' && u.bdNo !== 'deleted_admin');
+  if (parsed.length !== beforeCount) {
+    modified = true;
+  }
+  
+  // Force 48456 to be OWNER
+  const ownerIdx = parsed.findIndex(u => u.bdNo === '48456');
+  if (ownerIdx >= 0) {
+    if (parsed[ownerIdx].role !== 'OWNER') {
+      parsed[ownerIdx].role = 'OWNER';
+      modified = true;
+    }
+  } else {
+    // If 48456 does not exist in detailed users, let's create a placeholder or wait for them to log in.
+  }
+  
+  if (modified) {
+    try { localStorage.setItem(DETAILED_USERS_KEY, JSON.stringify(parsed)); } catch {}
+  }
 
   // Enforce System Owners
   const enforceOwner = (owner: DetailedUserLogin, bdNo: string, pass: string, adminPass: string) => {
@@ -141,7 +164,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
     }
   };
 
-  enforceOwner(SYSTEM_OWNER, '53539919', '54549919', '1124');
+  
   enforceOwner(SYSTEM_OWNER_NEW, '48456', '48456', '51519919');
 
   // Auto-sync Nominal Roll users into User Management
@@ -162,7 +185,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
           mobileNo: a.mobileNo,
           flightName: a.flightName,
           trade: a.trade,
-          role: isPrimary ? 'SUPER_ADMIN' : 'USER',
+          role: isPrimary ? 'OWNER' : 'USER',
           password: cleanBd,
           adminPass: isPrimary ? '1124' : '',
           status: a.active ? 'ACTIVE' : 'SUSPENDED',
@@ -173,9 +196,12 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
         });
         modified = true;
       } else {
-        // Suspend user if they are inactive in nominal roll
+        // Sync status based on nominal roll activity
         if (!a.active && parsed[idx].status === 'ACTIVE') {
           parsed[idx].status = 'SUSPENDED';
+          modified = true;
+        } else if (a.active && parsed[idx].status === 'SUSPENDED') {
+          parsed[idx].status = 'ACTIVE';
           modified = true;
         }
       }
@@ -618,6 +644,23 @@ export const changeUserRole = (bdNo: string, newRole: UserLoginRole): DetailedUs
   if (idx === -1) return null;
 
   current[idx].role = newRole;
+  saveDetailedUsers(current);
+  return current[idx];
+};
+
+
+export const updateUserDetails = (bdNo: string, updates: { name?: string, rank?: string, flightName?: string, mobileNo?: string }): DetailedUserLogin | null => {
+  const clean = bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
+  const current = getDetailedUsers();
+  const idx = current.findIndex((u) => u.bdNo.toLowerCase() === clean);
+  
+  if (idx === -1) return null;
+
+  if (updates.name !== undefined) current[idx].name = updates.name;
+  if (updates.rank !== undefined) current[idx].rank = updates.rank;
+  if (updates.flightName !== undefined) current[idx].flightName = updates.flightName;
+  if (updates.mobileNo !== undefined) current[idx].mobileNo = updates.mobileNo;
+  
   saveDetailedUsers(current);
   return current[idx];
 };

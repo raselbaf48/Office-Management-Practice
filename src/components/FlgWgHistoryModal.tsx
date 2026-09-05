@@ -185,8 +185,8 @@ export const FlgWgHistoryModal: React.FC<FlgWgHistoryModalProps> = ({ onClose })
   );
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm no-print">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden text-slate-800 dark:text-slate-100 flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm no-print">
+      <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-2xl shadow-xl w-full max-w-lg overflow-hidden text-slate-800 dark:text-slate-100 flex flex-col h-full sm:h-auto sm:max-h-[85vh]">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
           <h3 className="font-bold text-lg flex items-center gap-2">
             <Calendar className="w-5 h-5 text-emerald-600" />

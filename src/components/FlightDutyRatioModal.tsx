@@ -213,8 +213,8 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-6xl max-h-[90vh] shadow-2xl flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl w-full max-w-6xl h-full sm:h-auto sm:max-h-[90vh] shadow-2xl flex flex-col border-0 sm:border border-slate-200 dark:border-slate-800 overflow-hidden relative">
         
         {/* Header */}
         <div className="flex-none flex items-start justify-between border-b border-slate-200 dark:border-slate-800 p-6">

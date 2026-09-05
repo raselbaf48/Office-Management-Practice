@@ -1,0 +1,5 @@
+src/components/SettingsModal.tsx(89,21): error TS2552: Cannot find name 'appConfigHistory'. Did you mean 'addAppConfigHistory'?
+src/components/SettingsModal.tsx(90,5): error TS2552: Cannot find name 'setAppConfigHistory'. Did you mean 'getAppConfigHistory'?
+src/components/SettingsModal.tsx(688,54): error TS2304: Cannot find name 'handleDeleteHistoryItem'.
+src/components/SettingsModal.tsx(790,54): error TS2304: Cannot find name 'handleDeleteHistoryItem'.
+src/components/UserManagementTab.tsx(135,11): error TS2739: Type '{ id: string; bdNo: any; name: any; rank: any; mobileNo: any; role: any; status: "ACTIVE"; password: any; detailedAt: string; detailedBy: string; }' is missing the following properties from type 'DetailedUserLogin': flightName, trade

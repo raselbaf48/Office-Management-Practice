@@ -225,7 +225,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
               title="Assign or update duty (GD, Halishahar, Taskforce, etc.)"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Assign Duty</span>
+              <span>Assign Duty / Activity</span>
             </button>
           )}
 

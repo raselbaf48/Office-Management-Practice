@@ -9,7 +9,7 @@ import { EntryHistoryModal } from './EntryHistoryModal';
 interface DeploymentRegisterViewProps {
   role?: UserRole;
   airmen: Airman[];
-  onViewProfile?: (airman: Airman) => void;
+  onViewProfile?: (airman: Airman, config?: any) => void;
 }
 
 interface AttRecord {
@@ -37,6 +37,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
+  const [summaryFilter, setSummaryFilter] = useState<'OnAtt' | 'TotalAtt' | 'Available' | null>(null);
   const [attData, setAttData] = useState<Record<string, AttRecord>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
@@ -250,6 +251,13 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
         a.trade.toLowerCase().includes(q);
       if (!match) return false;
     }
+    
+    if (summaryFilter) {
+      const rec = attData[a.id];
+      if (summaryFilter === 'OnAtt' && (!rec || !rec.currentlyOnAtt)) return false;
+      if (summaryFilter === 'TotalAtt' && (!rec || rec.totalAttDays <= 0)) return false;
+      if (summaryFilter === 'Available' && (rec && rec.currentlyOnAtt)) return false;
+    }
     return true;
   });
 
@@ -320,33 +328,28 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
         {(() => {
           const currentList = attRecordsList.filter((r: any) => r.currentlyOnAtt);
           return (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px]">
+            <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'OnAtt' ? null : 'OnAtt')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px] cursor-pointer transition-all ${summaryFilter === 'OnAtt' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
               <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 shrink-0 flex justify-between">
                 <span>Currently On Deployment</span>
-                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{currentList.length}</span>
+                
               </div>
-              {currentList.length > 0 ? (
-                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                  {currentList.map((r: any) => {
-                    const airman = airmen.find(a => a.id === r.airmanId);
-                    return (
-                      <div key={r.airmanId} className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex justify-between bg-slate-50 dark:bg-slate-800 p-1.5 rounded-md">
-                        <span>{airman ? `${airman.rank} ${airman.name}` : 'Unknown Airman'}</span>
-                        <span className="text-[10px] text-slate-400">{airman ? airman.flightName : ''}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-xs text-slate-400 font-medium">
-                  Nobody on Deployment today
-                </div>
-              )}
+              <div className="flex-1 flex flex-col justify-end">
+      <div className="flex items-baseline space-x-2">
+        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          {currentList.length}
+        </span>
+        <span className="text-xs font-bold text-slate-500 uppercase">Men</span>
+      </div>
+    </div>
             </div>
           );
         })()}
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'TotalAtt' ? null : 'TotalAtt')}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-xs flex items-center justify-between cursor-pointer transition-all ${summaryFilter === 'TotalAtt' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Deployment Days ({selectedYear})</p>
             <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalAttDaysAll} Days</h4>
@@ -357,7 +360,9 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Available' ? null : 'Available')}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-xs flex items-center justify-between cursor-pointer transition-all ${summaryFilter === 'Available' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Available Personnel</p>
             <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{airmen.length - activeAttCount} Airmen</h4>
@@ -422,7 +427,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                   Total Deployment Days ({selectedYear})
                 </th>
                 <th className="py-3 px-4 text-center">Current Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -451,7 +456,8 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                   return (
                     <tr
                       key={airman.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'ATT', historyOnly: true })}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                     >
                       <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
                         {String(idx + 1).padStart(2, '0')}
@@ -466,7 +472,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                       </td>
                       <td className="py-3 px-4 font-black text-slate-900 dark:text-white">
                         <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
+                          onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'ATT', historyOnly: true })}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"
                           title="Click to view full duty & Deployment history"
                         >
@@ -499,15 +505,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
-                          className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center space-x-1 ml-auto cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3 text-slate-500" />
-                          <span>History</span>
-                        </button>
-                      </td>
+                      
                     </tr>
                   );
                 })
@@ -673,6 +671,11 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                       if (!attToDate || attToDate < newFrom) {
                         setAttToDate(newFrom);
                       }
+                      if (selectedPresetDays !== null) {
+                        const d = new Date(newFrom);
+                        d.setDate(d.getDate() + selectedPresetDays - 1);
+                        setAttToDate(d.toISOString().split('T')[0]);
+                      }
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                   />
@@ -685,7 +688,10 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                     
                     value={attToDate}
                     min={attFromDate}
-                    onChange={(e) => setAttToDate(e.target.value)}
+                    onChange={(e) => {
+                      setAttToDate(e.target.value);
+                      setSelectedPresetDays(null);
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                   />
                 </div>

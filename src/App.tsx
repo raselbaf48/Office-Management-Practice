@@ -39,6 +39,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
   const [role, setRole] = useState<UserRole>(() => {
     const saved = sessionStorage.getItem('baf_user_role');
+    if (saved === 'OWNER') return 'OWNER';
     if (saved === 'SUPER_ADMIN') return 'SUPER_ADMIN';
     return saved === 'ADMIN' ? 'ADMIN' : 'USER';
   });
@@ -209,7 +210,12 @@ return () => mediaQuery.removeEventListener('change', listener);
   const [conflictCount, setConflictCount] = useState<number>(0);
 
   // Modals
-  const [selectedAirmanProfile, setSelectedAirmanProfile] = useState<Airman | null>(null);
+  const [selectedAirmanProfile, setSelectedAirmanProfile] = useState<{
+    airman: Airman;
+    initialTab?: 'profile' | 'history';
+    initialCategory?: string;
+    historyOnly?: boolean;
+  } | null>(null);
   const [isAddEditOpen, setIsAddEditOpen] = useState<boolean>(false);
   const [airmanToEdit, setAirmanToEdit] = useState<Airman | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
@@ -516,7 +522,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               selectedFlight={selectedFlight}
               setSelectedFlight={setSelectedFlight}
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
           )}
@@ -530,7 +536,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               setSelectedDate={setSelectedDate}
               initialDocumentType="PARADE"
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
           )}
@@ -544,7 +550,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               setSelectedDate={setSelectedDate}
               initialDocumentType="PT"
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
           )}
@@ -557,11 +563,12 @@ return () => mediaQuery.removeEventListener('change', listener);
               airmen={airmen}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
           {activeTab === 'nominal' && (
             <NominalRoll
+              initialFlightFilter={selectedFlight === "Overall" || selectedFlight === "All" ? "All" : selectedFlight}
               airmen={airmen}
               role={role}
               userFlight={userSession?.flightName}
@@ -576,7 +583,7 @@ return () => mediaQuery.removeEventListener('change', listener);
                 setIsAddEditOpen(true);
               }}
               onDeleteAirman={handleDeleteAirman}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -598,7 +605,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               role={role}
               userFlight={userSession?.flightName}
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -607,7 +614,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               role={role}
               userFlight={userSession?.flightName}
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
           {activeTab === 'attachment-register' && (
@@ -615,7 +622,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               role={role}
               userFlight={userSession?.flightName}
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -625,7 +632,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               userFlight={userSession?.flightName}
               airmen={airmen}
               selectedDate={selectedDate}
-              onViewAirmanProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -636,7 +643,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               userFlight={userSession?.flightName}
               conflictCount={conflictCount}
               setConflictCount={setConflictCount}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -645,7 +652,7 @@ return () => mediaQuery.removeEventListener('change', listener);
               role={role}
               userFlight={userSession?.flightName}
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
@@ -659,14 +666,14 @@ return () => mediaQuery.removeEventListener('change', listener);
           {activeTab === 'analytics' && (
             <DutyAnalytics
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
             />
           )}
 
           {activeTab === 'conflicts' && (
             <DutyConflictMonitor
               airmen={airmen}
-              onViewProfile={(a) => setSelectedAirmanProfile(a)}
+              onViewProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onNavigateToRegister={() => setActiveTab('register')}
             />
           )}
@@ -691,7 +698,10 @@ return () => mediaQuery.removeEventListener('change', listener);
       
       {selectedAirmanProfile && (
         <AirmanProfileModal
-          airman={selectedAirmanProfile}
+          airman={selectedAirmanProfile.airman}
+          initialTab={selectedAirmanProfile.initialTab}
+          initialCategory={selectedAirmanProfile.initialCategory}
+          historyOnly={selectedAirmanProfile.historyOnly}
           onClose={() => setSelectedAirmanProfile(null)}
           onEditAirman={(a) => {
             setAirmanToEdit(a);

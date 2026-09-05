@@ -9,7 +9,7 @@ import { EntryHistoryModal } from './EntryHistoryModal';
 interface TdyRegisterViewProps {
   role?: UserRole;
   airmen: Airman[];
-  onViewProfile?: (airman: Airman) => void;
+  onViewProfile?: (airman: Airman, config?: any) => void;
 }
 
 interface TdyRecord {
@@ -36,6 +36,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()));
+  const [summaryFilter, setSummaryFilter] = useState<'OnTdy' | 'TotalTdy' | 'Available' | null>(null);
   const [tdyData, setTdyData] = useState<Record<string, TdyRecord>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
@@ -52,7 +53,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
   const [tdyToDate, setTdyToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [savingTdy, setSavingTdy] = useState<boolean>(false);
   const [tdySuccessMsg, setTdySuccessMsg] = useState<string>('');
-  const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(null);
+  const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(1);
 
   // Calculate calendar days in current TDY selection
   const tdyDurationDays = useMemo(() => {
@@ -243,6 +244,13 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
         a.trade.toLowerCase().includes(q);
       if (!match) return false;
     }
+    
+    if (summaryFilter) {
+      const rec = tdyData[a.id];
+      if (summaryFilter === 'OnTdy' && (!rec || !rec.currentlyOnTdy)) return false;
+      if (summaryFilter === 'TotalTdy' && (!rec || rec.totalTdyDays <= 0)) return false;
+      if (summaryFilter === 'Available' && (rec && rec.currentlyOnTdy)) return false;
+    }
     return true;
   });
 
@@ -313,33 +321,28 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
         {(() => {
           const currentList = tdyRecordsList.filter((r: any) => r.currentlyOnTdy);
           return (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px]">
+            <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'OnTdy' ? null : 'OnTdy')}
+          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 shadow-xs flex flex-col h-full max-h-[140px] cursor-pointer transition-all ${summaryFilter === 'OnTdy' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
               <div className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 shrink-0 flex justify-between">
                 <span>Currently On TDY</span>
-                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">{currentList.length}</span>
+                
               </div>
-              {currentList.length > 0 ? (
-                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                  {currentList.map((r: any) => {
-                    const airman = airmen.find(a => a.id === r.airmanId);
-                    return (
-                      <div key={r.airmanId} className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex justify-between bg-slate-50 dark:bg-slate-800 p-1.5 rounded-md">
-                        <span>{airman ? `${airman.rank} ${airman.name}` : 'Unknown Airman'}</span>
-                        <span className="text-[10px] text-slate-400">{airman ? airman.flightName : ''}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-xs text-slate-400 font-medium">
-                  Nobody on TDY today
-                </div>
-              )}
+              <div className="flex-1 flex flex-col justify-end">
+      <div className="flex items-baseline space-x-2">
+        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          {currentList.length}
+        </span>
+        <span className="text-xs font-bold text-slate-500 uppercase">Men</span>
+      </div>
+    </div>
             </div>
           );
         })()}
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'TotalTdy' ? null : 'TotalTdy')}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-xs flex items-center justify-between cursor-pointer transition-all ${summaryFilter === 'TotalTdy' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total TDY Days ({selectedYear})</p>
             <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totalTdyDaysAll} Days</h4>
@@ -350,7 +353,9 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+        <div 
+          onClick={() => setSummaryFilter(summaryFilter === 'Available' ? null : 'Available')}
+          className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-xs flex items-center justify-between cursor-pointer transition-all ${summaryFilter === 'Available' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300'}`}>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Available Personnel</p>
             <h4 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{airmen.length - activeTdyCount} Airmen</h4>
@@ -415,7 +420,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   Total TDY Days ({selectedYear})
                 </th>
                 <th className="py-3 px-4 text-center">Current Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -444,7 +449,8 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   return (
                     <tr
                       key={airman.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'TDY', historyOnly: true })}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                     >
                       <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
                         {String(idx + 1).padStart(2, '0')}
@@ -459,7 +465,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                       </td>
                       <td className="py-3 px-4 font-black text-slate-900 dark:text-white">
                         <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
+                          onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'TDY', historyOnly: true })}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"
                           title="Click to view full duty & TDY history"
                         >
@@ -492,15 +498,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onViewProfile && onViewProfile(airman)}
-                          className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center space-x-1 ml-auto cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3 text-slate-500" />
-                          <span>History</span>
-                        </button>
-                      </td>
+                      
                     </tr>
                   );
                 })
@@ -615,21 +613,35 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Destination (Mandatory) <span className="text-red-500">*</span>
                 </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {['AIR HQ', 'BAF AKR', 'BAF BSR', 'BAF MTR', 'BAF CXB', 'BAF SMD', 'Custom'].map((dest) => (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['AIR HQ', 'BAF AKR', 'BAF BSR', 'BAF MTR', 'BAF CXB', 'BAF SMD'].map((dest) => (
                     <button
                       key={dest}
                       type="button"
-                      onClick={() => setTdyDestination(dest)}
+                      onClick={() => {
+                          setTdyDestination(dest);
+                          setTdyCustomDestination('');
+                      }}
                       className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                         tdyDestination === dest
                           ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      {dest === 'Custom' ? 'Other Custom...' : dest}
+                      {dest}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setTdyDestination('Custom')}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                      tdyDestination === 'Custom'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Custom
+                  </button>
                 </div>
                 {tdyDestination === 'Custom' && (
                   <input
@@ -638,6 +650,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     onChange={(e) => setTdyCustomDestination(e.target.value)}
                     placeholder="Enter custom destination..."
                     className="w-full mt-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
+                    required
                   />
                 )}
               </div>
@@ -656,67 +669,95 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 />
               </div>
 
-              {/* Date Range */}
+              {/* Assignment Date Presets */}
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
+                    Assignment Date
+                  </label>
+                 <div className="grid grid-cols-5 gap-1.5 mb-3">
+                  {[{label: 'Today', val: 1}, {label: '2 Days', val: 2}, {label: '3 Days', val: 3}, {label: '7 Days', val: 7}, {label: '15 Days', val: 15}].map((opt) => {
+                    const isSelected = selectedPresetDays === opt.val;
+                    return (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPresetDays(opt.val);
+                          if (tdyFromDate) {
+                            const d = new Date(tdyFromDate);
+                            d.setDate(d.getDate() + opt.val - 1);
+                            setTdyToDate(d.toISOString().split('T')[0]);
+                          }
+                        }}
+                        className={`py-1.5 px-1 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
+                            : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Date Range (Dynamic based on Preset) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                     From Date
                   </label>
                   <DateNavigator
-                    
                     value={tdyFromDate}
                     onChange={(e) => {
-                      const newFrom = e.target.value;
-                      setTdyFromDate(newFrom);
-                      if (!tdyToDate || tdyToDate < newFrom) {
-                        setTdyToDate(newFrom);
+                      const val = e.target.value;
+                      setTdyFromDate(val);
+                      
+                      // Keep To Date in sync if it's a single day selection
+                      if (selectedPresetDays === 1 || selectedPresetDays === -1) {
+                          setTdyToDate(val);
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          setSelectedPresetDays(val === todayStr ? 1 : -1);
+                      } else if (selectedPresetDays !== null) {
+                          const d = new Date(val);
+                          d.setDate(d.getDate() + selectedPresetDays - 1);
+                          setTdyToDate(d.toISOString().split('T')[0]);
+                      } else {
+                          if (tdyToDate < val) setTdyToDate(val);
                       }
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                    To Date
-                  </label>
-                  <DateNavigator
-                    
-                    value={tdyToDate}
-                    min={tdyFromDate}
-                    onChange={(e) => setTdyToDate(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
-                  />
-                </div>
+                
+                {/* Show To Date only if > 1 day selected, or if user is manually overriding */}
+                {selectedPresetDays !== 1 && selectedPresetDays !== -1 && (
+                    <div className="animate-fadeIn">
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                        To Date
+                      </label>
+                      <DateNavigator
+                        value={tdyToDate}
+                        min={tdyFromDate}
+                        onChange={(e) => {
+                          setTdyToDate(e.target.value);
+                          setSelectedPresetDays(null); // Custom end date removes preset
+                        }}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                      />
+                    </div>
+                )}
               </div>
 
-              {/* Quick Presets (3, 7, 14, 30, 60 Days) */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Quick TDY Duration Presets:</span>
-                  <span className="text-[11px] text-slate-400">Sets 'To Date' automatically</span>
+              {/* Real-time Duration Summary */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 mt-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Total TDY Span:</span>
+                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">
+                    {tdyDurationDays} Calendar Day{tdyDurationDays > 1 ? 's' : ''}
+                  </span>
                 </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {[3, 7, 14, 30, 60].map((days) => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => applyPresetDays(days)}
-                      className={`py-1.5 px-1 bg-white dark:bg-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs text-center ${
-                        selectedPresetDays === days ? 'ring-2 ring-emerald-500 bg-emerald-50 text-emerald-800' : ''
-                      }`}
-                    >
-                      {days} Days
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Total Duration Summary */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-600 dark:text-slate-400">Total TDY Span:</span>
-                <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                  {tdyDurationDays} Calendar Day{tdyDurationDays > 1 ? 's' : ''}
-                </span>
               </div>
 
               {/* Buttons */}

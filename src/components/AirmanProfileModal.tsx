@@ -9,10 +9,13 @@ interface AirmanProfileModalProps {
   onClose: () => void;
   onEditAirman?: (airman: Airman) => void;
   role?: string;
+  initialTab?: 'profile' | 'history';
+  initialCategory?: string;
+  historyOnly?: boolean;
 }
 
-export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, onClose, onEditAirman, role }) => {
-  const [activeTab, setActiveTab] = useState<'history' | 'profile'>('history');
+export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, onClose, onEditAirman, role, initialTab = 'profile', initialCategory = 'ALL', historyOnly = false }) => {
+  const [activeTab, setActiveTab] = useState<'history' | 'profile'>(historyOnly ? 'history' : initialTab);
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -28,7 +31,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
   });
   const [assignments, setAssignments] = useState<DutyAssignment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialCategory);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -101,16 +104,64 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
   ).length;
   const totalLeave = assignments.filter((a) => a.dutyCode === 'LEAVE').length;
 
+  
+  const getGroupedList = (list) => {
+    if (list.length === 0) return [];
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    const groups = [];
+    let currentGroup = [sorted[0]];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i];
+      const prev = currentGroup[currentGroup.length - 1];
+      
+      const currDate = new Date(current.date);
+      const prevDate = new Date(prev.date);
+      const diffTime = Math.abs(currDate.getTime() - prevDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1 && current.dutyCode === prev.dutyCode && current.notes === prev.notes) {
+        currentGroup.push(current);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = [current];
+      }
+    }
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+    
+    return groups;
+  };
+
+  const formatDateRange = (startDate, endDate) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formatSingle = (dateStr) => {
+      if(!dateStr) return '';
+      const parts = dateStr.split('-');
+      const d = parseInt(parts[2], 10);
+      const m = months[parseInt(parts[1], 10) - 1];
+      return `${d < 10 ? '0' + d : d} ${m}`;
+    };
+    
+    if (startDate === endDate) return formatSingle(startDate);
+    return `${formatSingle(startDate)} - ${formatSingle(endDate)}`;
+  };
+
   const filteredList = assignments.filter((a) => {
-    if (categoryFilter === 'DUTY') return !['LEAVE', 'TDY', 'DUTY_OFF', 'ON_PARADE'].includes(a.dutyCode);
+    if (categoryFilter === 'DUTY') return !['LEAVE', 'TDY', 'ATT', 'DUTY_OFF', 'ON_PARADE'].includes(a.dutyCode);
+    if (categoryFilter === 'ATT') return a.dutyCode === 'ATT' || a.dutyCode === 'BAKE_N_BITE';
     if (categoryFilter === 'LEAVE') return a.dutyCode === 'LEAVE';
     if (categoryFilter === 'TDY') return a.dutyCode === 'TDY';
     return true;
   });
 
+  const isGroupedView = categoryFilter === 'LEAVE' || categoryFilter === 'TDY' || categoryFilter === 'ATT';
+  const groupedList = isGroupedView ? getGroupedList(filteredList) : [];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-3 sm:p-5">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-0 sm:p-5">
+      <div className="bg-white dark:bg-slate-900 border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-3xl shadow-2xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-slate-900 text-white p-5 flex items-start justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center space-x-3.5">
@@ -134,14 +185,8 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => window.print()}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Print History"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
-            {onEditAirman && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+            
+            {onEditAirman && !historyOnly && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
               <button
                 onClick={() => { onClose(); onEditAirman(airman); }}
                 className="p-2 rounded-xl text-emerald-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -150,27 +195,12 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                 <Settings className="w-4 h-4" />
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            
           </div>
         </div>
 
-        {/* Tab switch */}
+        {!historyOnly && (
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-5 pt-3 shrink-0">
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`pb-2.5 px-4 text-xs font-extrabold border-b-2 transition-all ${
-              activeTab === 'history'
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Duty & Leave History
-          </button>
           <button
             onClick={() => setActiveTab('profile')}
             className={`pb-2.5 px-4 text-xs font-extrabold border-b-2 transition-all ${
@@ -179,9 +209,20 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Airman Profile Details
+            Profile Details
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`pb-2.5 px-4 text-xs font-extrabold border-b-2 transition-all ${
+              activeTab === 'history'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            History
           </button>
         </div>
+      )}
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -236,24 +277,27 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                 </div>
 
                 {/* Category toggle */}
-                <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-bold">
-                  {(['ALL', 'DUTY', 'LEAVE', 'TDY'] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setCategoryFilter(cat)}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        categoryFilter === cat
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+                {!historyOnly && (
+                  <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-bold">
+                    {(['ALL', 'DUTY', 'LEAVE', 'TDY', 'ATT'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setCategoryFilter(cat)}
+                        className={`px-2.5 py-1 rounded-lg transition-all ${
+                          categoryFilter === cat
+                            ? 'bg-emerald-600 text-white'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Counters Summary */}
+              {!historyOnly && (
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-center">
                   <div className="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase">GD</div>
@@ -280,61 +324,106 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                   <div className="text-base font-black text-purple-800 dark:text-purple-200">{alCount}</div>
                 </div>
               </div>
+              )}
 
-              {/* Assignments Table */}
+              
+            {/* Assignments Table */}
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
-                      <th className="py-2.5 px-3.5">Date</th>
-                      <th className="py-2.5 px-3.5">Duty / Status</th>
-                      <th className="py-2.5 px-3.5">Shift</th>
-                      <th className="py-2.5 px-3.5">Remarks / Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={4} className="py-6 text-center text-slate-400">
-                          Loading duty history...
-                        </td>
+                {isGroupedView ? (
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3.5">Ser No</th>
+                        <th className="py-2.5 px-3.5">{categoryFilter === 'LEAVE' ? 'Leave Type' : 'Destination'}</th>
+                        <th className="py-2.5 px-3.5">Period</th>
+                        <th className="py-2.5 px-3.5 text-right">Total</th>
                       </tr>
-                    ) : filteredList.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-6 text-center text-slate-400">
-                          No duty or leave records found for this period.
-                        </td>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {loading ? (
+                        <tr><td colSpan={4} className="py-6 text-center text-slate-400">Loading duty history...</td></tr>
+                      ) : groupedList.length === 0 ? (
+                        <tr><td colSpan={4} className="py-6 text-center text-slate-400">No records found for this period.</td></tr>
+                      ) : (
+                        groupedList.map((group, idx) => {
+                          const first = group[0];
+                          const last = group[group.length - 1];
+                          const typeOrDest = categoryFilter === 'LEAVE' ? (first.notes || 'Leave') : (first.notes || (categoryFilter === 'TDY' ? 'TDY' : 'Deployment'));
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="py-2.5 px-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {String(idx + 1).padStart(2, '0')}
+                              </td>
+                              <td className="py-2.5 px-3.5 font-bold text-slate-700 dark:text-slate-300">
+                                {typeOrDest}
+                              </td>
+                              <td className="py-2.5 px-3.5 text-slate-600 dark:text-slate-400 font-semibold whitespace-nowrap">
+                                {formatDateRange(first.date, last.date)}
+                              </td>
+                              <td className="py-2.5 px-3.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                                {String(group.length).padStart(2, '0')} days
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3.5">Date</th>
+                        <th className="py-2.5 px-3.5">Duty / Status</th>
+                        <th className="py-2.5 px-3.5">Shift</th>
+                        <th className="py-2.5 px-3.5">Remarks / Details</th>
                       </tr>
-                    ) : (
-                      filteredList.map((item, idx) => {
-                        const typeInfo = DUTY_TYPE_MAP[item.dutyCode];
-                        return (
-                          <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                            <td className="py-2.5 px-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
-                              {item.date}
-                            </td>
-                            <td className="py-2.5 px-3.5">
-                              <span
-                                className={`px-2 py-0.5 rounded font-black text-[10px] ${
-                                  typeInfo?.badgeBg || 'bg-slate-100'
-                                } ${typeInfo?.badgeText || 'text-slate-800'}`}
-                              >
-                                {typeInfo?.name || item.dutyCode}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3.5 text-slate-600 dark:text-slate-400 font-semibold">
-                              {item.idaShift || '-'}
-                            </td>
-                            <td className="py-2.5 px-3.5 text-slate-500 dark:text-slate-400 italic">
-                              {item.notes || '-'}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {loading ? (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-slate-400">
+                            Loading duty history...
+                          </td>
+                        </tr>
+                      ) : filteredList.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-slate-400">
+                            No duty or leave records found for this period.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredList.map((item, idx) => {
+                          const typeInfo = DUTY_TYPE_MAP[item.dutyCode];
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="py-2.5 px-3.5 font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {item.date}
+                              </td>
+                              <td className="py-2.5 px-3.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded font-black text-[10px] ${
+                                    typeInfo?.badgeBg || 'bg-slate-100'
+                                  } ${typeInfo?.badgeText || 'text-slate-800'}`}
+                                >
+                                  {typeInfo?.name || item.dutyCode}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3.5 font-semibold text-slate-600 dark:text-slate-400">
+                                {item.shift || '-'}
+                              </td>
+                              <td className="py-2.5 px-3.5 text-slate-600 dark:text-slate-400">
+                                {item.notes || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
+
             </div>
           ) : (
             /* Profile Details Tab */

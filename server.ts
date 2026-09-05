@@ -914,7 +914,7 @@ Return ONLY valid JSON matching this structure:
 
       // AI Analysis with Gemini
       if (process.env.GEMINI_API_KEY) {
-        const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+        const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-pro-preview'];
 
         // If total pages <= 6: analyze all in one prompt
         // If total pages > 6: chunk into batches of 3-4 pages to guarantee complete coverage

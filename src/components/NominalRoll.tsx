@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Airman, FlightName, Rank, UserRole } from '../types';
-import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload, KeyRound, UserCheck } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload, KeyRound, UserCheck, AlertTriangle } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { exportNominalRollDocx } from '../utils/docxExport';
 import { BulkImportAirmenModal } from './BulkImportAirmenModal';
@@ -17,9 +17,11 @@ interface NominalRollProps {
   onDeleteAirman: (airmanId: string) => void;
   onViewProfile: (airman: Airman) => void;
   onSyncGoogleSheet?: () => Promise<void>;
+  initialFlightFilter?: FlightName | 'All' | '';
 }
 
 export const NominalRoll: React.FC<NominalRollProps> = ({
+  initialFlightFilter = 'All',
   airmen,
   role,
   onRefresh,
@@ -30,7 +32,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   onSyncGoogleSheet,
 }) => {
   const [search, setSearch] = useState('');
-  const [flightFilter, setFlightFilter] = useState<FlightName | 'All' | ''>('All');
+  const [flightFilter, setFlightFilter] = useState<FlightName | 'All' | ''>(initialFlightFilter);
   const [rankFilter, setRankFilter] = useState<Rank | 'All' | ''>('All');
   const [statusFilter, setStatusFilter] = useState<'Total' | 'Active' | 'Previous Airmen'>('Active');
   const [syncing, setSyncing] = useState(false);
@@ -198,7 +200,6 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               onChange={(e) => setFlightFilter(e.target.value as any)}
               className="bg-transparent font-black outline-none text-slate-900 dark:text-slate-100 cursor-pointer"
             >
-              <option value="All">All Flights</option>
               {flightsList.map((fl) => (
                 <option key={fl} value={fl} className="bg-white dark:bg-slate-900">
                   {fl === 'All' ? 'All Flights (48)' : `${fl} Flight`}
@@ -215,7 +216,6 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
               onChange={(e) => setRankFilter(e.target.value as any)}
               className="bg-transparent font-black outline-none text-slate-900 dark:text-slate-100 cursor-pointer"
             >
-              <option value="All">All Ranks</option>
               {ranksList.map((rk) => (
                 <option key={rk} value={rk} className="bg-white dark:bg-slate-900">
                   {rk === 'All' ? 'All Ranks' : rk}
@@ -276,9 +276,14 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="font-black text-slate-900 dark:text-slate-100 text-left">
-                      {airman.name}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-black text-slate-900 dark:text-slate-100 text-left">
+                        {airman.name}
+                      </span>
+                      {(!airman.bdNo || !airman.rank || !airman.name || !airman.trade || !airman.addressBlock || !airman.mobileNo || !airman.flightName) && (
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Missing information. Click to update." />
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
                     {airman.trade}

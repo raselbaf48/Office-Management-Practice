@@ -181,8 +181,8 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs select-none overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scaleIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs select-none overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 border-0 sm:border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-none sm:rounded-3xl shadow-2xl overflow-hidden animate-scaleIn h-full sm:h-auto">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">

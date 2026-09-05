@@ -60,7 +60,38 @@ interface SettingsModalProps {
   onRosterUpdated?: () => void;
 }
 
-type SettingSection = 'appearance' | 'cloudsync' | 'users' | 'security' | 'database' | 'history' | 'appNotice' | 'appMaintenance' | 'duties';
+type SettingSection = 'appearance' | 'cloudsync' | 'users' | 'security' | 'database' | 'history' | 'appManagement';
+
+export 
+const Countdown = ({ endTime }: { endTime: string }) => {
+  const [timeLeft, setTimeLeft] = React.useState('');
+  
+  React.useEffect(() => {
+    if (!endTime) return;
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const end = new Date(endTime).getTime();
+      const distance = end - now;
+      
+      if (distance < 0) {
+        setTimeLeft('Expired');
+        clearInterval(interval);
+        return;
+      }
+      
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+    }, 1000);
+
+
+  return () => clearInterval(interval);
+  }, [endTime]);
+
+  return <span className="ml-2 font-mono bg-emerald-200 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded text-[10px] text-emerald-800 dark:text-emerald-300">Remaining: {timeLeft || '...'}</span>;
+};
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   nominalAirmen,
@@ -75,6 +106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onRosterUpdated,
 }) => {
   const [activeSection, setActiveSection] = useState<SettingSection | null>(null);
+  const [appManagementTab, setAppManagementTab] = useState<'notice' | 'maintenance'>('notice');
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
 
   // Security Tab State
@@ -456,21 +488,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const sections = [
-    ...(role === 'SUPER_ADMIN' ? [{
-      id: 'appNotice',
-      label: 'App Notice',
-      icon: <Megaphone className="w-5 h-5" />,
-      color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400'
-    }, {
-      id: 'appMaintenance',
-      label: 'Maintenance Mode',
-      icon: <Wrench className="w-5 h-5" />,
-      color: 'text-amber-500 bg-amber-100 dark:bg-amber-950 dark:text-amber-400'
-    }] : []),
     { id: 'appearance', label: 'Theme & Appearance', icon: <Palette className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'cloudsync', label: 'Database Cloud Sync', icon: <Cloud className="w-5 h-5" />, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' }] : []),
+    ...(role === 'SUPER_ADMIN' ? [
+      { id: 'appNotice', label: 'App Notice', icon: <Megaphone className="w-5 h-5" />, color: 'text-orange-500 bg-orange-100 dark:bg-orange-950 dark:text-orange-400' },
+      { id: 'maintenanceMode', label: 'Maintenance Mode', icon: <Wrench className="w-5 h-5" />, color: 'text-red-500 bg-red-100 dark:bg-red-950 dark:text-red-400' }
+    ] : []),
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'users', label: 'User Management', icon: <ShieldCheck className="w-5 h-5" />, color: 'text-purple-500 bg-purple-100 dark:bg-purple-950 dark:text-purple-400' }] : []),
-    ...(role === 'SUPER_ADMIN' ? [{ id: 'duties', label: 'Custom Duties', icon: <Shield className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' }] : []),
     { id: 'security', label: 'Security & Passcode', icon: <Lock className="w-5 h-5" />, color: 'text-amber-500 bg-amber-100 dark:bg-amber-950 dark:text-amber-400' },
     ...((role === 'SUPER_ADMIN' || role === 'ADMIN') ? [{ id: 'database', label: 'Backup & Restore', icon: <Database className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400' }] : []),
     ...(role === 'SUPER_ADMIN' ? [{ id: 'history', label: 'Login History', icon: <History className="w-5 h-5" />, color: 'text-sky-500 bg-sky-100 dark:bg-sky-950 dark:text-sky-400' }] : []),
@@ -480,10 +504,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return sections.find(s => s.id === id)?.label || 'Settings';
   };
 
+  const handleDeleteHistoryItem = (item: any) => {
+    const updated = appConfigHistory.filter(h => h.id !== item.id);
+    setAppConfigHistory(updated);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-8">
       {/* 2-Column Split View Desktop / Fullscreen Mobile */}
-      <div className="w-full max-w-6xl h-[85vh] bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 sm:rounded-3xl shadow-2xl flex flex-col sm:flex-row overflow-hidden relative">
+      <div className="w-full max-w-6xl h-full sm:h-[85vh] bg-white dark:bg-[#1e293b] border-0 sm:border border-slate-200 dark:border-slate-700 sm:rounded-3xl shadow-2xl flex flex-col sm:flex-row overflow-hidden relative">
         
         {/* Left Column: Tabs Navigation (approx 30%) */}
         <div className={`w-full sm:w-[30%] sm:max-w-[320px] bg-slate-50 dark:bg-slate-900 border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 flex-col shrink-0 ${mobileView === 'detail' ? 'hidden sm:flex' : 'flex'}`}>
@@ -511,10 +540,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     setMobileView('detail');
                   }
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-left ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-left mb-2 ${
                   activeSection === sec.id
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent font-medium'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-300 dark:border-emerald-500/40 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-700 shadow-sm font-medium'
                 }`}
               >
                 <div className={`${activeSection === sec.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
@@ -549,435 +578,310 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-            <div className="max-w-3xl mx-auto space-y-8">
+          {/* Main Content Area */}
+          <div className="flex-1 h-full overflow-hidden flex flex-col bg-white dark:bg-[#1e293b]">
+            {activeSection !== 'users' ? (
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+                <div className="max-w-3xl mx-auto space-y-8">
+                  {/* Appearance */}
+                  {activeSection === 'appearance' && (
+                    <div className="space-y-6 animate-fadeIn">
+                      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
+                        <h4 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                          <Palette className="w-5 h-5 text-indigo-500" />
+                          Theme Preference
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {[
+                            { id: 'system', label: 'System Theme', icon: <Monitor className="w-5 h-5" /> },
+                            { id: 'light', label: 'Light Mode', icon: <Sun className="w-5 h-5" /> },
+                            { id: 'dark', label: 'Dark Mode', icon: <Moon className="w-5 h-5" /> }
+                          ].map((themeOpt) => (
+                            <button
+                              key={themeOpt.id}
+                              onClick={() => onThemeChange(themeOpt.id)}
+                              className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${currentTheme === themeOpt.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}
+                            >
+                              {themeOpt.icon}
+                              <span className="mt-2 text-sm font-bold">{themeOpt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+</div>
+</div>)}
+
+                  {/* Cloud Sync */}
+                  {activeSection === 'cloudsync' && (role === 'SUPER_ADMIN' || role === 'ADMIN') && (
+                    <div className="space-y-6 animate-fadeIn max-w-md mx-auto">
+                      <div className="flex flex-col items-center justify-center p-8 text-center bg-transparent">
+                        <div className="w-16 h-16 rounded-full bg-[#1e2b4d] flex items-center justify-center mb-6">
+                          <Cloud className="w-8 h-8 text-blue-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Database Cloud Sync</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
+                          Manually push your local changes or pull updates from the central Firebase database.
+                        </p>
+                        <button 
+                          onClick={async () => {
+                            setRestoreStatus('Syncing...');
+                            await localDb.syncFromFirebase();
+                            setSyncLogsState(getSyncLogs());
+                            setRestoreStatus('');
+                            if (onRosterUpdated) onRosterUpdated();
+                          }} 
+                          disabled={restoreStatus === 'Syncing...'}
+                          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-5 h-5 ${restoreStatus === 'Syncing...' ? 'animate-spin' : ''}`} />
+                          Sync Now
+                        </button>
+                      </div>
+
+                      <div className="mt-8">
+                        <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 px-2">Recent Sync Logs</h4>
+                        {syncLogsState.length === 0 ? (
+                          <div className="text-center py-8 bg-slate-800/30 rounded-2xl">
+                            <p className="text-sm font-bold text-slate-500">No recent logs.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {syncLogsState.map((log: any) => (
+                              <div key={log.id} className="p-4 bg-[#1b2234] border border-slate-700/50 rounded-xl flex justify-between items-start">
+                                <div className="flex gap-3">
+                                  <div className="pt-1.5 shrink-0">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${log.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-white mb-1">
+                                      {log.type === 'PULL' ? 'Downloaded from Cloud' : 'Uploaded to Cloud'}
+                                    </p>
+                                    <p className="text-xs text-slate-400">{log.message}</p>
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono text-right shrink-0 mt-1">
+                                  {new Date(log.timestamp).toLocaleDateString()}<br/>
+                                  {new Date(log.timestamp).toLocaleTimeString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+
               
               
               
               
               {activeSection === 'appNotice' && role === 'SUPER_ADMIN' && (
-                <div className="space-y-8 animate-fadeIn">
-                  {appConfig.notice.isActive && (
-                    <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                          <Megaphone className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Notice is Currently Live</span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                              Active
-                            </span>
+            <div className="space-y-6 animate-fadeIn max-w-2xl">
+                    {appConfig.notice.isActive && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Megaphone className="w-5 h-5" />
                           </div>
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-                            {appConfig.notice.heading ? `${appConfig.notice.heading}: ` : ''}{appConfig.notice.message}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Notice is Currently Live</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                Active
+                              </span>
+                              {appConfig.notice.isScheduled && appConfig.notice.endTime && (
+                                <Countdown endTime={appConfig.notice.endTime} />
+                              )}
+                            </div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+                              {appConfig.notice.heading ? `${appConfig.notice.heading}: ` : ''}{appConfig.notice.message}
+                            </p>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedConfig = { ...appConfig, notice: { ...appConfig.notice, isActive: false } };
+                            saveAppConfig(updatedConfig);
+                            setAppConfig(updatedConfig);
+                            const activeItem = appConfigHistory.find(i => i.type === 'NOTICE' && i.isActive);
+                            if (activeItem) {
+                              setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                        >
+                          <PowerOff className="w-3.5 h-3.5" /> Stop Notice
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedConfig = { ...appConfig, notice: { ...appConfig.notice, isActive: false } };
-                          saveAppConfig(updatedConfig);
-                          setAppConfig(updatedConfig);
-                          const activeItem = appConfigHistory.find(i => i.type === 'NOTICE' && i.isActive);
-                          if (activeItem) {
-                            setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
-                          }
-                        }}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
-                      >
-                        <PowerOff className="w-3.5 h-3.5" /> Stop / Deactivate Notice
-                      </button>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 flex items-center justify-center">
-                        <Megaphone className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white">Publish App Notice</h3>
-                        <p className="text-xs text-slate-500">Show a popup notice to users when they login.</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase">Heading</label>
-                        <input 
-                          type="text"
-                          value={noticeDraft.heading} 
-                          onChange={(e) => setNoticeDraft({ ...noticeDraft, heading: e.target.value })}
-                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm outline-none focus:border-indigo-500 dark:text-white"
-                          placeholder="e.g. Important Notice"
-                        />
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Create New Notice</h3>
                       </div>
                       
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase">Notice Message</label>
-                        <textarea 
-                          value={noticeDraft.message} 
-                          onChange={(e) => setNoticeDraft({ ...noticeDraft, message: e.target.value })}
-                          rows={3} 
-                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 dark:text-white resize-none"
-                          placeholder="Enter the notice message here..."
-                        />
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500">Notice Heading</label>
+                        <input type="text" value={noticeDraft.heading} onChange={(e) => setNoticeDraft({...noticeDraft, heading: e.target.value})} placeholder="e.g. Scheduled Maintenance" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" />
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="notice-schedule" checked={noticeDraft.isScheduled} onChange={(e) => setNoticeDraft({ ...noticeDraft, isScheduled: e.target.checked })} className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
-                        <label htmlFor="notice-schedule" className="text-sm font-medium text-slate-700 dark:text-slate-300">Enable Schedule</label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500">Notice Message <span className="text-rose-500">*</span></label>
+                        <textarea value={noticeDraft.message} onChange={(e) => setNoticeDraft({...noticeDraft, message: e.target.value})} placeholder="Enter the detailed notice message here..." rows={4} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white resize-none" />
                       </div>
-                      
+
+                      <div className="pt-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" checked={noticeDraft.isScheduled} onChange={(e) => setNoticeDraft({...noticeDraft, isScheduled: e.target.checked})} className="w-5 h-5 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900" />
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Schedule this notice (auto-expire)</span>
+                        </label>
+                      </div>
+
                       {noticeDraft.isScheduled && (
-                        <div className="space-y-4 animate-fadeIn">
-                          <div className="flex gap-2">
-                            <button onClick={() => applyTimePreset(setNoticeDraft, noticeDraft, 30)} className="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 30 Mins</button>
-                            <button onClick={() => applyTimePreset(setNoticeDraft, noticeDraft, 60)} className="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 1 Hour</button>
-                            <button onClick={() => applyTimePreset(setNoticeDraft, noticeDraft, 120)} className="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 2 Hours</button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-slate-500">Start Time (Default: Now)</label>
-                              <input type="datetime-local" value={noticeDraft.startTime || ''} onChange={(e) => setNoticeDraft({ ...noticeDraft, startTime: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white outline-none focus:border-indigo-500" />
-                            </div>
-                            <div className="space-y-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                           <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-slate-500">Start Time</label>
+                              <input type="datetime-local" value={noticeDraft.startTime} onChange={(e) => setNoticeDraft({...noticeDraft, startTime: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" />
+                           </div>
+                           <div className="space-y-1.5">
                               <label className="text-xs font-bold text-slate-500">End Time</label>
-                              <input type="datetime-local" value={noticeDraft.endTime || ''} onChange={(e) => setNoticeDraft({ ...noticeDraft, endTime: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white outline-none focus:border-indigo-500" />
-                            </div>
-                          </div>
+                              <input type="datetime-local" value={noticeDraft.endTime} onChange={(e) => setNoticeDraft({...noticeDraft, endTime: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" />
+                           </div>
                         </div>
                       )}
-                      
-                      <div className="flex justify-end pt-2">
-                        <button onClick={handleSaveNotice} disabled={!noticeDraft.message} className="disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2">
+
+                      <div className="pt-4 flex justify-end">
+                        <button disabled={!noticeDraft.message.trim()} onClick={handleSaveNotice} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-colors flex items-center gap-2">
                           <Megaphone className="w-4 h-4" /> Publish Notice
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Notice History */}
-                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <History className="w-4 h-4 text-slate-400" /> Notice History
-                      </h3>
-                      <button onClick={() => setClearAllConfirmType('NOTICE')} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">
-                        Clear All
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                      {appConfigHistory.filter(i => i.type === 'NOTICE').length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-6">No notice history available yet.</p>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">Notice History</h3>
+                      {appConfigHistory.filter(h => h.type === 'NOTICE').length === 0 ? (
+                        <p className="text-sm text-slate-500">No notices in history.</p>
                       ) : (
-                        appConfigHistory.filter(i => i.type === 'NOTICE').map((item) => (
-                          <div key={item.id} className={`p-4 rounded-xl border text-sm flex flex-col gap-3 ${item.isActive ? 'bg-white dark:bg-slate-800 border-indigo-200 dark:border-indigo-900/50 shadow-md ring-1 ring-indigo-500/20' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-200 dark:border-slate-700'}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                  NOTICE
-                                </span>
-                                {item.isActive && (
-                                  <span className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-medium text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
-                                <button onClick={() => setDeleteConfirmId(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              {item.heading && <h4 className="font-bold text-slate-900 dark:text-white mb-1">{item.heading}</h4>}
-                              <p className={`${item.isActive ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>{item.message}</p>
-                            </div>
-                            
-                            <div className="flex items-center justify-between mt-1">
+                        <div className="space-y-3">
+                          {appConfigHistory.filter(h => h.type === 'NOTICE').map(h => (
+                            <div key={h.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
                               <div>
-                                {(item.startTime || item.endTime) ? (
-                                  <div className="text-xs text-slate-500 bg-white dark:bg-slate-900/50 px-2 py-1.5 rounded-lg inline-flex items-center gap-1.5 border border-slate-100 dark:border-slate-700">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    <span>{item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A'} - {item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A'}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-slate-400 italic">No schedule (Manual)</span>
-                                )}
+                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{h.heading || 'Notice'}</p>
+                                <p className="text-xs text-slate-500 line-clamp-1">{h.message}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">{new Date(h.timestamp).toLocaleString()}</p>
                               </div>
-                              
-                              {item.isActive && (
-                                <button onClick={() => handleStopFeature('NOTICE', item.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg text-xs font-bold transition-colors">
-                                  <PowerOff className="w-3.5 h-3.5" /> Stop Notice
-                                </button>
+                              <button onClick={() => handleDeleteHistoryItem(h)} className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>)}
+
+
+        
+        {activeSection === 'maintenanceMode' && role === 'SUPER_ADMIN' && (
+            <div className="space-y-6 animate-fadeIn max-w-2xl">
+                    {appConfig.maintenance.isActive && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Wrench className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black uppercase tracking-wider text-red-800 dark:text-red-300">Maintenance Mode is Active</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
+                                Live
+                              </span>
+                              {appConfig.maintenance.isScheduled && appConfig.maintenance.endTime && (
+                                <Countdown endTime={appConfig.maintenance.endTime} />
                               )}
                             </div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
+                              {appConfig.maintenance.message}
+                            </p>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeSection === 'appMaintenance' && role === 'SUPER_ADMIN' && (
-                <div className="space-y-8 animate-fadeIn">
-                  {appConfig.maintenance.isActive && (
-                    <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
-                          <Wrench className="w-5 h-5" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black uppercase tracking-wider text-red-800 dark:text-red-300">Maintenance Mode is Active</span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
-                              Live
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-                            {appConfig.maintenance.message}
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedConfig = { ...appConfig, maintenance: { ...appConfig.maintenance, isActive: false } };
+                            saveAppConfig(updatedConfig);
+                            setAppConfig(updatedConfig);
+                            const activeItem = appConfigHistory.find(i => i.type === 'MAINTENANCE' && i.isActive);
+                            if (activeItem) {
+                              setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
+                            }
+                          }}
+                          className="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-200 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                        >
+                          <PowerOff className="w-3.5 h-3.5" /> Deactivate
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedConfig = { ...appConfig, maintenance: { ...appConfig.maintenance, isActive: false } };
-                          saveAppConfig(updatedConfig);
-                          setAppConfig(updatedConfig);
-                          const activeItem = appConfigHistory.find(i => i.type === 'MAINTENANCE' && i.isActive);
-                          if (activeItem) {
-                            setAppConfigHistory(updateAppConfigHistoryItemActiveStatus(activeItem.id, false));
-                          }
-                        }}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
-                      >
-                        <PowerOff className="w-3.5 h-3.5" /> Deactivate Maintenance
-                      </button>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-500 flex items-center justify-center">
-                        <Wrench className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white">Activate Maintenance Mode</h3>
-                        <p className="text-xs text-slate-500">Temporarily close the app for regular users.</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase">Maintenance Message</label>
-                        <textarea 
-                          value={maintDraft.message} 
-                          onChange={(e) => setMaintDraft({ ...maintDraft, message: e.target.value })}
-                          rows={3} 
-                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 dark:text-white resize-none"
-                          placeholder="App is currently undergoing maintenance..."
-                        />
-                      </div>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">Activate Maintenance Mode</h3>
                       
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" id="maint-schedule" checked={maintDraft.isScheduled} onChange={(e) => setMaintDraft({ ...maintDraft, isScheduled: e.target.checked })} className="w-4 h-4 text-amber-600 rounded border-slate-300" />
-                        <label htmlFor="maint-schedule" className="text-sm font-medium text-slate-700 dark:text-slate-300">Enable Schedule</label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500">Maintenance Message <span className="text-rose-500">*</span></label>
+                        <textarea value={maintDraft.message} onChange={(e) => setMaintDraft({...maintDraft, message: e.target.value})} placeholder="e.g. System is down for scheduled upgrades." rows={4} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white resize-none" />
                       </div>
-                      
+
+                      <div className="pt-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" checked={maintDraft.isScheduled} onChange={(e) => setMaintDraft({...maintDraft, isScheduled: e.target.checked})} className="w-5 h-5 text-red-600 rounded-md border-slate-300 focus:ring-red-500 dark:border-slate-600 dark:bg-slate-900" />
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Schedule maintenance window</span>
+                        </label>
+                      </div>
+
                       {maintDraft.isScheduled && (
-                        <div className="space-y-4 animate-fadeIn">
-                          <div className="flex gap-2">
-                            <button onClick={() => applyTimePreset(setMaintDraft, maintDraft, 30)} className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 30 Mins</button>
-                            <button onClick={() => applyTimePreset(setMaintDraft, maintDraft, 60)} className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 1 Hour</button>
-                            <button onClick={() => applyTimePreset(setMaintDraft, maintDraft, 120)} className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors flex items-center gap-1"><Clock className="w-3 h-3"/> 2 Hours</button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-slate-500">Start Time (Default: Now)</label>
-                              <input type="datetime-local" value={maintDraft.startTime || ''} onChange={(e) => setMaintDraft({ ...maintDraft, startTime: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white outline-none focus:border-amber-500" />
-                            </div>
-                            <div className="space-y-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                           <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-slate-500">Start Time</label>
+                              <input type="datetime-local" value={maintDraft.startTime} onChange={(e) => setMaintDraft({...maintDraft, startTime: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" />
+                           </div>
+                           <div className="space-y-1.5">
                               <label className="text-xs font-bold text-slate-500">End Time</label>
-                              <input type="datetime-local" value={maintDraft.endTime || ''} onChange={(e) => setMaintDraft({ ...maintDraft, endTime: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white outline-none focus:border-amber-500" />
-                            </div>
-                          </div>
+                              <input type="datetime-local" value={maintDraft.endTime} onChange={(e) => setMaintDraft({...maintDraft, endTime: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 text-slate-900 dark:text-white" />
+                           </div>
                         </div>
                       )}
-                      
-                      <div className="flex justify-end pt-2">
-                        <button onClick={handleSaveMaintenance} disabled={!maintDraft.message} className="disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2">
-                          <Wrench className="w-4 h-4" /> Activate Maintenance
+
+                      <div className="pt-4 flex justify-end">
+                        <button disabled={!maintDraft.message.trim()} onClick={handleSaveMaintenance} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-colors flex items-center gap-2">
+                          <Wrench className="w-4 h-4" /> Enable Maintenance Mode
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Maintenance History */}
-                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <History className="w-4 h-4 text-slate-400" /> Maintenance History
-                      </h3>
-                      <button onClick={() => setClearAllConfirmType('MAINTENANCE')} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">
-                        Clear All
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                      {appConfigHistory.filter(i => i.type === 'MAINTENANCE').length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-6">No maintenance history available yet.</p>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">Maintenance History</h3>
+                      {appConfigHistory.filter(h => h.type === 'MAINTENANCE').length === 0 ? (
+                        <p className="text-sm text-slate-500">No maintenance records.</p>
                       ) : (
-                        appConfigHistory.filter(i => i.type === 'MAINTENANCE').map((item) => (
-                          <div key={item.id} className={`p-4 rounded-xl border text-sm flex flex-col gap-3 ${item.isActive ? 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-900/50 shadow-md ring-1 ring-amber-500/20' : 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-200 dark:border-slate-700'}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold px-2 py-1 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                  MAINTENANCE
-                                </span>
-                                {item.isActive && (
-                                  <span className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-medium text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
-                                <button onClick={() => setDeleteConfirmId(item.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Delete record">
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <p className={`${item.isActive ? 'text-slate-800 dark:text-slate-200 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>{item.message}</p>
-                            
-                            <div className="flex items-center justify-between mt-1">
+                        <div className="space-y-3">
+                          {appConfigHistory.filter(h => h.type === 'MAINTENANCE').map(h => (
+                            <div key={h.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
                               <div>
-                                {(item.startTime || item.endTime) ? (
-                                  <div className="text-xs text-slate-500 bg-white dark:bg-slate-900/50 px-2 py-1.5 rounded-lg inline-flex items-center gap-1.5 border border-slate-100 dark:border-slate-700">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    <span>{item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A'} - {item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A'}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-slate-400 italic">No schedule (Manual)</span>
-                                )}
+                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Maintenance Mode</p>
+                                <p className="text-xs text-slate-500 line-clamp-1">{h.message}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">{new Date(h.timestamp).toLocaleString()}</p>
                               </div>
-                              
-                              {item.isActive && (
-                                <button onClick={() => handleStopFeature('MAINTENANCE', item.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg text-xs font-bold transition-colors">
-                                  <PowerOff className="w-3.5 h-3.5" /> Stop Maintenance
-                                </button>
-                              )}
+                              <button onClick={() => handleDeleteHistoryItem(h)} className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                             </div>
-                          </div>
-                        ))
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </div>
-                </div>
-              )}
-              
-              {activeSection === 'appearance' && (
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Display Theme</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <button
-                        onClick={() => onThemeChange('system')}
-                        className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${currentTheme === 'system' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-emerald-300 dark:hover:border-slate-600'}`}
-                      >
-                        <Monitor className={`w-6 h-6 ${currentTheme === 'system' ? 'text-emerald-500' : 'text-slate-400'}`} />
-                        <span className={`text-sm font-bold ${currentTheme === 'system' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>System</span>
-                      </button>
-                      <button
-                        onClick={() => onThemeChange('light')}
-                        className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${currentTheme === 'light' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-emerald-300 dark:hover:border-slate-600'}`}
-                      >
-                        <Sun className={`w-6 h-6 ${currentTheme === 'light' ? 'text-emerald-500' : 'text-slate-400'}`} />
-                        <span className={`text-sm font-bold ${currentTheme === 'light' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>Light</span>
-                      </button>
-                      <button
-                        onClick={() => onThemeChange('dark')}
-                        className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${currentTheme === 'dark' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-emerald-300 dark:hover:border-slate-600'}`}
-                      >
-                        <Moon className={`w-6 h-6 ${currentTheme === 'dark' ? 'text-emerald-500' : 'text-slate-400'}`} />
-                        <span className={`text-sm font-bold ${currentTheme === 'dark' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>Dark</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-{activeSection === 'cloudsync' && (
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-                <div className="flex flex-col items-center mb-6">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mb-4 border-4 border-white dark:border-slate-800 shadow-sm">
-                    <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Database Cloud Sync</h3>
-                  <p className="text-xs text-slate-500 mt-1 text-center max-w-[250px]">
-                    Manually push your local changes or pull updates from the central Firebase database.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    localDb.forceSave(); // Triggers push to firebase
-                    localDb.syncFromFirebase(); // Triggers pull from firebase
-                  }}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2 mb-6"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Sync Now</span>
-                </button>
-
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Recent Sync Logs</h4>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {syncLogsState.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic text-center py-4">No recent sync activity</p>
-                    ) : (
-                      syncLogsState.map((log) => (
-                        <div key={log.id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
-                          <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${log.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                {log.type === 'PUSH' ? 'Uploaded to Cloud' : log.type === 'PULL' ? 'Downloaded from Cloud' : 'Manual Sync'}
-                              </span>
-                              <span className="text-[10px] text-slate-400">{new Date(log.timestamp).toLocaleString()}</span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 truncate">{log.message}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                  </div>)}
 
 
-          {activeSection === 'users' && (role === 'SUPER_ADMIN' || role === 'ADMIN') && (
-            <div className="flex-1 h-full">
-              <UserManagementTab nominalAirmen={nominalAirmen} userSessionRole={role} userFlight={userFlight} />
-            </div>
-          )}
+        
+        
 
-          {activeSection === 'duties' && role === 'SUPER_ADMIN' && (
-            <CustomDutiesTab />
-          )}
 
               {activeSection === 'security' && (
                 <div className="space-y-6">
@@ -1270,10 +1174,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </>
               )}
             </div>
-          )}            </div>
-          </div>
+          )}
         </div>
-
+      </div>
+    ) : (
+      <div className="flex-1 h-full overflow-hidden">
+        {activeSection === "users" && (role === "SUPER_ADMIN" || role === "ADMIN") && (
+          <UserManagementTab nominalAirmen={nominalAirmen} userSessionRole={role} userFlight={userFlight} />
+        )}
+      </div>
+    )}
+  </div>
+</div>
+        {/* Modals */}
+        
         {/* Delete Single History Item Confirmation Modal */}
         {deleteConfirmId && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
@@ -1348,7 +1262,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
         )}
-      
       </div>
     </div>
   );

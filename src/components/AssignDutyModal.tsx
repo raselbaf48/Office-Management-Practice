@@ -34,6 +34,10 @@ import { getCurrentUserSession } from '../utils/authSession';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
 import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
+import { AssignLeaveTab } from './AssignLeaveTab';
+import { AssignTdyTab } from './AssignTdyTab';
+import { AssignDeploymentTab } from './AssignDeploymentTab';
+
 
 interface AssignDutyModalProps {
   isOpen: boolean;
@@ -65,7 +69,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
   const isAdmin = session?.assignedRole === 'ADMIN';
   const adminFlight = session?.flightName;
-  const [dateMode, setDateMode] = useState<'single' | 'multi'>('single');
+  const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(1);
   const [fromDate, setFromDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
 
   const isPastDate = fromDate < new Date().toISOString().split('T')[0];
@@ -83,6 +87,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const [proxyForFlight, setProxyForFlight] = useState<FlightName | ''>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterByRatio, setFilterByRatio] = useState<boolean>(true);
+    const [activeModalTab, setActiveModalTab] = useState<'Duty' | 'Leave' | 'TDY' | 'Deployment'>('Duty');
   const [showRatioModal, setShowRatioModal] = useState<boolean>(false);
 
   // Live assignments map for fromDate (airmanId -> DutyAssignment[])
@@ -266,31 +271,61 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   }, [activeDutyCode, activeIdaShift, activeFlight, fromDate]);
 
 
+  
+  const updatePresetBasedOnDates = (start: string, end: string) => {
+    if (!start || !end) return;
+    const diff = Math.round((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 3600 * 24)) + 1;
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (diff === 1) {
+      if (start === todayStr) {
+        setSelectedPresetDays(1);
+      } else {
+        setSelectedPresetDays(-1); // -1 means 1 day span but not today
+      }
+    } else if ([2, 3, 7, 15].includes(diff)) {
+      setSelectedPresetDays(diff);
+    } else {
+      setSelectedPresetDays(null);
+    }
+  };
+
   const handleShiftDate = (days: number) => {
     if (!fromDate) return;
     const d = new Date(fromDate);
     d.setDate(d.getDate() + days);
     const newDate = d.toISOString().split('T')[0];
     setFromDate(newDate);
-    setToDate(newDate);
+    if (selectedPresetDays !== null) {
+      const td = new Date(newDate);
+      const spanDays = selectedPresetDays === -1 ? 1 : selectedPresetDays;
+      td.setDate(td.getDate() + spanDays - 1);
+      const newTo = td.toISOString().split('T')[0];
+      setToDate(newTo);
+      updatePresetBasedOnDates(newDate, newTo);
+    } else {
+      if (toDate < newDate) {
+        setToDate(newDate);
+        setSelectedPresetDays(1);
+      } else {
+        updatePresetBasedOnDates(newDate, toDate);
+      }
+    }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (dateMode === 'single') {
-        if (e.key === 'ArrowRight') {
+      if (e.key === 'ArrowRight') {
           handleShiftDate(1);
         } else if (e.key === 'ArrowLeft') {
           handleShiftDate(-1);
         }
-      }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, dateMode, fromDate]);
+  }, [isOpen, selectedPresetDays, fromDate]);
 
   // Direct Click Assignment Action (No Draft System)
   const handleToggleAssignAirman = async (airman: Airman) => {
@@ -624,8 +659,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   }, [airmen, activeFlight, proxyForFlight, isProxyEnabled, activeDutyCode, activeIdaShift, searchQuery, assignmentsList, prevDayAssignmentsList]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-4xl w-full p-4 sm:p-5 space-y-3.5 relative overflow-hidden max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 bg-slate-950/75 backdrop-blur-xs animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 shadow-2xl max-w-4xl w-full p-4 sm:p-5 space-y-3.5 relative overflow-hidden h-full sm:h-auto sm:max-h-[92vh] flex flex-col">
         
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3 shrink-0">
@@ -636,7 +671,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
-                  {onlyIdac ? 'IDA Center Duty Assignment' : 'Direct Duty Assignment'}
+                  {onlyIdac ? 'IDA Center Duty Assignment' : 'Assign Duty / Activity'}
                 </h2>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${
                   onlyIdac 
@@ -649,7 +684,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {onlyIdac
                   ? 'Click IDAC shift and airman below to assign directly. Synchronized with Dashboard & Matrix.'
-                  : 'Click any airman to assign directly. Previous duty is automatically replaced.'}
+                  : 'Select a tab below to assign Duty, Leave, TDY, or Deployment.'}
               </p>
             </div>
           </div>
@@ -661,6 +696,25 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+        
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          {['Duty', 'Leave', 'TDY', 'Deployment'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveModalTab(tab as any)}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-colors flex-1 text-center ${activeModalTab === tab ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        {activeModalTab === 'Leave' && <AssignLeaveTab airmen={airmen} onClose={onClose} onSuccess={() => { if(onSuccess) onSuccess(); else if (onRefreshParadeData) onRefreshParadeData(); onClose(); }} />}
+        {activeModalTab === 'TDY' && <AssignTdyTab airmen={airmen} onClose={onClose} onSuccess={() => { if(onSuccess) onSuccess(); else if (onRefreshParadeData) onRefreshParadeData(); onClose(); }} />}
+        {activeModalTab === 'Deployment' && <AssignDeploymentTab airmen={airmen} onClose={onClose} onSuccess={() => { if(onSuccess) onSuccess(); else if (onRefreshParadeData) onRefreshParadeData(); onClose(); }} />}
+        
+        <div style={{ display: activeModalTab === 'Duty' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+
 
         {/* Live Toast Notification */}
         {toastMessage && (
@@ -680,38 +734,43 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                 Assignment Date:
               </span>
-              <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDateMode('single');
-                    setToDate(fromDate);
-                  }}
-                  className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                    dateMode === 'single'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  Single Date
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDateMode('multi')}
-                  className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                    dateMode === 'multi'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  Multi-Date Range
-                </button>
+              <div className="flex items-center space-x-1.5">
+                {[{label: 'Today', val: 1}, {label: '2 Days', val: 2}, {label: '3 Days', val: 3}, {label: '7 Days', val: 7}, {label: '15 Days', val: 15}].map((opt) => {
+                  const isSelected = selectedPresetDays === opt.val;
+                  return (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      onClick={() => {
+                        if (opt.val === 1) {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          setFromDate(todayStr);
+                          setToDate(todayStr);
+                          setSelectedPresetDays(1);
+                        } else {
+                          setSelectedPresetDays(opt.val);
+                          if (fromDate) {
+                            const d = new Date(fromDate);
+                            d.setDate(d.getDate() + opt.val - 1);
+                            setToDate(d.toISOString().split('T')[0]);
+                          }
+                        }
+                      }}
+                      className={`px-2 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer shadow-2xs border ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
+                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
-              {dateMode === 'single' && (
-                <button
+              <button
                   type="button"
                   onClick={() => handleShiftDate(-1)}
                   className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
@@ -719,21 +778,32 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-              )}
               <DateNavigator
                 hideArrows={true}                
                 value={fromDate || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   setFromDate(val);
-                  if (dateMode === 'single' || !toDate || toDate < val) {
-                    setToDate(val);
+                  
+                  if (selectedPresetDays !== null) {
+                    const d = new Date(val);
+                    const spanDays = selectedPresetDays === -1 ? 1 : selectedPresetDays;
+                    d.setDate(d.getDate() + spanDays - 1); 
+                    const newTo = d.toISOString().split('T')[0];
+                    setToDate(newTo);
+                    updatePresetBasedOnDates(val, newTo);
+                  } else {
+                    if (toDate < val) {
+                      setToDate(val);
+                      setSelectedPresetDays(1);
+                    } else {
+                      updatePresetBasedOnDates(val, toDate);
+                    }
                   }
                 }}
                 className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 cursor-pointer"
               />
-              {dateMode === 'single' && (
-                <button
+              <button
                   type="button"
                   onClick={() => handleShiftDate(1)}
                   className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 border border-slate-200 dark:border-slate-700 shadow-xs"
@@ -741,15 +811,18 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-              )}
-              {dateMode === 'multi' && (
+              {selectedPresetDays !== 1 && selectedPresetDays !== -1 && (
                 <>
                   <span className="text-xs text-slate-400">to</span>
                   <DateNavigator
                     
                     value={toDate || ''}
                     min={fromDate}
-                    onChange={(e) => setToDate(e.target.value)}
+                    onChange={(e) => {
+                      const newTo = e.target.value;
+                      setToDate(newTo);
+                      updatePresetBasedOnDates(fromDate, newTo);
+                    }}
                     className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 cursor-pointer"
                   />
                 </>
@@ -962,13 +1035,13 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">
                 2. Flight:
               </span>
-              {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as (FlightName | 'All')[]).map((flt) => {
+              {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
                 const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                 return (
                 <button
                   key={flt}
                   type="button"
-                  onClick={() => !isDisabledFlt && setActiveFlight(flt)}
+                  onClick={() => !isDisabledFlt && setActiveFlight(activeFlight === flt ? 'All' : flt)}
                   disabled={isDisabledFlt}
                   className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
                     isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :
@@ -1151,7 +1224,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           <div className="text-xs text-slate-500">
             <span>
               Date: <strong>{fromDate}</strong>
-              {dateMode === 'multi' && fromDate !== toDate ? ` to ${toDate}` : ''} • Changes are applied directly.
+              {selectedPresetDays !== 1 && fromDate !== toDate ? ` to ${toDate}` : ''} • Changes are applied directly.
             </span>
           </div>
 
@@ -1180,6 +1253,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           }}
         />
       )}
+      </div>
     </div>
   );
 };

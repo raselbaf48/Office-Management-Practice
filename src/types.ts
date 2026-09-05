@@ -130,7 +130,7 @@ export interface ConflictAlert {
   ruleType: string;
 }
 
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER';
+export type UserRole = 'OWNER' | 'SUPER_ADMIN' | 'ADMIN' | 'USER';
 
 export interface PersonnelStatusItem {
   airman: Airman;
@@ -245,7 +245,7 @@ export interface ImportHistoryBatch {
   }>;
 }
 
-export type UserLoginRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserLoginRole = 'OWNER' | 'SUPER_ADMIN' | 'ADMIN' | 'USER';
 export type UserLoginStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 
 export interface DetailedUserLogin {

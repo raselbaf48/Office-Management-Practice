@@ -29,7 +29,8 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
     return () => window.removeEventListener('baf_detailed_users_changed', handleDetailedUsersChange);
   }, []);
 
-  const isOwner = userSessionRole === 'SUPER_ADMIN';
+  const isOwner = userSessionRole === 'OWNER';
+  const isSuperAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'OWNER';
 
   // Single Add Admin Mode States
   const [isAddAdminMode, setIsAddAdminMode] = useState(false);
@@ -43,7 +44,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
       const cleanBd = airman.bdNo.trim().replace(/^BD\/?/i, '').replace(/\s+/g, '').toLowerCase();
       const detailed = detailedUsers.find(d => d.bdNo.toLowerCase() === cleanBd);
       
-      const isDefaultOwner = cleanBd === '474455' || cleanBd === '53539919';
+      const isDefaultOwner = cleanBd === '474455' || cleanBd === 'deleted_admin';
       const role = detailed ? detailed.role : (isDefaultOwner ? 'SUPER_ADMIN' : 'USER');
       const status = detailed ? detailed.status : 'ACTIVE';
       const password = detailed?.password || cleanBd;
@@ -68,7 +69,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
     let nextSerNo = list.length + 1;
     detailedUsers.forEach(d => {
       if (!list.some(u => u.cleanBd === d.bdNo.toLowerCase())) {
-        const isDefaultOwner = d.bdNo === '474455' || d.bdNo === '53539919';
+        const isDefaultOwner = d.bdNo === '474455' || d.bdNo === 'deleted_admin';
         list.push({
           airman: {
             id: d.airmanId || `extra-${d.bdNo}`,
@@ -101,7 +102,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
 
   const filteredUsers = mergedUsers.filter((u) => {
     // Normal admins cannot see super admins
-    if (!isOwner && u.role === 'SUPER_ADMIN') return false;
+    
 
     if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
     if (!searchQuery) return true;
@@ -136,7 +137,8 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
 
   const openProfile = (user: typeof mergedUsers[0]) => {
-    if (!isOwner) return;
+    if (!isSuperAdmin) return;
+    
     setSelectedUser(user);
     setEditRole(user.role);
     setEditStatus(user.status);
@@ -249,8 +251,8 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl border-0 sm:border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
@@ -474,7 +476,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
               </div>
 
               {/* Add Single Admin Button */}
-              {isOwner && (
+              {isSuperAdmin && (
                 <button
                   onClick={() => {
                     setIsAddAdminMode(true);
@@ -514,9 +516,9 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                       <tr 
                         key={user.cleanBd}
                         onClick={() => {
-                          if (isOwner) openProfile(user);
+                          if (isSuperAdmin) openProfile(user);
                         }}
-                        className={`transition-colors ${isOwner ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}`}
+                        className={`transition-colors ${isSuperAdmin ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}`}
                       >
                         <td className="px-4 py-3 font-mono text-slate-500">{user.serNo}</td>
                         <td className="px-4 py-3 font-mono font-black text-slate-900 dark:text-white">
