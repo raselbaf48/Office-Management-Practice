@@ -64,6 +64,16 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_target_date', targetDate);
   }, [targetDate]);
+
+  useEffect(() => {
+    const handleUpdate = () => setMatrix(getStoredDutyMatrix());
+    window.addEventListener('baf_custom_duties_updated', handleUpdate);
+    window.addEventListener('baf_duty_ratio_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('baf_custom_duties_updated', handleUpdate);
+      window.removeEventListener('baf_duty_ratio_updated', handleUpdate);
+    };
+  }, []);
   const [settingsTab, setSettingsTab] = useState<'Overall' | 'Mechanics' | 'Avionics' | 'GCS' | null>(null);
   const [editingCalendar, setEditingCalendar] = useState<{tableIdx: number, flight: FlightName} | null>(null);
 
@@ -313,7 +323,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     </div>
 
     {/* LAST UPDATING DATE */}
-    <div className="flex flex-col items-center justify-center mt-6 w-full max-w-3xl">
+    <div className="flex flex-col items-center justify-center mt-6 w-full max-w-3xl mx-auto">
       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Last Updating Date</div>
       <input 
         type="date"
@@ -324,7 +334,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     </div>
 
     {/* TAB NAVIGATION */}
-    <div className="flex flex-wrap space-x-1 sm:space-x-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-full max-w-3xl mt-4">
+    <div className="flex flex-wrap space-x-1 sm:space-x-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-full max-w-3xl mt-4 mx-auto justify-center">
       <button 
         onClick={() => setViewMode('DUTY_LIST')}
         className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_LIST' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
@@ -463,7 +473,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                                   <span>{flight}</span>
                                   {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
                                     <button
-                                      onClick={() => setEditingCalendar({ tableIdx, flight })}
+                                      onClick={() => setEditingCalendar({ tableIdx: matrix.findIndex(x => x.id === table.id), flight })}
                                       className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-500 transition-colors cursor-pointer"
                                       title="Edit in Calendar"
                                     >
@@ -613,7 +623,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                             <span>{table.title}</span>
                             {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
                               <button
-                                onClick={() => setEditingCalendar({ tableIdx, flight: selectedFlightFilter as FlightName })}
+                                onClick={() => setEditingCalendar({ tableIdx: matrix.findIndex(x => x.id === table.id), flight: selectedFlightFilter as FlightName })}
                                 className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-500 transition-colors cursor-pointer ml-2"
                                 title="Edit in Calendar"
                               >

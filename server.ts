@@ -441,29 +441,19 @@ async function startServer() {
   }
 
   // Extract all text and pages from a PDF buffer using PDFParseClass
-  async function extractAllPagesFromPdf(buffer: Buffer): Promise<{ totalPages: number; pages: Array<{ pageNumber: number; text: string }>; fullText: string }> {
+    async function extractAllPagesFromPdf(buffer: Buffer): Promise<{ totalPages: number; pages: Array<{ pageNumber: number; text: string }>; fullText: string }> {
     try {
-      const parser = new PDFParseClass({ data: buffer });
-      const parsed = await parser.getText({ cellSeparator: ' | ', lineEnforce: true });
-      const totalPages = parsed.total || parsed.pages?.length || 1;
-      const pages: Array<{ pageNumber: number; text: string }> = [];
-
-      if (Array.isArray(parsed.pages) && parsed.pages.length > 0) {
-        for (const p of parsed.pages) {
-          const pageNum = p.num || pages.length + 1;
-          const pageText = (p.text || '').trim();
-          pages.push({
-            pageNumber: pageNum,
-            text: pageText,
-          });
-        }
-      } else if (parsed.text && parsed.text.trim()) {
-        pages.push({
+      // Direct call to pdf-parse function instead of instantiating a class
+      const pdf = require('pdf-parse');
+      const parsed = await pdf(buffer);
+      const totalPages = parsed.numpages || 1;
+      const pages = [];
+      
+      // Fallback array since default pdf-parse doesn't split by page nicely in its standard return
+      pages.push({
           pageNumber: 1,
-          text: parsed.text.trim(),
-        });
-      }
-
+          text: parsed.text || ''
+      });
       const fullText = pages.map((p) => `--- [PAGE ${p.pageNumber} OF ${totalPages}] ---\n${p.text}`).join('\n\n');
       return { totalPages, pages, fullText };
     } catch (err: any) {
@@ -914,7 +904,7 @@ Return ONLY valid JSON matching this structure:
 
       // AI Analysis with Gemini
       if (process.env.GEMINI_API_KEY) {
-        const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-pro-preview'];
+        const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
         // If total pages <= 6: analyze all in one prompt
         // If total pages > 6: chunk into batches of 3-4 pages to guarantee complete coverage

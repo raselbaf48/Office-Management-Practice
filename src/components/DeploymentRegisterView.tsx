@@ -279,7 +279,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
               <span>155 UASU BAF</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Annual Deployment Register ({selectedYear})
+              Annual Deployment Register
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
               Official register of Temporary Duty (Deployment), outstation detachments, unit training courses, and temporary deployments across all flights.

@@ -1,8 +1,9 @@
+import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 import React, { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Settings, Info, Users, ChevronDown, ChevronUp, Calendar, X, Save, Power, PowerOff, Trash, Filter } from 'lucide-react';
 import { localDb } from '../services/localDatabase';
 import { Airman, Rank, FlightName, DutyCategoryCode } from '../types';
-import { addCustomDuty, CustomDutyConfig } from '../utils/customDuties';
+import { addCustomDuty, CustomDutyConfig, removeCustomDuty } from '../utils/customDuties';
 
 const DEFAULT_TOTAL_DUTY = {
   syDuty: 88,
@@ -568,7 +569,16 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                      const isSecurity = t.id === 'security_duty';
                      return (
                        <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-1 py-1">
-                         Total {t.title} ÷ Total<br/>{isSecurity ? 'Cpl & Below' : 'Sgt & Below'}
+                         Total {t.title} ÷ Total<br/>
+                         {(() => {
+                           const ranksToUse = t.eligibleRanks || DUTY_TYPE_MAP.get(t.dutyCode as any)?.eligibleRanks;
+                           if (ranksToUse && ranksToUse.length > 0) {
+                              const RANK_ORDER = ['MWO', 'SWO', 'WO', 'Sgt', 'Cpl', 'LAC', 'AC-1', 'AC-2'];
+                              const sorted = [...ranksToUse].sort((a, b) => RANK_ORDER.indexOf(a) - RANK_ORDER.indexOf(b));
+                              return sorted[0] + ' & Below';
+                           }
+                           return isSecurity ? 'Cpl & Below' : 'Sgt & Below';
+                         })()}
                        </td>
                      );
                   })}
@@ -746,7 +756,12 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
             <div className="flex justify-end gap-3">
               <button onClick={() => setDeleteConfirmIdx(null)} className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
               <button onClick={() => {
-                if (onMatrixChange && matrix) {
+                if (onMatrixChange && matrix && deleteConfirmIdx !== null) {
+                  const dutyToDelete = matrix[deleteConfirmIdx];
+                  if (dutyToDelete) {
+                    // Try to remove from custom duties if it's a custom duty
+                    removeCustomDuty(dutyToDelete.dutyCode);
+                  }
                   const newMatrix = matrix.filter((_, i) => i !== deleteConfirmIdx);
                   onMatrixChange(newMatrix);
                 }

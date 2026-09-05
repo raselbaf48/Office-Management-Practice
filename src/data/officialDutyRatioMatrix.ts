@@ -1,3 +1,4 @@
+import { getCustomDuties } from '../utils/customDuties';
 import { FlightName, DutyCategoryCode, IDAShift } from '../types';
 import { FlightDutyQuota } from './dutyRatios';
 
@@ -199,16 +200,69 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
         }));
         const existingIds = new Set(updatedParsed.map((t: DutyRatioTable) => t.id));
         const missing = INITIAL_OFFICIAL_DUTY_MATRIX.filter((t) => !existingIds.has(t.id));
+        const customDuties = getCustomDuties();
+        const validCustomIds = new Set(customDuties.map(cd => cd.code.toLowerCase() + '_duty'));
+        const officialIds = new Set(INITIAL_OFFICIAL_DUTY_MATRIX.map(t => t.id));
+        
+        // Filter out deleted custom duties
+        let finalMatrix = updatedParsed.filter(t => officialIds.has(t.id) || validCustomIds.has(t.id));
+        
         if (missing.length > 0) {
-          return [...updatedParsed, ...missing];
+          finalMatrix = [...finalMatrix, ...missing];
         }
-        return updatedParsed;
+        
+        // Dynamically append custom duties if they are missing
+        // customDuties already declared
+        const existingMatrixIds = new Set(finalMatrix.map(t => t.id));
+        
+        customDuties.forEach(cd => {
+           const id = cd.code.toLowerCase() + '_duty';
+           if (!existingMatrixIds.has(id)) {
+               finalMatrix.push({
+                  id,
+                  title: cd.name,
+                  dutyCode: cd.code as any,
+                  totalRequiredMonth: 0,
+                  totalRequiredDaily: 0,
+                  data: {
+                    Mechanics: Array(31).fill(0),
+                    Avionics: Array(31).fill(0),
+                    GCS: Array(31).fill(0),
+                    Admin: Array(31).fill(0),
+                  }
+               });
+           }
+        });
+
+        return finalMatrix;
       }
     }
   } catch (e) {
     console.error('Failed to load stored duty matrix:', e);
   }
-  return INITIAL_OFFICIAL_DUTY_MATRIX;
+  
+  // Default fallback
+  const baseMatrix = [...INITIAL_OFFICIAL_DUTY_MATRIX];
+  const customDuties = getCustomDuties();
+  customDuties.forEach(cd => {
+      const id = cd.code.toLowerCase() + '_duty';
+      if (!baseMatrix.find(t => t.id === id)) {
+          baseMatrix.push({
+             id,
+             title: cd.name,
+             dutyCode: cd.code as any,
+             totalRequiredMonth: 0,
+             totalRequiredDaily: 0,
+             data: {
+               Mechanics: Array(31).fill(0),
+               Avionics: Array(31).fill(0),
+               GCS: Array(31).fill(0),
+               Admin: Array(31).fill(0),
+             }
+          });
+      }
+  });
+  return baseMatrix;
 }
 
 export function saveDutyMatrix(matrix: DutyRatioTable[]) {

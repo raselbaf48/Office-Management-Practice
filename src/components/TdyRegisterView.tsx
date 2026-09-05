@@ -272,7 +272,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
               <span>155 UASU BAF</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Annual TDY Register ({selectedYear})
+              Annual TDY Register
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
               Official register of Temporary Duty (TDY), outstation detachments, unit training courses, and temporary attachments across all flights.
