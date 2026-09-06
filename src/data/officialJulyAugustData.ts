@@ -870,7 +870,7 @@ export function generateOfficialMonthAssignments(year: number, month: number): D
           } else if (yestDuty.dutyCode === 'NTF') {
             offNote = 'NTF Off';
           } else if (yestDuty.dutyCode === 'AIRPORT') {
-            offNote = 'Airport Off';
+            offNote = 'Airfield Off';
           } else if (yestDuty.dutyCode === 'HALISHAHAR') {
             offNote = 'Halishahar Off';
           }

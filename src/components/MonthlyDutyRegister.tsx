@@ -1354,7 +1354,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                   <th className="py-3 px-1.5 text-center bg-indigo-950 text-indigo-300 w-9 border-l border-slate-800 font-bold" title="Halishahar Taskforce Duty (HAL)">
                     HAL
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-blue-950 text-blue-300 w-9 border-l border-slate-800 font-bold" title="Airport Duty (APT)">
+                  <th className="py-3 px-1.5 text-center bg-blue-950 text-blue-300 w-9 border-l border-slate-800 font-bold" title="Airfield Duty (APT)">
                     APT
                   </th>
                   <th className="py-3 px-1.5 text-center bg-sky-950 text-sky-300 w-9 border-l border-slate-800 font-bold" title="IDAC Morning Duty">
@@ -2118,7 +2118,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       else if (res.dutyCode === 'BTF') dutySuffix = 'Base Taskforce';
                       else if (res.dutyCode === 'NTF') dutySuffix = 'Najirpara Taskforce';
                       else if (res.dutyCode === 'HALISHAHAR') dutySuffix = 'Halishahar Taskforce';
-                      else if (res.dutyCode === 'AIRPORT') dutySuffix = 'Airport Duty';
+                      else if (res.dutyCode === 'AIRPORT') dutySuffix = 'Airfield Duty';
                       else if (res.dutyCode === 'IDAC' || res.dutyCode === 'IDA') dutySuffix = `IDAC Duty (${res.idaShift || 'Morning'})`;
                       else if (res.dutyCode === 'BAKE_N_BITE') dutySuffix = 'Bake N Bite';
                       else if (res.dutyCode === 'DUTY_OFF') dutySuffix = 'Duty Off';

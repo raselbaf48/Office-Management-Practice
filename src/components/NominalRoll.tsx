@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Airman, FlightName, Rank, UserRole } from '../types';
 import { Search, UserPlus, Edit3, Trash2, Eye, Filter, Phone, MapPin, Shield, CheckCircle, RefreshCw, Printer, FileDown, FileSpreadsheet, Upload, KeyRound, UserCheck, AlertTriangle } from 'lucide-react';
+import { handleSafePrint } from "../utils/printUtils";
 import { sortAirmenBySeniority } from '../utils/seniority';
+import { PrintableNominalRollModal } from './PrintableNominalRollModal';
 import { exportNominalRollDocx } from '../utils/docxExport';
 import { BulkImportAirmenModal } from './BulkImportAirmenModal';
 import { EntryHistoryModal } from './EntryHistoryModal';
@@ -38,6 +40,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   
@@ -107,7 +110,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
   });
 
   const handlePrint = () => {
-    window.print();
+    handleSafePrint();
   };
 
   return (
@@ -137,12 +140,13 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
           </button>
 
           <button
-            onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
-            title="Print or Save Nominal Roll as PDF"
+            type="button"
+            onClick={() => setIsPrintModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            title="Print Preview / Export"
           >
             <Printer className="w-4 h-4" />
-            <span>Print PDF</span>
+            <span>Official Export/Print</span>
           </button>
 
           <button
@@ -252,7 +256,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                 <th className="py-3 px-4">Name</th>
                 <th className="py-3 px-4">Trade</th>
                 <th className="py-3 px-4">Flight</th>
-                <th className="py-3 px-4">Quarter / Block</th>
+                <th className="py-3 px-4">Address</th>
                 <th className="py-3 px-4">Contact</th>
                 <th className="py-3 px-4 text-center">Status</th>
               </tr>
@@ -280,8 +284,8 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                       <span className="font-black text-slate-900 dark:text-slate-100 text-left">
                         {airman.name}
                       </span>
-                      {(!airman.bdNo || !airman.rank || !airman.name || !airman.trade || !airman.addressBlock || !airman.mobileNo || !airman.flightName) && (
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Missing information. Click to update." />
+                      {(!airman.bdNo?.trim() || !airman.rank?.trim() || !airman.name?.trim() || !airman.trade?.trim() || ['General Tech', '-', 'N/A'].includes(airman.trade) || !airman.addressBlock?.trim() || ['-', 'N/A', 'L/O', 'L/I', "Sgt's Mess", "Airmen's Mess", "Live Out", "Live In"].includes(airman.addressBlock) || !airman.mobileNo?.trim() || ['01', '01700000000', '-'].includes(airman.mobileNo) || !airman.flightName?.trim()) && (
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Missing or incomplete information (Trade, Address, or Mobile). Click to update." />
                       )}
                     </div>
                   </td>
@@ -440,6 +444,13 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
           filterType="ALL"
           onClose={() => setIsHistoryModalOpen(false)}
           onRefreshData={onRefresh}
+        />
+      )}
+
+      {isPrintModalOpen && (
+        <PrintableNominalRollModal
+          airmen={filteredAirmen}
+          onClose={() => setIsPrintModalOpen(false)}
         />
       )}
     </div>

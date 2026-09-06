@@ -979,7 +979,7 @@ export class LocalDatabaseEngine {
             if (yestCodeStr === 'GD') offShort = 'GD Off';
             else if (yestCodeStr === 'BTF') offShort = 'BTF Off';
             else if (yestCodeStr === 'NTF') offShort = 'NTF Off';
-            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'ATT' || yestCodeStr === 'DETT') offShort = 'Airport Off';
+            else if (yestCodeStr === 'AIRPORT' || yestCodeStr === 'AIRFIELD' || yestCodeStr === 'ATT' || yestCodeStr === 'DETT') offShort = 'Airfield Off';
             else if (yestCodeStr === 'HALISHAHAR') offShort = 'Halishahar Off';
             else if ((yestCodeStr === 'IDAC' || yestCodeStr === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
             else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
@@ -990,7 +990,7 @@ export class LocalDatabaseEngine {
             else if (ass.notes.toLowerCase().includes('gd')) offShort = 'GD Off';
             else if (ass.notes.toLowerCase().includes('btf')) offShort = 'BTF Off';
             else if (ass.notes.toLowerCase().includes('ntf')) offShort = 'NTF Off';
-            else if (ass.notes.toLowerCase().includes('airport')) offShort = 'Airport Off';
+            else if (ass.notes.toLowerCase().includes('airport')) offShort = 'Airfield Off';
             else if (ass.notes.toLowerCase().includes('halishahar')) offShort = 'Halishahar Off';
             else offShort = ass.notes;
           }
@@ -1078,7 +1078,7 @@ export class LocalDatabaseEngine {
           if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
           else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
           else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
-          else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airport Off';
+          else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airfield Off';
           else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
           else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
           else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';

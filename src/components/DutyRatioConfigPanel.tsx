@@ -183,7 +183,85 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
     localStorage.setItem('baf_duty_distribution_manpower', JSON.stringify(currentManpower));
   }, [JSON.stringify(currentManpower)]);
 
+  const calculatedMatrixDistributions = useMemo(() => {
+    if (!matrix) return {};
+    const result: Record<string, Record<string, { autoVal: number, exactVal: number }>> = {};
+    
+    // Tracker to balance pure ties across different duty types
+    const tieBreakerTracker: Record<string, number> = {
+      'Mechanics': 0, 'Avionics': 0, 'GCS': 0, 'Admin': 0
+    };
+    
+    matrix.forEach(t => {
+      const isSecurity = t.id === 'security_duty';
+      const dutyTotal = t.totalRequiredMonth || 0;
+      
+      const flights = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
+      const flightPools: Record<string, number> = {};
+      
+      let actualPoolSize = 0;
+      flights.forEach(fl => {
+        let fltCpl = 0, fltSgt = 0;
+        if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
+        if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
+        if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
+        if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
+        
+        let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
+        if (t.eligibleFlights && !t.eligibleFlights.includes(fl as any)) {
+          fltPool = 0;
+        }
+        flightPools[fl] = fltPool;
+        actualPoolSize += fltPool;
+      });
 
+      if (dutyTotal === 0 || actualPoolSize === 0) {
+        result[t.id] = flights.reduce((acc, fl) => ({ ...acc, [fl]: { autoVal: 0, exactVal: 0 } }), {});
+        return;
+      }
+
+      const exactVals = flights.map(fl => {
+        const exact = (flightPools[fl] / actualPoolSize) * dutyTotal;
+        return {
+          flight: fl,
+          exact: exact,
+          floor: Math.floor(exact),
+          remainder: exact - Math.floor(exact)
+        };
+      });
+
+      const allocated = exactVals.reduce((sum, item) => sum + item.floor, 0);
+      const remaining = dutyTotal - allocated;
+
+      const sortedForDistribution = [...exactVals]
+        .filter(item => flightPools[item.flight] > 0)
+        .sort((a, b) => {
+        const diff = b.remainder - a.remainder;
+        if (Math.abs(diff) > 1e-9) {
+          return diff; // larger remainder first
+        }
+        const floorDiff = a.floor - b.floor;
+        if (floorDiff !== 0) {
+          return floorDiff; // tie breaker 1: lower total duty (floor) first
+        }
+        // tie breaker 2: alternate based on who has received fewer extra tie-breaker duties
+        return tieBreakerTracker[a.flight] - tieBreakerTracker[b.flight];
+      });
+
+      for (let i = 0; i < remaining && i < sortedForDistribution.length; i++) {
+        sortedForDistribution[i].floor += 1;
+        // Record allocation to balance future pure ties
+        tieBreakerTracker[sortedForDistribution[i].flight] += 1;
+      }
+
+      result[t.id] = {};
+      exactVals.forEach(item => {
+        result[t.id][item.flight] = { autoVal: item.floor, exactVal: item.exact };
+      });
+    });
+    
+    return result;
+  }, [matrix, JSON.stringify(currentManpower), totalCpl, totalSgtAndBelow]);
 
   return (
     <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 md:p-8 min-h-max overflow-auto text-sm font-sans relative" style={{ fontFamily: 'Arial, sans-serif' }}>
@@ -586,7 +664,19 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                 <tr>
                   {matrix && matrix.map(t => {
                      const isSecurity = t.id === 'security_duty';
-                     const poolSize = isSecurity ? totalCpl : totalSgtAndBelow;
+                     let poolSize = 0;
+                     ['Mechanics', 'Avionics', 'GCS', 'Admin'].forEach(fl => {
+                       if (t.eligibleFlights && !t.eligibleFlights.includes(fl as any)) return;
+                       
+                       let fltCpl = 0, fltSgt = 0;
+                       if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
+                       if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
+                       if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
+                       if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
+                       
+                       poolSize += isSecurity ? fltCpl : (fltCpl + fltSgt);
+                     });
+                     
                      const val = poolSize > 0 ? ((t.totalRequiredMonth || 0) / poolSize) : 0;
                      return (
                        <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-mono">
@@ -646,49 +736,46 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                         if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
                         if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
                         
-                        // For airfield duty, Admin is excluded (fltPool = 0 if Admin)
-                        let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
-                        if (t.id === 'airfield_duty' && fl === 'Admin') {
-                          fltPool = 0;
-                        }
-                        
-                        const exactVal = dppVal * fltPool;
+                        // Retrieve pre-calculated LRM values
+                        const distribution = calculatedMatrixDistributions[t.id]?.[fl];
+                        const exactVal = distribution?.exactVal || 0;
+                        const autoVal = distribution?.autoVal || 0;
                         
                         const manualVal = t.flightTargets?.[fl as keyof typeof t.flightTargets];
                         
-                        // LRM logic is usually complex to do inline, but since we just need integer targets that sum to dutyTotal, 
-                        // doing round() inline might cause the sum to deviate. For now, let's just use round() as autoVal.
-                        // (We will let the warning show if sum != total)
-                        const autoVal = Math.round(exactVal);
-                        
                         return (
                           <td key={t.id} className="border border-slate-400 dark:border-slate-700 px-0 py-0 relative">
-                            {t.id === 'airfield_duty' && fl === 'Admin' ? (
+                            {t.eligibleFlights && !t.eligibleFlights.includes(fl as any) ? (
                                 <div className="w-full text-center text-slate-400 bg-slate-100 dark:bg-slate-800/50 py-1">N/A</div>
+                            ) : showExactRatio ? (
+                              <div className="w-full h-full min-h-[30px] flex items-center justify-center text-xs whitespace-nowrap px-1">
+                                <span className="text-slate-500 dark:text-slate-400">{exactVal.toFixed(2)}</span>
+                                <span className="mx-1 text-slate-300 dark:text-slate-600">➤</span>
+                                <span className={manualVal !== undefined ? 'text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300 font-bold'}>
+                                  {manualVal !== undefined ? manualVal : autoVal}
+                                </span>
+                              </div>
                             ) : (
-                              <>
-                                <input
-                                  type="number"
-                                  className={`w-full h-full min-h-[30px] px-1 text-center bg-transparent outline-none focus:bg-indigo-50 dark:focus:bg-indigo-900/30 ${manualVal !== undefined ? 'text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}
-                                  placeholder={autoVal.toString()}
-                                  value={manualVal !== undefined ? manualVal : ''}
-                                  onChange={(e) => {
-                                    if (onMatrixChange) {
-                                       const val = e.target.value ? parseInt(e.target.value) : undefined;
-                                       const newMatrix = [...matrix];
-                                       const tIdx = newMatrix.findIndex(x => x.id === t.id);
-                                       if (tIdx >= 0) {
-                                          const newTargets = { ...(newMatrix[tIdx].flightTargets || {}) };
-                                          if (val !== undefined) newTargets[fl] = val;
-                                          else delete newTargets[fl];
-                                          newMatrix[tIdx] = { ...newMatrix[tIdx], flightTargets: newTargets };
-                                          onMatrixChange(newMatrix);
-                                       }
-                                    }
-                                  }}
-                                />
-                                {showExactRatio && <div className="text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 absolute bottom-0 left-0 right-0">{exactVal.toFixed(2)}</div>}
-                              </>
+                              <input
+                                type="number"
+                                className={`w-full h-full min-h-[30px] px-1 text-center bg-transparent outline-none focus:bg-indigo-50 dark:focus:bg-indigo-900/30 ${manualVal !== undefined ? 'text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}
+                                placeholder={autoVal.toString()}
+                                value={manualVal !== undefined ? manualVal : ''}
+                                onChange={(e) => {
+                                  if (onMatrixChange) {
+                                     const val = e.target.value ? parseInt(e.target.value) : undefined;
+                                     const newMatrix = [...matrix];
+                                     const tIdx = newMatrix.findIndex(x => x.id === t.id);
+                                     if (tIdx >= 0) {
+                                        const newTargets = { ...(newMatrix[tIdx].flightTargets || {}) };
+                                        if (val !== undefined) newTargets[fl] = val;
+                                        else delete newTargets[fl];
+                                        newMatrix[tIdx] = { ...newMatrix[tIdx], flightTargets: newTargets };
+                                        onMatrixChange(newMatrix);
+                                     }
+                                  }
+                                }}
+                              />
                             )}
                           </td>
                         );
@@ -705,18 +792,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                        if (manual !== undefined) {
                          totalVal += manual;
                        } else {
-                         const isSecurity = t.id === 'security_duty';
-                         const poolSize = isSecurity ? totalCpl : totalSgtAndBelow;
-                         const dutyTotal = t.totalRequiredMonth || 0;
-                         const dppVal = poolSize > 0 ? (dutyTotal / poolSize) : 0;
-                         let fltCpl = 0, fltSgt = 0;
-                         if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
-                         if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
-                         if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
-                         if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
-                         let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
-                         if (t.id === 'airfield_duty' && fl === 'Admin') fltPool = 0;
-                         totalVal += Math.round(dppVal * fltPool);
+                         totalVal += calculatedMatrixDistributions[t.id]?.[fl]?.autoVal || 0;
                        }
                     });
                     

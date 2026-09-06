@@ -128,6 +128,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     dutyCode: 'AIRPORT',
     totalRequiredMonth: 93,
     totalRequiredDaily: 3,
+    eligibleFlights: ['Mechanics', 'Avionics', 'GCS'],
     data: {
       Mechanics: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       Avionics:  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -143,6 +144,7 @@ export const INITIAL_OFFICIAL_DUTY_MATRIX: DutyRatioTable[] = [
     dutyCode: 'HALISHAHAR',
     totalRequiredMonth: 7,
     totalRequiredDaily: 1,
+    eligibleFlights: ['Avionics'],
     data: {
       Mechanics: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       Avionics:  [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
@@ -193,11 +195,16 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         // Map over parsed and ensure official updated titles are synchronized while preserving user custom data
-        const titleMap = new Map(INITIAL_OFFICIAL_DUTY_MATRIX.map((t) => [t.id, t.title]));
-        const updatedParsed = parsed.map((t: DutyRatioTable) => ({
-          ...t,
-          title: titleMap.get(t.id) || t.title,
-        }));
+        const defaultsMap = new Map(INITIAL_OFFICIAL_DUTY_MATRIX.map((t) => [t.id, t]));
+        const updatedParsed = parsed.map((t: DutyRatioTable) => {
+          const defT = defaultsMap.get(t.id);
+          return {
+            ...t,
+            title: defT?.title || t.title,
+            eligibleFlights: t.eligibleFlights || defT?.eligibleFlights,
+            eligibleRanks: t.eligibleRanks || defT?.eligibleRanks,
+          };
+        });
         const existingIds = new Set(updatedParsed.map((t: DutyRatioTable) => t.id));
         const missing = INITIAL_OFFICIAL_DUTY_MATRIX.filter((t) => !existingIds.has(t.id));
         const customDuties = getCustomDuties();
@@ -415,5 +422,12 @@ export function getFlightDutyQuotaForDate(
   }
 
   if (!table) return 0;
+  
+  // If the user explicitly set a target of 0 for this flight for the whole month, return 0 for all days.
+  // This handles cases where they use LRM but haven't updated the daily arrays in the calendar.
+  if (table.flightTargets && typeof table.flightTargets[flight] === 'number' && table.flightTargets[flight] === 0) {
+    return 0;
+  }
+
   return table.data[flight]?.[dayIndex] || 0;
 }

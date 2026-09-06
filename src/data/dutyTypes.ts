@@ -48,14 +48,14 @@ export const INITIAL_DUTY_TYPES: DutyTypeInfo[] = [
   },
   {
     code: 'AIRPORT',
-    name: 'Airport Duty',
+    name: 'Airfield Duty',
     shortName: 'APT',
     category: 'Special',
     color: 'bg-blue-600 text-white',
     badgeBg: 'bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700',
     badgeText: 'text-blue-800 dark:text-blue-300',
     isCountedAsDuty: true,
-    description: 'Airport & Runway Security Ops',
+    description: 'Airfield & Runway Security Ops',
   },
   {
     code: 'IDAC',

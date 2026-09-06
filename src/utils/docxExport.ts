@@ -314,7 +314,7 @@ export async function exportNominalRollDocx(
       spacing: { after: 60 },
       children: [
         new TextRun({
-          text: 'NOMINAL ROLL DIRECTORY : 155 UASU BAF',
+          text: 'NOMINAL ROLL : AIRMEN',
           font: 'Arial',
           bold: true,
           size: 26,
@@ -327,10 +327,11 @@ export async function exportNominalRollDocx(
       spacing: { after: 180 },
       children: [
         new TextRun({
-          text: `Total Personnel: ${airmen.length} Airmen (Sorted by Rank Seniority & BD Number)`,
+          text: '155 UASU BAF',
           font: 'Arial',
-          bold: false,
-          size: 20,
+          bold: true,
+          size: 26,
+          underline: {},
         }),
       ],
     }),
@@ -345,7 +346,7 @@ export async function exportNominalRollDocx(
       createArialHeaderCell('Name', 2200),
       createArialHeaderCell('Trade', 1400),
       createArialHeaderCell('Flight', 1300),
-      createArialHeaderCell('Address / Block', 1600),
+      createArialHeaderCell('Address', 1600),
       createArialHeaderCell('Mobile No', 1500),
     ],
   });
@@ -354,12 +355,12 @@ export async function exportNominalRollDocx(
     return new TableRow({
       children: [
         createArialDataCell(String(idx + 1), 700, AlignmentType.CENTER),
-        createArialDataCell(a.bdNo, 1400, AlignmentType.CENTER),
-        createArialDataCell(a.rank, 1000, AlignmentType.CENTER),
+        createArialDataCell(a.bdNo.replace(/^BD\//i, ''), 1400, AlignmentType.CENTER),
+        createArialDataCell(a.rank, 1000, AlignmentType.LEFT),
         createArialDataCell(a.name, 2200, AlignmentType.LEFT),
-        createArialDataCell(a.trade, 1400, AlignmentType.CENTER),
-        createArialDataCell(a.flightName, 1300, AlignmentType.CENTER),
-        createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.CENTER),
+        createArialDataCell(a.trade, 1400, AlignmentType.LEFT),
+        createArialDataCell(a.flightName, 1300, AlignmentType.LEFT),
+        createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.LEFT),
         createArialDataCell(a.mobileNo || '-', 1500, AlignmentType.CENTER),
       ],
     });

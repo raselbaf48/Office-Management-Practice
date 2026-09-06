@@ -1,5 +1,5 @@
 import { DateNavigator } from './DateNavigator';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Check,
@@ -32,7 +32,7 @@ import {
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
 import { getCurrentUserSession } from '../utils/authSession';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
-import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
+import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate, getStoredDutyMatrix } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { AssignLeaveTab } from './AssignLeaveTab';
 import { AssignTdyTab } from './AssignTdyTab';
@@ -97,6 +97,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   const [loadingInitial, setLoadingInitial] = useState<boolean>(false);
   const [processingAirmanId, setProcessingAirmanId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string>('');
+  
+  const userManuallySelectedFlightRef = useRef<boolean>(false);
 
   // Update dates & duty code when isOpen changes
   useEffect(() => {
@@ -188,6 +190,61 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       fetchCurrentRoster();
     }
   }, [isOpen, fromDate]);
+
+  useEffect(() => {
+    if (activeFlight !== 'All') {
+      const dutyConfig = DUTY_TYPE_MAP.get(activeDutyCode as any);
+      if (dutyConfig) {
+        const matrixConfig = getStoredDutyMatrix().find(t => t.dutyCode === activeDutyCode);
+        const eligibleFlights = matrixConfig?.eligibleFlights || dutyConfig.eligibleFlights;
+        if (eligibleFlights && eligibleFlights.length > 0 && !eligibleFlights.includes(activeFlight)) {
+           setActiveFlight('All');
+        }
+      }
+    }
+  }, [activeDutyCode, activeFlight]);
+
+  // Reset manual flight selection tracking when duty config changes
+  useEffect(() => {
+    userManuallySelectedFlightRef.current = false;
+  }, [activeDutyCode, fromDate, activeIdaShift]);
+
+  // Auto-select flight for matrix-tracked duties based on quota and unfulfilled assignments
+  useEffect(() => {
+    if (userManuallySelectedFlightRef.current) return;
+    const isMatrixTracked = getStoredDutyMatrix().some(t => t.dutyCode === activeDutyCode);
+    if (isMatrixTracked) {
+      const orderedFlights: FlightName[] = ["Avionics", "Mechanics", "GCS", "Admin"];
+      let targetFlight: FlightName | "All" = "All";
+
+      for (const flt of orderedFlights) {
+        const required = getFlightDutyQuotaForDate(
+          fromDate, 
+          flt, 
+          activeDutyCode,
+          (activeDutyCode === "IDAC" || activeDutyCode === "IDA") ? activeIdaShift : undefined
+        );
+        
+        if (required > 0) {
+          const assignedCount = assignmentsList.filter((a) => {
+            const airman = airmanMap.get(a.airmanId);
+            return airman && 
+                   airman.flightName === flt && 
+                   a.dutyCode === activeDutyCode &&
+                   (a.dutyCode !== "IDAC" && a.dutyCode !== "IDA" || a.idaShift === activeIdaShift);
+          }).length;
+            
+          if (assignedCount < required) {
+            targetFlight = flt;
+            break;
+          }
+        }
+      }
+        
+      setActiveFlight(targetFlight);
+    }
+  }, [activeDutyCode, fromDate, activeIdaShift, assignmentsList, airmanMap]);
+
 
   // Helper to get required ratio count for duty
   const getRequiredCountForDuty = (dutyCode: DutyCategoryCode, shift?: IDAShift): number => {
@@ -374,7 +431,9 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         const targetFlight = proxyForFlight && isProxyEnabled ? proxyForFlight : (activeFlight !== 'All' ? activeFlight : airman.flightName);
 
         // Find if there is any previously assigned airman from this same flight for this duty (and shift if IDAC)
-        const previousFlightAssignee = assignmentsList.find((a) => {
+        // We only do this auto-replace if the quota for this flight is exactly 1, or if it's not a matrix-tracked duty.
+        const reqQuota = getRequiredCountForDuty(activeDutyCode, activeIdaShift);
+        const previousFlightAssignee = reqQuota <= 1 ? assignmentsList.find((a) => {
           if (a.airmanId === airman.id) return false;
           const assignedAirman = airmen.find((m) => m.id === a.airmanId);
           if (!assignedAirman || assignedAirman.flightName !== targetFlight) return false;
@@ -385,7 +444,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             return a.dutyCode === 'ATT' || a.dutyCode === 'AIRPORT';
           }
           return a.dutyCode === activeDutyCode;
-        });
+        }) : undefined;
 
         // If previously assigned airman exists from this flight, unassign them first to enforce single selection per flight slot
         if (previousFlightAssignee) {
@@ -583,14 +642,22 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         if (isAssigned) return true;
 
         const dutyConfig = DUTY_TYPE_MAP.get(activeDutyCode as any);
-        if (dutyConfig?.isCustom) {
-          if (dutyConfig.eligibleFlights && dutyConfig.eligibleFlights.length > 0) {
-            if (!dutyConfig.eligibleFlights.includes(airman.flightName)) return false;
+        if (dutyConfig) {
+          // If the duty has overridden eligible flights in the matrix, use those instead
+          const matrixConfig = getStoredDutyMatrix().find(t => t.dutyCode === activeDutyCode);
+          const eligibleFlights = matrixConfig?.eligibleFlights || dutyConfig.eligibleFlights;
+          const eligibleRanks = matrixConfig?.eligibleRanks || dutyConfig.eligibleRanks;
+          
+          if (eligibleFlights && eligibleFlights.length > 0) {
+            if (!eligibleFlights.includes(airman.flightName as any)) return false;
           }
-          if (dutyConfig.eligibleRanks && dutyConfig.eligibleRanks.length > 0) {
-            if (!dutyConfig.eligibleRanks.includes(airman.rank)) return false;
+          if (eligibleRanks && eligibleRanks.length > 0) {
+            if (!eligibleRanks.includes(airman.rank as any)) return false;
           }
-          return true;
+          
+          // Return true if it passed the specific configured filters.
+          // This avoids the legacy hardcoded checks below overriding the matrix configuration.
+          if (eligibleFlights?.length || eligibleRanks?.length || dutyConfig.isCustom) return true;
         }
 
         const rankLower = (airman.rank || '').toLowerCase();
@@ -1035,13 +1102,44 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">
                 2. Flight:
               </span>
-              {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
+              {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).filter(flt => {
+                const matrixConfig = getStoredDutyMatrix().find(t => t.dutyCode === activeDutyCode);
+                
+                if (matrixConfig) {
+                  // For duties that are tracked in the matrix (GD, BTF, IDAC, etc), hide flights with 0 quota for that day.
+                  const quota = getFlightDutyQuotaForDate(
+                    fromDate, 
+                    flt, 
+                    activeDutyCode, 
+                    activeDutyCode === 'IDAC' || activeDutyCode === 'IDA' ? activeIdaShift : undefined
+                  );
+                  if (quota === 0) return false;
+                } else {
+                  // For duties without a matrix, use eligibleFlights if defined
+                  const dutyConfig = DUTY_TYPE_MAP.get(activeDutyCode as any);
+                  if (dutyConfig?.eligibleFlights && dutyConfig.eligibleFlights.length > 0) {
+                    return dutyConfig.eligibleFlights.includes(flt);
+                  }
+                }
+                
+                // Also respect matrix eligibleFlights just in case
+                if (matrixConfig?.eligibleFlights && matrixConfig.eligibleFlights.length > 0) {
+                  return matrixConfig.eligibleFlights.includes(flt);
+                }
+
+                return true;
+              }).map((flt) => {
                 const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                 return (
                 <button
                   key={flt}
                   type="button"
-                  onClick={() => !isDisabledFlt && setActiveFlight(activeFlight === flt ? 'All' : flt)}
+                  onClick={() => {
+                    if (!isDisabledFlt) {
+                      setActiveFlight(activeFlight === flt ? 'All' : flt);
+                      userManuallySelectedFlightRef.current = true;
+                    }
+                  }}
                   disabled={isDisabledFlt}
                   className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
                     isDisabledFlt ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' :

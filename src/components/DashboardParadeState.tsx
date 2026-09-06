@@ -657,7 +657,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                                       if (prev.includes('BTF')) return '🌙 BTF Off';
                                       if (prev.includes('NTF') || prev.includes('NAJIR')) return '🌙 NTF Off';
                                       if (prev.includes('IDAC') || prev.includes('IDA')) return '🌙 IDAC Nt Off';
-                                      if (prev.includes('AIR') || prev.includes('PORT')) return '🌙 Airport Off';
+                                      if (prev.includes('AIR') || prev.includes('PORT')) return '🌙 Airfield Off';
                                       if (prev.includes('HALI')) return '🌙 Halishahar Off';
                                       if (item.previousDutyName) return `🌙 ${item.previousDutyName}`;
                                       if (item.dutyName && !item.dutyName.toLowerCase().includes('duty off')) return `🌙 ${item.dutyName}`;
@@ -668,7 +668,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                                       if (item.dutyCode === 'BTF') return '📌 Base Taskforce Duty';
                                       if (item.dutyCode === 'NTF') return '📌 Najirpara Taskforce Duty';
                                       if (item.dutyCode === 'HALISHAHAR') return '📌 Halishahar Duty';
-                                      if (item.dutyCode === 'AIRPORT') return '📌 Airport Duty';
+                                      if (item.dutyCode === 'AIRPORT') return '📌 Airfield Duty';
                                       if (item.dutyCode === 'IDAC' || item.dutyCode === 'IDA') return `📌 IDAC Duty (${item.idaShift || 'Morning'})`;
                                       return `📌 ${item.dutyName || item.dutyCode}`;
                                     }
