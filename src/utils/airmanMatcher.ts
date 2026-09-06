@@ -252,7 +252,7 @@ export function parseRosterTextHeuristically(
       return { code: 'LEAVE', name: 'Leave (CL/AL)', shift: null };
     }
     if (upper.includes('BAKE N BITE') || upper.includes('BAKE & BITE')) {
-      return { code: 'BAKE_N_BITE', name: 'Bake N Bite', shift: null };
+      return { code: 'BAKE_N_BITE', name: 'Bake & Bite', shift: null };
     }
     if (upper === 'TDY' || upper.startsWith('TDY')) {
       return { code: 'TDY', name: 'TDY', shift: null };
@@ -260,6 +260,10 @@ export function parseRosterTextHeuristically(
     return null;
   };
 
+
+  let currentDateStr = '';
+  let currentDayName = '';
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const upperLine = line.toUpperCase();
@@ -282,36 +286,40 @@ export function parseRosterTextHeuristically(
       continue;
     }
 
-    let dateStr = '';
-    let dayName = '';
-    let lineContent = '';
+    let lineContent = line;
 
     const match = line.match(dateRegex);
     if (match) {
       const dayNum = match[1].padStart(2, '0');
       const monthStr = match[2].toLowerCase().slice(0, 3);
       const monthNum = monthMap[monthStr] || '08';
-      dayName = match[3] || '';
-      dateStr = `${targetYear}-${monthNum}-${dayNum}`;
-      lineContent = line.slice(match.index! + match[0].length).replace(/^[\s:—|]+/, '').trim();
+      currentDayName = match[3] || '';
+      currentDateStr = `${targetYear}-${monthNum}-${dayNum}`;
+      lineContent = line.slice(match.index + match[0].length).replace(/^[\s:—|]+/, '').trim();
     } else {
       const numMatch = line.match(numericDateRegex);
       if (numMatch) {
         if (numMatch[1]) {
-          dateStr = `${numMatch[1]}-${numMatch[2].padStart(2, '0')}-${numMatch[3].padStart(2, '0')}`;
+          currentDateStr = `${numMatch[1]}-${numMatch[2].padStart(2, '0')}-${numMatch[3].padStart(2, '0')}`;
         } else {
           const yr = numMatch[6].length === 2 ? `20${numMatch[6]}` : numMatch[6];
-          dateStr = `${yr}-${numMatch[5].padStart(2, '0')}-${numMatch[4].padStart(2, '0')}`;
+          currentDateStr = `${yr}-${numMatch[5].padStart(2, '0')}-${numMatch[4].padStart(2, '0')}`;
         }
-        lineContent = line.slice(numMatch.index! + numMatch[0].length).replace(/^[\s:—|]+/, '').trim();
+        lineContent = line.slice(numMatch.index + numMatch[0].length).replace(/^[\s:—|]+/, '').trim();
       }
     }
+    
+    // If we haven't found a date yet, try to assign to today or skip
+    if (!currentDateStr) {
+      const today = new Date();
+      currentDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
 
-    if (dateStr) {
-      if (!dateMap.has(dateStr)) {
-        dateMap.set(dateStr, { date: dateStr, dayName: dayName, assignments: [] });
+    if (currentDateStr) {
+      if (!dateMap.has(currentDateStr)) {
+        dateMap.set(currentDateStr, { date: currentDateStr, dayName: currentDayName, assignments: [] });
       }
-      const entry = dateMap.get(dateStr)!;
+      const entry = dateMap.get(currentDateStr);
 
       // Process tokens in lineContent
       const tokens = lineContent.split(/(?:[-—|•\t;]+|\s{2,})/);

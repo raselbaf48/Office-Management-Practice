@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, FlightName } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
+import { sortAirmenBySeniority } from '../utils/seniority';
 import { DateNavigator } from './DateNavigator';
 import { RefreshCw, Check } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
   const [deploymentFromDate, setDeploymentFromDate] = useState<string>(todayStr);
   const [deploymentToDate, setDeploymentToDate] = useState<string>(todayStr);
   const [deploymentLocation, setDeploymentLocation] = useState<string>('');
+  const [deploymentCustomDestination, setDeploymentCustomDestination] = useState<string>('');
   const [deploymentRemarks, setDeploymentRemarks] = useState<string>('');
   
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(null);
@@ -35,7 +37,7 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
   }, [isAdmin, adminFlight]);
 
   const deploymentAirmenList = useMemo(() => {
-    return airmen.filter((a) => a.flightName === deploymentFlight).sort((a, b) => a.name.localeCompare(b.name));
+    return sortAirmenBySeniority(airmen.filter((a) => a.flightName === deploymentFlight));
   }, [airmen, deploymentFlight]);
 
   const handlePresetToggle = (days: number) => {
@@ -65,13 +67,17 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
       alert('Invalid date range, missing airman, or missing destination.');
       return;
     }
+    const finalDest = deploymentLocation === 'Custom' ? deploymentCustomDestination : deploymentLocation;
+    if (deploymentLocation === 'Custom' && !finalDest) {
+      alert('Please enter custom destination');
+      return;
+    }
 
     setSavingDeployment(true);
     setDeploymentSuccessMsg('');
 
     try {
-      let fullNotes = `Deployed to ${deploymentLocation}`;
-      if (deploymentRemarks.trim()) fullNotes += ` - ${deploymentRemarks.trim()}`;
+      const fullNotes = deploymentRemarks.trim() ? `${finalDest} - ${deploymentRemarks.trim()}` : finalDest;
 
       const res = await fetch('/api/roster/assign-range', {
         method: 'POST',
@@ -103,7 +109,7 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
   };
 
   // Custom preset locations array to render nicely
-  const presetLocations = ['Canteen', 'Bake n Bite', 'JES (MT)', 'BSM', 'DOHS'];
+  const presetLocations = ['Canteen', 'Bake & Bite'];
 
   return (
     <div className="flex flex-col h-full bg-slate-900 overflow-y-auto">
@@ -176,13 +182,16 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
             <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
               Destination (Mandatory) <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-3 gap-2 mb-2">
+            <div className="flex flex-wrap gap-1.5 mb-2">
                {presetLocations.map(loc => (
                   <button
                     key={loc}
                     type="button"
-                    onClick={() => setDeploymentLocation(loc)}
-                    className={`py-1.5 px-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                    onClick={() => {
+                      setDeploymentLocation(loc);
+                      setDeploymentCustomDestination('');
+                    }}
+                    className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
                       deploymentLocation === loc
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                         : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -193,9 +202,9 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
                ))}
                <button
                   type="button"
-                  onClick={() => setDeploymentLocation(deploymentLocation && !presetLocations.includes(deploymentLocation) ? deploymentLocation : 'Custom')}
-                  className={`py-1.5 px-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                    deploymentLocation && !presetLocations.includes(deploymentLocation)
+                  onClick={() => setDeploymentLocation('Custom')}
+                  className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                    deploymentLocation === 'Custom'
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                       : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
@@ -204,18 +213,18 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
                 </button>
             </div>
             
-            {(!presetLocations.includes(deploymentLocation) && deploymentLocation !== '') || deploymentLocation === 'Custom' ? (
+            {deploymentLocation === 'Custom' && (
               <input
                 type="text"
-                value={deploymentLocation === 'Custom' ? '' : deploymentLocation}
-                onChange={(e) => setDeploymentLocation(e.target.value)}
+                value={deploymentCustomDestination}
+                onChange={(e) => setDeploymentCustomDestination(e.target.value)}
                 placeholder="Enter custom deployment location..."
                 className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${
-                  !deploymentLocation ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-emerald-500'
+                  !deploymentCustomDestination ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-emerald-500'
                 }`}
                 required
               />
-            ) : null}
+            )}
           </div>
 
           {/* Remarks */}

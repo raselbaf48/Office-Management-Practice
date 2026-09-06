@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, Loader2, Unlock, AlertCircle, ChevronRight } from 'lucide-react';
 import { getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 import { INITIAL_AIRMEN } from '../data/initialAirmen';
+import { RandomizedKeypad } from './RandomizedKeypad';
 import { Airman, UserRole } from '../types';
 
 interface AdminPasscodeModalProps {
@@ -22,6 +23,8 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
   airmen = [],
 }) => {
   const [passcode, setPasscode] = useState('');
+  const [isPasswordFocused, setIsPasswordFocused] = useState<boolean>(true);
+  const [isConfirmFocused, setIsConfirmFocused] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -235,14 +238,20 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 <input
                   type="password"
                   value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                  readOnly
+                  onFocus={() => setIsPasswordFocused(true)}
                   disabled={isSuccess || isVerifying || lockRemainingSec > 0}
-                  className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-2xl font-mono tracking-[0.5em] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition-all disabled:opacity-50"
+                  className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-2xl font-mono tracking-[0.5em] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition-all disabled:opacity-50 cursor-pointer"
                   placeholder="••••"
                   autoFocus
                   maxLength={10}
                 />
+                
+                {isPasswordFocused && !isSuccess && !isVerifying && lockRemainingSec === 0 && (
+                  <div className="pt-2 animate-fadeIn">
+                    <RandomizedKeypad value={passcode} onChange={setPasscode} maxLength={10} />
+                  </div>
+                )}
                 
                 {lockRemainingSec > 0 && (
                   <div className="text-xs font-bold text-red-500 mt-2 animate-pulse">
@@ -332,21 +341,35 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                     <input
                       type="password"
                       value={newPass}
-                      onChange={(e) => setNewPass(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-all text-center tracking-widest text-lg"
+                      readOnly
+                      onFocus={() => { setIsPasswordFocused(true); setIsConfirmFocused(false); }}
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-all text-center tracking-widest text-lg cursor-pointer"
                       required
                       autoFocus
                     />
+                    {isPasswordFocused && (
+                      <div className="pt-2">
+                         <RandomizedKeypad value={newPass} onChange={setNewPass} maxLength={10} />
+                         <div className="text-right mt-1"><button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold p-1">Done</button></div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Confirm Admin Passcode</label>
                     <input
                       type="password"
                       value={confirmPass}
-                      onChange={(e) => setConfirmPass(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-all text-center tracking-widest text-lg"
+                      readOnly
+                      onFocus={() => { setIsConfirmFocused(true); setIsPasswordFocused(false); }}
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-all text-center tracking-widest text-lg cursor-pointer"
                       required
                     />
+                    {isConfirmFocused && (
+                      <div className="pt-2">
+                         <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} maxLength={10} />
+                         <div className="text-right mt-1"><button type="button" onClick={() => setIsConfirmFocused(false)} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold p-1">Done</button></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

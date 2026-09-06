@@ -115,14 +115,14 @@ export const INITIAL_DUTY_TYPES: DutyTypeInfo[] = [
   },
   {
     code: 'BAKE_N_BITE',
-    name: 'Bake N Bite',
+    name: 'Bake & Bite',
     shortName: 'BnB',
     category: 'Special',
     color: 'bg-rose-600 text-white',
     badgeBg: 'bg-rose-100 dark:bg-rose-900/40 border border-rose-300 dark:border-rose-700',
     badgeText: 'text-rose-800 dark:text-rose-300',
     isCountedAsDuty: false,
-    description: 'Bake N Bite Facility Duty (Does not count towards total duty count)',
+    description: 'Bake & Bite Facility Duty (Does not count towards total duty count)',
   },
   {
     code: 'DUTY_OFF',

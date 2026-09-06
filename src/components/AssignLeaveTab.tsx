@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, FlightName } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
+import { sortAirmenBySeniority } from '../utils/seniority';
 import { DateNavigator } from './DateNavigator';
 import { Calendar, RefreshCw, Check } from 'lucide-react';
 
@@ -41,7 +42,7 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
   }, [isAdmin, adminFlight]);
 
   const grantAirmenList = useMemo(() => {
-    return airmen.filter((a) => a.flightName === grantLeaveFlight).sort((a, b) => a.name.localeCompare(b.name));
+    return sortAirmenBySeniority(airmen.filter((a) => a.flightName === grantLeaveFlight));
   }, [airmen, grantLeaveFlight]);
 
   // Derived Values & Handlers

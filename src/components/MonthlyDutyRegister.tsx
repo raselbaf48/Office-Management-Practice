@@ -100,7 +100,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
     { key: 'IDAC_AFTERNOON', dutyCode: 'IDAC', label: 'IDA Center Duty (Afternoon)', idaShift: 'Afternoon', badgeBg: 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-800' },
     { key: 'IDAC_NIGHT', dutyCode: 'IDAC', label: 'IDA Center Duty (Night)', idaShift: 'Night', badgeBg: 'bg-indigo-200 text-indigo-950 border-indigo-400 dark:bg-indigo-950 dark:text-indigo-200 dark:border-indigo-800' },
     { key: 'LEAVE', dutyCode: 'LEAVE', label: 'LEAVE', badgeBg: 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800' },
-    { key: 'BAKE_N_BITE', dutyCode: 'BAKE_N_BITE', label: 'Bake N Bite', badgeBg: 'bg-orange-200 text-orange-950 border-orange-400 dark:bg-orange-950 dark:text-orange-200 dark:border-orange-800' },
+    { key: 'BAKE_N_BITE', dutyCode: 'BAKE_N_BITE', label: 'Bake & Bite', badgeBg: 'bg-orange-200 text-orange-950 border-orange-400 dark:bg-orange-950 dark:text-orange-200 dark:border-orange-800' },
   ];
 
   const flightsList: FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
@@ -1366,7 +1366,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                   <th className="py-3 px-1.5 text-center bg-indigo-950 text-indigo-300 w-9 border-l border-slate-800 font-bold" title="IDAC Night Duty">
                     I-N
                   </th>
-                  <th className="py-3 px-1.5 text-center bg-orange-950 text-orange-300 w-9 border-l border-slate-800 font-bold" title="Bake N Bite Duty">
+                  <th className="py-3 px-1.5 text-center bg-orange-950 text-orange-300 w-9 border-l border-slate-800 font-bold" title="Bake & Bite Duty">
                     BnB
                   </th>
                   <th className="py-3 px-2 text-center bg-emerald-950 text-emerald-300 w-11 border-l border-slate-800 font-bold" title="Total Active Duties">
@@ -2120,7 +2120,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       else if (res.dutyCode === 'HALISHAHAR') dutySuffix = 'Halishahar Taskforce';
                       else if (res.dutyCode === 'AIRPORT') dutySuffix = 'Airfield Duty';
                       else if (res.dutyCode === 'IDAC' || res.dutyCode === 'IDA') dutySuffix = `IDAC Duty (${res.idaShift || 'Morning'})`;
-                      else if (res.dutyCode === 'BAKE_N_BITE') dutySuffix = 'Bake N Bite';
+                      else if (res.dutyCode === 'BAKE_N_BITE') dutySuffix = 'Bake & Bite';
                       else if (res.dutyCode === 'DUTY_OFF') dutySuffix = 'Duty Off';
                       else if (hasOtherDuty) dutySuffix = res.dutyCode;
 

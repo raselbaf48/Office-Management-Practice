@@ -89,8 +89,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                     <th className="p-1.5 border border-black font-bold text-center w-48">Name</th>
                     <th className="p-1.5 border border-black font-bold text-center">Trade</th>
                     <th className="p-1.5 border border-black font-bold text-center">Flight</th>
-                    <th className="p-1.5 border border-black font-bold text-center">Address</th>
-                    <th className="p-1.5 border border-black font-bold text-center">Mobile No</th>
+                    
                   </tr>
                 </thead>
                 <tbody style={{ display: 'table-row-group' }}>
@@ -120,11 +119,14 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                       <td className="p-1.5 border border-black text-center">
                         {airman.mobileNo || '-'}
                       </td>
+                      <td className="p-1.5 border border-black text-center">
+                        {airman.active !== false ? 'Active' : (airman.leaveReason || 'Inactive')}
+                      </td>
                     </tr>
                   ))}
                   {airmen.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-4 text-center text-slate-500 font-medium">
+                      <td colSpan={9} className="p-4 text-center text-slate-500 font-medium">
                         No airmen found.
                       </td>
                     </tr>

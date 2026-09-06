@@ -1340,7 +1340,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  const resData = multiDayStates[dStr];
  const pList = selectedFlight === 'Overall' ? (resData?.personnelStatusList || []) : (resData?.personnelStatusList || []).filter(s => s.airman.flightName === selectedFlight);
  if (dutyName === 'Halishahar Duty') return pList.some(s => s.dutyCode === 'HALISHAHAR');
- if (dutyName === 'Bake N Bite') return pList.some(s => s.dutyCode === 'BAKE_BITE' || s.dutyCode === 'BAKE_N_BITE' || s.statusCategory === 'BAKE_N_BITE');
+ if (dutyName === 'Bake & Bite') return pList.some(s => s.dutyCode === 'BAKE_BITE' || s.dutyCode === 'BAKE_N_BITE' || s.statusCategory === 'BAKE_N_BITE');
  if (dutyName === 'Base Security Duty') return pList.some(s => s.dutyCode === 'GD' || s.notes?.toLowerCase().includes('base sec'));
  if (dutyName === 'Base Taskforce Duty') return pList.some(s => s.dutyCode === 'BTF');
  if (dutyName === 'Najirpara Taskforce Duty') return pList.some(s => s.dutyCode === 'NTF');
@@ -1365,7 +1365,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {hasData('Najirpara Taskforce Duty') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>}
  {hasData('Airfield Duty') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>}
  {hasData('Halishahar Duty') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>}
- {hasData('Bake N Bite') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Bake N Bite</th>}
+ {hasData('Bake & Bite') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Bake & Bite</th>}
  {hasData('Tdy') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>}
  {customKeysArray.map(key => <th key={key} className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>{key}</th>)}
  {hasData('Leave') && <th className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle" rowSpan={2}>Leave</th>}
@@ -1471,7 +1471,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {hasData('Halishahar Duty') && <td className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle">
  {renderAirmanColumnList(halishahar)}
  </td>}
- {hasData('Bake N Bite') && <td className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle">
+ {hasData('Bake & Bite') && <td className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle">
  {renderAirmanColumnList(bakeBite)}
  </td>}
  {hasData('Tdy') && <td className="border border-slate-800 dark:border-white print:border-black p-1.5 text-center align-middle">

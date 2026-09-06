@@ -429,12 +429,12 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
           </div>
         </div>
 
-        {/* 7. Bake N Bite */}
+        {/* 7. Bake & Bite */}
         <div
           onClick={() => {
             setModalSearchQuery('');
             setStrengthCategoryModal({
-              title: 'Bake N Bite Catering Personnel',
+              title: 'Bake & Bite Catering Personnel',
               category: 'BAKE_N_BITE',
               color: 'rose',
             });
@@ -443,7 +443,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 font-bold tracking-wider">
-              Bake N Bite
+              Bake & Bite
             </span>
             <div className="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:bg-rose-200 transition-colors">
               <Coffee className="w-3.5 h-3.5" />
@@ -650,7 +650,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                               }`}>
                                 <span>
                                   {(() => {
-                                    if (item.dutyCode === 'BAKE_N_BITE') return '☕ Bake N Bite';
+                                    if (item.dutyCode === 'BAKE_N_BITE') return '☕ Bake & Bite';
                                     if (item.dutyCode === 'DUTY_OFF' || item.statusCategory === 'OFF') {
                                       const prev = (item.previousDutyName || item.dutyName || item.notes || '').toUpperCase();
                                       if (prev.includes('GD') || prev.includes('BASE SEC')) return '🌙 GD Off';

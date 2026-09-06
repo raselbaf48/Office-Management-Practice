@@ -624,7 +624,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                       }}
                       className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                         tdyDestination === dest
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                           : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
@@ -636,7 +636,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     onClick={() => setTdyDestination('Custom')}
                     className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
                       tdyDestination === 'Custom'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                         : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -649,7 +649,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                     value={tdyCustomDestination}
                     onChange={(e) => setTdyCustomDestination(e.target.value)}
                     placeholder="Enter custom destination..."
-                    className="w-full mt-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
+                    className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${ !tdyCustomDestination ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-amber-500' }`}
                     required
                   />
                 )}
@@ -691,7 +691,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                         }}
                         className={`py-1.5 px-1 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
                           isSelected
-                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
+                            ? 'bg-amber-600 text-white border-amber-600 ring-2 ring-emerald-500/50 shadow-sm'
                             : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
                         }`}
                       >
@@ -772,7 +772,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 <button
                   type="submit"
                   disabled={savingTdy}
-                  className="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-md shadow-emerald-900/20 transition-all cursor-pointer flex items-center space-x-1.5"
+                  className="px-5 py-2 text-xs font-black text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-xl shadow-md shadow-amber-900/20 transition-all cursor-pointer flex items-center space-x-1.5"
                 >
                   {savingTdy ? (
                     <>

@@ -619,25 +619,46 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
                   Destination (Mandatory) <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={attDestination}
-                  onChange={(e) =>
-                  setAttDestination(e.target.value)}
-                  className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${!attDestination ? 'border-amber-400 dark:border-amber-600 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-700'}`}
-                >
-                  <option value="" disabled>— Select Destination —</option>
-                  <option value="">Select Destination</option>
-                  <option value="Bake N Bite">Bake & Bite</option>
-                  <option value="Canteen">Canteen</option>
-                  <option value="Custom">Custom (Type manually...)</option>
-                </select>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['Canteen', 'Bake & Bite'].map((dest) => (
+                    <button
+                      key={dest}
+                      type="button"
+                      onClick={() => {
+                        setAttDestination(dest);
+                        setAttCustomDestination('');
+                      }}
+                      className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                        attDestination === dest
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {dest}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setAttDestination('Custom')}
+                    className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                      attDestination === 'Custom'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
                 {attDestination === 'Custom' && (
                   <input
                     type="text"
                     value={attCustomDestination}
                     onChange={(e) => setAttCustomDestination(e.target.value)}
                     placeholder="Enter custom destination..."
-                    className="w-full mt-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none"
+                    className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${
+                      !attCustomDestination ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-emerald-500'
+                    }`}
+                    required
                   />
                 )}
               </div>

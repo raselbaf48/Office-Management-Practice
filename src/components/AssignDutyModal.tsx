@@ -207,7 +207,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   // Reset manual flight selection tracking when duty config changes
   useEffect(() => {
     userManuallySelectedFlightRef.current = false;
-  }, [activeDutyCode, fromDate, activeIdaShift]);
+  }, [activeDutyCode, fromDate]);
 
   // Auto-select flight for matrix-tracked duties based on quota and unfulfilled assignments
   useEffect(() => {

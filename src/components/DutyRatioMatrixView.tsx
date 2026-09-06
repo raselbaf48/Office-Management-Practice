@@ -256,7 +256,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
-      <div className="flex-none pt-4 px-4 md:pt-6 md:px-6 w-full max-w-7xl mx-auto animate-fadeIn space-y-6">
+      <div className="flex-none pt-4 px-4 md:pt-6 md:px-6 w-full max-w-7xl mx-auto animate-fadeIn space-y-6 print:hidden">
       {/* Top Banner & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center space-x-3.5">
@@ -275,9 +275,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Configured daily quota ratio for Security Duty, Nazirpara T/F, Base T/F, and IDAC Shifts (Days 1–31).
             </p>
-          </div>
         </div>
 
+        </div>
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
@@ -309,7 +309,6 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
           <span className="hidden sm:inline">{isSaved ? 'Saved!' : 'Save All Changes'}</span>
           <span className="sm:hidden">{isSaved ? 'Saved' : 'Save'}</span>
         </button>
-      </div>
     </div>
 
     {/* LAST UPDATING DATE */}
@@ -342,9 +341,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
         className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_RATIO' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
       >Duty Ratio</button>
     </div>
-    </div>
 
-    <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
+      </div>
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth print:hidden">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {viewMode !== 'DUTY_RATIO' && (
@@ -421,8 +420,8 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                     </>
                   )}
 
-                  </div>
                 </div>
+              </div>
                 {/* Table Body (Days 1 to 31) */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-center border-collapse">
@@ -584,7 +583,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
               </div>
               <div className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-lg">
                 Month Total: <strong className="font-mono">{flightTotalsOverall[selectedFlightFilter as FlightName]}</strong>
-              </div>
+            </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-center border-collapse">
@@ -684,6 +683,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             </div>
           </div>
         )}
+              </div>
 
       </div>
       
@@ -760,10 +760,10 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                       </div>
                     );
                   })}
-                </div>
-              </div>
             </div>
             
+            </div>
+              </div>
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
               <button
                 onClick={() => setSettingsTableIdx(null)}
@@ -781,7 +781,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                 <Save className="w-4 h-4" />
                 <span>Save & Close</span>
               </button>
-            </div>
+        </div>
           </div>
         </div>
       )}

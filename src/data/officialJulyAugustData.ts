@@ -7,7 +7,7 @@ interface DayRaw {
   ntf?: string[]; // Najirpara Taskforce Duty
   airfield?: string[]; // Airfield Duty
   halishahar?: string[]; // Halishahar Duty
-  bakeNBite?: string[]; // Bake N Bite
+  bakeNBite?: string[]; // Bake & Bite
   tdy?: string[]; // TDY
   leave?: string[]; // Leave
   idaMorning?: string[];
@@ -844,7 +844,7 @@ export function generateOfficialMonthAssignments(year: number, month: number): D
     addDuty(dayData.ntf, 'NTF', undefined, 'Najirpara Taskforce Duty');
     addDuty(dayData.airfield, 'AIRPORT', undefined, 'Airfield Duty');
     addDuty(dayData.halishahar, 'HALISHAHAR', undefined, 'Halishahar Duty');
-    addDuty(dayData.bakeNBite, 'BAKE_N_BITE', undefined, 'Bake N Bite');
+    addDuty(dayData.bakeNBite, 'BAKE_N_BITE', undefined, 'Bake & Bite');
     addDuty(dayData.tdy, 'TDY', undefined, 'TDY / Attachment');
     addDuty(dayData.leave, 'LEAVE', undefined, 'Casual Leave (CL)');
     addDuty(dayData.idaMorning, 'IDAC', 'Morning', 'IDA Center Duty');
@@ -1009,7 +1009,7 @@ export function getOfficialParadeStateDocument(
       addItems(dayData.ntf, 'NTF', 'Najirpara Taskforce Duty');
       addItems(dayData.airfield, 'ATT', 'Airfield Duty');
       addItems(dayData.halishahar, 'HALISHAHAR', 'Halishahar Duty');
-      addItems(dayData.bakeNBite, 'BAKE_N_BITE', 'Bake N Bite');
+      addItems(dayData.bakeNBite, 'BAKE_N_BITE', 'Bake & Bite');
       addItems(dayData.tdy, 'TDY', 'TDY / Attachment');
       addItems(dayData.leave, 'LEAVE', 'Leave (CL/AL)');
       addItems(dayData.idaMorning, 'IDAC', 'IDA Center Duty', 'Morning');

@@ -489,7 +489,7 @@ export const PdfDutyImportModal: React.FC<PdfDutyImportModalProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-bold tracking-tight">AI Multi-Page PDF & Duty Data Import</h2>
+                <h2 className="text-lg font-bold tracking-tight">OCR / Text Duty Data Import</h2>
                 <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 rounded-md">
                   Unlimited Pages (20+)
                 </span>
@@ -707,7 +707,7 @@ Security GD: 509301 Cpl Rashed, 509999 LAC Jahid
                     className="w-full font-mono text-xs p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                   <p className="text-[11px] text-slate-500">
-                    Tip: You can copy-paste from Word, PDF text, or scanner OCR. The AI will parse dates and match personnel automatically.
+                    Tip: You can copy-paste from Word, PDF text, or scanner OCR. The system will use OCR and Regex to parse dates and match personnel automatically.
                   </p>
                 </div>
               )}
@@ -810,7 +810,7 @@ Security GD: 509301 Cpl Rashed, 509999 LAC Jahid
 
               <div className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Multi-Page AI Analysis in Progress...
+                  Multi-Page OCR/Text Analysis in Progress...
                 </h3>
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-pulse">
                   {analysisProgressMsg}

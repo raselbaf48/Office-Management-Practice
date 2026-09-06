@@ -241,7 +241,12 @@ export class LocalDatabaseEngine {
           activityHistory: dbToSave.activityHistory,
           lastUpdated: dbToSave.lastUpdated,
         });
-        if (success) {
+        if (success === 'SIMULATED') {
+          firebaseConnected = true;
+          firebaseLastSyncTime = new Date().toLocaleTimeString();
+          addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Dev Mode: Simulated save (Live DB is Protected)" });
+          broadcastSyncState();
+        } else if (success) {
           firebaseConnected = true;
           firebaseLastSyncTime = new Date().toLocaleTimeString();
           addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Successfully saved local data to cloud" });
@@ -949,7 +954,7 @@ export class LocalDatabaseEngine {
           }
         }
         else if (codeStr === 'BAKE_N_BITE') {
-          dutyName = 'Bake N Bite';
+          dutyName = 'Bake & Bite';
           statusCategory = 'BAKE_N_BITE';
         }
         else if (codeStr === 'LEAVE') {
@@ -1442,7 +1447,7 @@ export class LocalDatabaseEngine {
       this.db.airmen
     );
 
-    if (!parsedResult.dates || parsedResult.dates.length === 0) {
+    if (!parsedResult.dates || parsedResult.dates.length === 0 || parsedResult.totalAssignmentsCount === 0) {
       throw new Error('Could not identify any duty dates or airman assignments from the provided input. Please verify that your file or text contains dates (e.g. 01 Aug) and duty columns.');
     }
 

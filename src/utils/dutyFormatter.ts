@@ -10,7 +10,7 @@
  * - GD / Security -> GD
  * - BTF -> BTF
  * - Halishahar -> Halishahar
- * - Bake N Bite -> Bake N Bite
+ * - Bake & Bite -> Bake & Bite
  * - TDY -> TDY
  */
 
@@ -144,14 +144,14 @@ export function formatDutyOnShortName(
     return 'GD';
   }
 
-  // 7. Bake N Bite
+  // 7. Bake & Bite
   if (
     code === 'BAKE_BITE' ||
     code === 'BAKE_N_BITE' ||
     notesLower.includes('bake') ||
     nameLower.includes('bake')
   ) {
-    return 'Bake N Bite';
+    return 'Bake & Bite';
   }
 
   // 8. TDY

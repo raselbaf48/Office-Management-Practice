@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Airman, FlightName } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
+import { sortAirmenBySeniority } from '../utils/seniority';
 import { DateNavigator } from './DateNavigator';
 import { RefreshCw, Check } from 'lucide-react';
 
@@ -25,6 +26,7 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
   const [tdyToDate, setTdyToDate] = useState<string>(todayStr);
   
   const [tdyDestination, setTdyDestination] = useState<string>('');
+  const [tdyCustomDestination, setTdyCustomDestination] = useState<string>('');
   const [tdyRemarks, setTdyRemarks] = useState<string>('');
   
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(1); // Default to Today
@@ -38,7 +40,7 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
   }, [isAdmin, adminFlight]);
 
   const tdyAirmenList = useMemo(() => {
-    return airmen.filter((a) => a.flightName === tdyFlight).sort((a, b) => a.name.localeCompare(b.name));
+    return sortAirmenBySeniority(airmen.filter((a) => a.flightName === tdyFlight));
   }, [airmen, tdyFlight]);
 
   const handlePresetToggle = (days: number) => {
@@ -70,13 +72,17 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
       alert('Invalid date range, missing airman, or missing destination.');
       return;
     }
+    const finalDest = tdyDestination === 'Custom' ? tdyCustomDestination : tdyDestination;
+    if (tdyDestination === 'Custom' && !finalDest) {
+      alert('Please enter custom destination');
+      return;
+    }
 
     setSavingTdy(true);
     setTdySuccessMsg('');
 
     try {
-      let fullNotes = `TDY to ${tdyDestination}`;
-      if (tdyRemarks.trim()) fullNotes += ` - ${tdyRemarks.trim()}`;
+      const fullNotes = tdyRemarks.trim() ? `${finalDest} - ${tdyRemarks.trim()}` : finalDest;
 
       const res = await fetch('/api/roster/assign-range', {
         method: 'POST',
@@ -185,7 +191,10 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
                   <button
                     key={loc}
                     type="button"
-                    onClick={() => setTdyDestination(loc)}
+                    onClick={() => {
+                      setTdyDestination(loc);
+                      setTdyCustomDestination('');
+                    }}
                     className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
                       tdyDestination === loc
                         ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
@@ -197,9 +206,9 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
                ))}
                <button
                   type="button"
-                  onClick={() => setTdyDestination(tdyDestination && !presetLocations.includes(tdyDestination) ? tdyDestination : 'Custom')}
+                  onClick={() => setTdyDestination('Custom')}
                   className={`py-1.5 px-3 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
-                    tdyDestination && !presetLocations.includes(tdyDestination)
+                    tdyDestination === 'Custom'
                       ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                       : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
@@ -208,18 +217,18 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
                 </button>
             </div>
             
-            {(!presetLocations.includes(tdyDestination) && tdyDestination !== '') || tdyDestination === 'Custom' ? (
+            {tdyDestination === 'Custom' && (
               <input
                 type="text"
-                value={tdyDestination === 'Custom' ? '' : tdyDestination}
-                onChange={(e) => setTdyDestination(e.target.value)}
+                value={tdyCustomDestination}
+                onChange={(e) => setTdyCustomDestination(e.target.value)}
                 placeholder="Enter custom destination..."
                 className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer ${
-                  !tdyDestination ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-amber-500'
+                  !tdyCustomDestination ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700 focus:border-amber-500'
                 }`}
                 required
               />
-            ) : null}
+            )}
           </div>
 
           {/* Remarks */}

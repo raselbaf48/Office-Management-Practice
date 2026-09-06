@@ -1,0 +1,1 @@
+sed -i 's/{airman.mobileNo || '"'-'"'}/{airman.mobileNo || '"'-'"'}\n                      <\/td>\n                      <td className="p-1.5 border border-black text-center">\n                        {airman.active !== false ? '"'Active'"' : (airman.leaveReason || '"'Inactive'"')}/' src/components/PrintableNominalRollModal.tsx

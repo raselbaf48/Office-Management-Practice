@@ -115,6 +115,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
 
   return (
     <div className="space-y-6">
+      <div className={isPrintModalOpen ? "hidden" : "space-y-6 print:hidden"}>
       {/* Top Banner */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -447,6 +448,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         />
       )}
 
+      </div>
       {isPrintModalOpen && (
         <PrintableNominalRollModal
           airmen={filteredAirmen}

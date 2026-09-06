@@ -346,8 +346,7 @@ export async function exportNominalRollDocx(
       createArialHeaderCell('Name', 2200),
       createArialHeaderCell('Trade', 1400),
       createArialHeaderCell('Flight', 1300),
-      createArialHeaderCell('Address', 1600),
-      createArialHeaderCell('Mobile No', 1500),
+      
     ],
   });
 
@@ -362,6 +361,7 @@ export async function exportNominalRollDocx(
         createArialDataCell(a.flightName, 1300, AlignmentType.LEFT),
         createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.LEFT),
         createArialDataCell(a.mobileNo || '-', 1500, AlignmentType.CENTER),
+        createArialDataCell(a.active !== false ? 'Active' : (a.leaveReason || 'Inactive'), 1200, AlignmentType.CENTER),
       ],
     });
   });

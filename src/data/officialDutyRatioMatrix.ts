@@ -212,7 +212,7 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
         const officialIds = new Set(INITIAL_OFFICIAL_DUTY_MATRIX.map(t => t.id));
         
         // Filter out deleted custom duties
-        let finalMatrix = updatedParsed.filter(t => officialIds.has(t.id) || validCustomIds.has(t.id));
+        let finalMatrix: DutyRatioTable[] = updatedParsed.filter(t => officialIds.has(t.id) || validCustomIds.has(t.id));
         
         if (missing.length > 0) {
           finalMatrix = [...finalMatrix, ...missing];
@@ -229,6 +229,8 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
                   id,
                   title: cd.name,
                   dutyCode: cd.code as any,
+                  eligibleFlights: ["Mechanics", "Avionics", "GCS", "Admin"],
+                  eligibleRanks: ["Sgt", "Cpl", "LAC", "AC-1"],
                   totalRequiredMonth: 0,
                   totalRequiredDaily: 0,
                   data: {
@@ -258,7 +260,9 @@ export function getStoredDutyMatrix(): DutyRatioTable[] {
              id,
              title: cd.name,
              dutyCode: cd.code as any,
-             totalRequiredMonth: 0,
+             eligibleFlights: ["Mechanics", "Avionics", "GCS", "Admin"],
+                  eligibleRanks: ["Sgt", "Cpl", "LAC", "AC-1"],
+                  totalRequiredMonth: 0,
              totalRequiredDaily: 0,
              data: {
                Mechanics: Array(31).fill(0),

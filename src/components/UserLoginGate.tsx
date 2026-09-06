@@ -3,6 +3,7 @@ import { Airman } from '../types';
 import { Logo155UASU } from './Logo155UASU';
 import { X, Shield, ArrowRight, AlertCircle, CheckCircle2, Lock, LogIn, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { getAppConfig, isFeatureActive } from '../utils/appConfig';
+import { RandomizedKeypad } from './RandomizedKeypad';
 import { setUserSession, validateUserLogin, getDetailedUsers, saveDetailedUsers } from '../utils/authSession';
 
 interface UserLoginGateProps {
@@ -21,6 +22,8 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
   const [isUserIdFocused, setIsUserIdFocused] = useState<boolean>(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState<boolean>(false);
+  const [isConfirmFocused, setIsConfirmFocused] = useState<boolean>(false);
 
   const [recentLogins, setRecentLogins] = useState<string[]>(() => {
     try {
@@ -263,8 +266,10 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                 <input
                   type={showPin ? "text" : "password"}
                   value={passwordInput}
-                  onChange={(e) => { setPasswordInput(e.target.value); setErrorMsg(''); }}
-                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 pr-12 text-sm font-mono font-bold text-white outline-none transition-all"
+                  readOnly
+                  onFocus={() => setIsPasswordFocused(true)}
+                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 pr-12 text-sm font-mono font-bold text-white outline-none transition-all cursor-pointer"
+                  placeholder="Tap to open keypad"
                 />
                 <button
                   type="button"
@@ -274,7 +279,20 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {isPasswordFocused && (
+                <div className="pt-2 animate-fadeIn">
+                  <RandomizedKeypad 
+                    value={passwordInput} 
+                    onChange={(val) => { setPasswordInput(val); setErrorMsg(''); }} 
+                    maxLength={20}
+                  />
+                  <div className="mt-2 text-right">
+                    <button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-400 font-bold p-2 hover:bg-emerald-900/30 rounded-lg">Done</button>
+                  </div>
+                </div>
+              )}
             </div>
+            
             <button
               type="submit"
               disabled={isLoading || !!successAirman}
@@ -352,21 +370,34 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   <input
                     type="password"
                     value={newPass}
-                    onChange={(e) => setNewPass(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all"
+                    readOnly
+                    onFocus={() => { setIsPasswordFocused(true); setIsConfirmFocused(false); }}
+                    className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
                     required
-                    autoFocus
                   />
+                  {isPasswordFocused && (
+                    <div className="pt-2">
+                       <RandomizedKeypad value={newPass} onChange={setNewPass} maxLength={20} />
+                       <div className="text-right mt-1"><button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-400 font-bold p-1">Done</button></div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirm Your Password</label>
                   <input
                     type="password"
                     value={confirmPass}
-                    onChange={(e) => setConfirmPass(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all"
+                    readOnly
+                    onFocus={() => { setIsConfirmFocused(true); setIsPasswordFocused(false); }}
+                    className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
                     required
                   />
+                  {isConfirmFocused && (
+                    <div className="pt-2">
+                       <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} maxLength={20} />
+                       <div className="text-right mt-1"><button type="button" onClick={() => setIsConfirmFocused(false)} className="text-xs text-emerald-400 font-bold p-1">Done</button></div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

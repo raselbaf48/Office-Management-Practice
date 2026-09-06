@@ -253,11 +253,8 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
     }
 
     // 10. Document & PDF Import Endpoints
-    if (pathname === '/api/import/analyze-duty-doc') {
-      const result = localDb.analyzeDutyDocument(body);
-      return jsonResponse(result);
-    }
 
+        
     if (pathname === '/api/import/load-official-roster') {
       const { targetYear, monthChoice } = body || {};
       const result = localDb.loadOfficialRoster(targetYear, monthChoice);

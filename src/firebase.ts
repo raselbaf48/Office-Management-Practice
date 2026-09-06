@@ -31,6 +31,15 @@ if (typeof window !== "undefined") {
 export async function saveDbToFirebase(dbData: any) {
   if (quotaExceeded) return false;
   
+  // Disable writing to cloud when running in AI Studio preview or development
+  if (typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || 
+       window.location.hostname.includes('run.app') || 
+       window.location.hostname.includes('webcontainer.io'))) {
+    console.log('Development environment detected. Skipping cloud save to protect live data.');
+    return 'SIMULATED'; // Return a special string to indicate simulated save
+  }
+  
   try {
     const extraSettings: Record<string, string> = {};
     if (typeof window !== 'undefined' && window.localStorage) {
