@@ -1,2 +1,0 @@
-sed -i 's/<div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">/<div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">\n      <div className={isPrintModalOpen ? "hidden" : "w-full h-full flex flex-col print:hidden"}>/' src/components/DutyRatioMatrixView.tsx
-sed -i 's/      {isPrintModalOpen && (/      <\/div>\n      {isPrintModalOpen && (/' src/components/DutyRatioMatrixView.tsx

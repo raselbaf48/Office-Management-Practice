@@ -5,9 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import * as pdfParsePkgRaw from 'pdf-parse';
-const pdfParsePkg = (pdfParsePkgRaw as any).default || pdfParsePkgRaw;
-
+import pdfParsePkg from 'pdf-parse';
 
 import { INITIAL_AIRMEN } from './src/data/initialAirmen';
 import { DUTY_TYPES } from './src/data/dutyTypes';
@@ -443,25 +441,20 @@ async function startServer() {
     return { airman: null, confidence: 0 };
   }
 
-  // Extract all text and pages from a PDF buffer using PDFParseClass
-    async function extractAllPagesFromPdf(buffer: Buffer): Promise<{ totalPages: number; pages: Array<{ pageNumber: number; text: string }>; fullText: string }> {
+  // Extract all text and pages from a PDF buffer using pdf-parse
+  async function extractAllPagesFromPdf(buffer: Buffer): Promise<{ totalPages: number; pages: Array<{ pageNumber: number; text: string }>; fullText: string }> {
     try {
-      // Direct call to pdf-parse function instead of instantiating a class
-      const pdf = require('pdf-parse');
-      const parsed = await pdf(buffer);
+      const parsed = await pdfParsePkg(buffer);
       const totalPages = parsed.numpages || 1;
-      const pages = [];
-      
-      // Fallback array since default pdf-parse doesn't split by page nicely in its standard return
-      pages.push({
-          pageNumber: 1,
-          text: parsed.text || ''
-      });
+      const pages = [{
+        pageNumber: 1,
+        text: parsed.text || ''
+      }];
       const fullText = pages.map((p) => `--- [PAGE ${p.pageNumber} OF ${totalPages}] ---\n${p.text}`).join('\n\n');
       return { totalPages, pages, fullText };
     } catch (err: any) {
       console.warn('PDFParse extraction note:', err?.message || err);
-      // Fallback: extract binary text stream if available
+      // Fallback: extract binary text stream
       const rawStr = buffer.toString('binary');
       const textMatches = rawStr.match(/\(([^()]{2,100})\)\s*(?:Tj|TJ|'|")/g);
       let fallbackText = '';
@@ -507,6 +500,8 @@ async function startServer() {
     let activeSectionDuty: DutyCategoryCode | null = null;
     let activeSectionDutyName = '';
     let activeSectionIdaShift: IDAShift | null = null;
+    let currentDateStr = '';
+    let currentDayName = '';
 
     // Detect section headers (e.g. "Sy Duty", "TF Duty", "IDAC Duty", "Leave")
     const detectSectionDuty = (line: string): { code: DutyCategoryCode; name: string; shift: IDAShift | null } | null => {
@@ -568,36 +563,34 @@ async function startServer() {
         continue;
       }
 
-      let dateStr = '';
-      let dayName = '';
-      let lineContent = '';
+      let lineContent = line;
 
       const match = line.match(dateRegex);
       if (match) {
         const dayNum = match[1].padStart(2, '0');
         const monthStr = match[2].toLowerCase().slice(0, 3);
         const monthNum = monthMap[monthStr] || '08';
-        dayName = match[3] || '';
-        dateStr = `${targetYear}-${monthNum}-${dayNum}`;
+        currentDayName = match[3] || '';
+        currentDateStr = `${targetYear}-${monthNum}-${dayNum}`;
         lineContent = line.slice(match.index! + match[0].length).replace(/^[\s:—|]+/, '').trim();
       } else {
         const numMatch = line.match(numericDateRegex);
         if (numMatch) {
           if (numMatch[1]) {
-            dateStr = `${numMatch[1]}-${numMatch[2].padStart(2, '0')}-${numMatch[3].padStart(2, '0')}`;
+            currentDateStr = `${numMatch[1]}-${numMatch[2].padStart(2, '0')}-${numMatch[3].padStart(2, '0')}`;
           } else {
             const yr = numMatch[6].length === 2 ? `20${numMatch[6]}` : numMatch[6];
-            dateStr = `${yr}-${numMatch[5].padStart(2, '0')}-${numMatch[4].padStart(2, '0')}`;
+            currentDateStr = `${yr}-${numMatch[5].padStart(2, '0')}-${numMatch[4].padStart(2, '0')}`;
           }
           lineContent = line.slice(numMatch.index! + numMatch[0].length).replace(/^[\s:—|]+/, '').trim();
         }
       }
 
-      if (dateStr) {
-        if (!dateMap.has(dateStr)) {
-          dateMap.set(dateStr, { date: dateStr, day: dayName, assignments: [] });
+      if (currentDateStr) {
+        if (!dateMap.has(currentDateStr)) {
+          dateMap.set(currentDateStr, { date: currentDateStr, day: currentDayName, assignments: [] });
         }
-        const entry = dateMap.get(dateStr)!;
+        const entry = dateMap.get(currentDateStr)!;
 
         // Process tokens in lineContent
         const tokens = lineContent.split(/(?:[-—|•\t;]+|\s{2,})/);
@@ -614,8 +607,8 @@ async function startServer() {
           const namesToProcess = subNames.length > 0 ? subNames : [cleanToken];
 
           for (const item of namesToProcess) {
-            let dutyCode: DutyCategoryCode = activeSectionDuty || 'ON_PARADE';
-            let dutyName = activeSectionDutyName || 'On Parade';
+            let dutyCode: DutyCategoryCode = activeSectionDuty || 'GD';
+            let dutyName = activeSectionDutyName || 'Base Security Duty';
             let idaShift: IDAShift | null = activeSectionIdaShift || null;
 
             const itemUpper = item.toUpperCase();
@@ -753,27 +746,30 @@ async function startServer() {
       }
 
       let combinedText = textSnippet || '';
+      const partsForGemini: any[] = [];
 
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         const buffer = Buffer.from(file.base64.split(',').pop() || '', 'base64');
         
+        partsForGemini.push({
+          inlineData: {
+            mimeType: file.mime === 'application/pdf' ? 'application/pdf' : file.mime,
+            data: file.base64.split(',').pop() || ''
+          }
+        });
+        
         try {
           if (file.mime === 'application/pdf') {
-            
-            let pdfData: any = {};
-            if (typeof pdfParsePkg === 'function') {
-              pdfData = await pdfParsePkg(buffer);
-            } else if ((pdfParsePkg as any).PDFParse) {
-              const parser = new (pdfParsePkg as any).PDFParse();
-              await parser.load(buffer);
-              const text = await parser.getText();
-              pdfData = { text };
-            } else if ((pdfParsePkg as any).default && typeof (pdfParsePkg as any).default === 'function') {
-              pdfData = await (pdfParsePkg as any).default(buffer);
+            try {
+              const pdfData = await pdfParsePkg(buffer);
+              combinedText += '\n--- PDF PAGE ---\n' + pdfData.text;
+            } catch (pdfErr) {
+              console.warn('PDF Parse error in /api/import/analyze-duty-doc:', pdfErr);
+              // Fallback to binary stream extraction
+              const { fullText } = await extractAllPagesFromPdf(buffer);
+              combinedText += '\n--- PDF PAGE (Heuristic) ---\n' + fullText;
             }
-
-            combinedText += '\n--- PDF PAGE ---\n' + pdfData.text;
           } else if (file.mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.mime.includes('word')) {
             const result = await mammoth.extractRawText({ buffer });
             combinedText += '\n--- DOCX CONTENT ---\n' + result.value;
@@ -794,113 +790,245 @@ async function startServer() {
       const dutyCodes = ['GD', 'BTF', 'NTF', 'HALISHAHAR', 'AIRFIELD_DUTY', 'LEAVE', 'IDAC', 'DUTY_OFF', 'ON_PARADE', 'BAKE_N_BITE', 'ESSN', 'CMH', 'SICK_REPORT', 'DRILL_CAT_C', 'RECEPTION', 'TDY', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'];
       
       const lines = combinedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const resultMap = new Map();
-      let currentDateStr = null;
-      
-      const dateRegex = /\b(?:0?[1-9]|[12][0-9]|3[01])(?:[-/](?:0?[1-9]|1[012])[-/](?:20\d\d|\d\d)|(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:\s+(?:20\d\d|\d\d))?)\b/gi;
-      const monthMap = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
-      
-      const parseDateMatch = (matchStr) => {
-          matchStr = matchStr.replace(/(st|nd|rd|th)/i, '').trim();
-          if (matchStr.includes('-') || matchStr.includes('/')) {
-             let parts = matchStr.split(/[-/]/);
-             if (parts[2].length === 2) parts[2] = '20' + parts[2];
-             return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-          } else {
-             const parts = matchStr.split(/\s+/);
-             const day = parts[0].padStart(2, '0');
-             const monthKey = parts[1].substring(0, 3).toLowerCase();
-             const month = monthMap[monthKey] || '08';
-             let year = parts[2] || String(targetYear);
-             if (year.length === 2) year = '20' + year;
-             return `${year}-${month}-${day}`;
-          }
-      };
-
-      for (const line of lines) {
-         // match date
-         // Need to clone regex because we use it as /g inside a loop or test, wait, line.match(/g) doesn't use lastIndex
-         const dateMatch = line.match(dateRegex); console.log("Line:", line, "Matched Date:", dateMatch);
-         if (dateMatch && dateMatch.length > 0) {
-            currentDateStr = parseDateMatch(dateMatch[0]);
-         }
-         
-         let foundAirman = null;
-         for (const a of airmen) {
-            if (line.includes(a.bdNo) || line.includes('BD/' + a.bdNo) || line.toLowerCase().includes(a.name.toLowerCase())) {
-               foundAirman = a;
-               break;
-            }
-         }
-         
-         if (foundAirman) {
-            let assignedDuty = null;
-            let assignedShift = null;
-            const upperLine = line.toUpperCase();
-            
-            for (const code of dutyCodes) {
-               if (upperLine.includes(code)) {
-                  assignedDuty = code;
-                  break;
-               }
-            }
-            
-            if (!assignedDuty) {
-               if (upperLine.includes('SICK') || upperLine.includes('S/Q')) assignedDuty = 'SICK_REPORT';
-               else if (upperLine.includes('HOSP') || upperLine.includes('CMH')) assignedDuty = 'CMH';
-               else if (upperLine.includes('BAKE')) assignedDuty = 'BAKE_N_BITE';
-               else if (upperLine.includes('AIRFIELD')) assignedDuty = 'AIRFIELD_DUTY';
-               else if (upperLine.includes('IDA')) assignedDuty = 'IDAC';
-            }
-            
-            if (assignedDuty === 'IDAC') {
-               if (upperLine.includes('MORN')) assignedShift = 'Morning';
-               else if (upperLine.includes('AFT')) assignedShift = 'Afternoon';
-               else if (upperLine.includes('NIGHT')) assignedShift = 'Night';
-               else assignedShift = 'Morning';
-            }
-            
-            if (!assignedDuty) assignedDuty = 'GD';
-            
-            let applyDate = currentDateStr;
-            if (!applyDate) {
-               const today = new Date();
-               applyDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            }
-            
-            if (!resultMap.has(applyDate)) resultMap.set(applyDate, []);
-            const mapArr = resultMap.get(applyDate);
-            
-            if (!mapArr.find(x => x.bdNo === foundAirman.bdNo)) {
-               mapArr.push({
-                  bdNo: foundAirman.bdNo,
-                  dutyCode: assignedDuty,
-                  idaShift: assignedShift,
-                  name: foundAirman.name,
-                  rank: foundAirman.rank
-               });
-            }
-         }
-      }
-      
-      const finalDates = [];
-      for (const [dateStr, assignments] of resultMap.entries()) {
-         finalDates.push({
-            date: dateStr,
-            assignments: assignments
-         });
-      }
-
-
-      finalDates.sort((a, b) => a.date.localeCompare(b.date));
-
+      let finalDates: any[] = [];
       let totalAssignmentsCount = 0;
-      let matchedCount = 0;
-      let unmatchedCount = 0;
       
-      for (const d of finalDates) {
-         totalAssignmentsCount += d.assignments.length;
-         matchedCount += d.assignments.length;
+      let heuristicFinalDates: any[] = [];
+      let heuristicAssignmentsCount = 0;
+      
+      try {
+        const heuristicResult = parseRosterTextHeuristically(combinedText, targetYear, targetFlight);
+        if (heuristicResult && heuristicResult.dates) {
+          for (const d of heuristicResult.dates) {
+            const mappedAssignments = [];
+            for (const a of d.assignments) {
+              // Always include, even if matchedAirmanId is null (allows manual fixing in UI)
+              mappedAssignments.push({
+                rawText: a.rawText || a.matchedAirmanName || '',
+                dutyCode: a.dutyCode,
+                dutyName: a.dutyName || a.dutyCode,
+                idaShift: a.idaShift,
+                matchedAirmanId: a.matchedAirmanId || null,
+                matchedAirmanName: a.matchedAirmanName || a.rawText,
+                matchedAirmanRank: a.matchedAirmanRank,
+                matchedAirmanFlight: a.matchedAirmanFlight,
+                matchedAirmanBdNo: a.matchedAirmanBdNo,
+                confidence: a.confidence || 0
+              });
+            }
+            if (mappedAssignments.length > 0) {
+              heuristicFinalDates.push({
+                date: d.date,
+                assignments: mappedAssignments
+              });
+              heuristicAssignmentsCount += mappedAssignments.length;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Heuristic parser error:", e);
+      }
+
+      try {
+        const ai = getGeminiAI();
+        if (ai && process.env.GEMINI_API_KEY) {
+          const prompt = `Extract duty roster assignments from the provided document(s) or text.
+Return a JSON object with a "dates" array. Each date object should have a "date" (YYYY-MM-DD) and an "assignments" array.
+To save space, each assignment in the array MUST be a single string in the format "Name, BD No, Duty Code, Shift".
+- Duty Code MUST be one of: ${dutyCodes.join(', ')}
+- Shift MUST be one of: Morning, Afternoon, Night, or null
+- If BD No is not found, leave it empty (e.g. "Rakib, , GD, null")
+- Make sure to extract ALL assignments for ALL dates. Do not skip any.
+If text is provided below, analyze it as well:
+${combinedText.substring(0, 30000)}
+`;
+          partsForGemini.push({ text: prompt });
+
+          let response;
+          let retries = 5;
+          while (retries > 0) {
+            try {
+              response = await ai.models.generateContent({
+                model: 'gemini-3.6-flash',
+                contents: [{ role: 'user', parts: partsForGemini }],
+                config: {
+                  responseMimeType: 'application/json',
+                  responseSchema: {
+                    type: 'OBJECT',
+                    properties: {
+                      dates: {
+                        type: 'ARRAY',
+                        items: {
+                          type: 'OBJECT',
+                          properties: {
+                            date: { type: 'STRING', description: 'YYYY-MM-DD' },
+                            assignments: {
+                              type: 'ARRAY',
+                              items: {
+                                type: 'STRING',
+                                description: 'Format: "Name, BDNo, DutyCode, Shift"'
+                              }
+                            }
+                          },
+                          required: ['date', 'assignments']
+                        }
+                      }
+                    },
+                    required: ['dates']
+                  }
+                }
+              });
+              break;
+            } catch (err: any) {
+              if (err?.status === 'UNAVAILABLE' || err?.status === 'RESOURCE_EXHAUSTED' || err?.code === 503 || err?.status === 503) {
+                retries--;
+                if (retries === 0) throw err;
+                console.warn(`Gemini API 503 error, retrying... (${retries} retries left)`);
+                await new Promise(r => setTimeout(r, 4000));
+              } else {
+                throw err;
+              }
+            }
+          }
+
+          let aiData;
+          try {
+             aiData = JSON.parse(response?.text || '{}');
+          } catch (jsonErr) {
+             console.warn("JSON parsing failed exactly, attempting to fix truncated JSON...");
+             let fixedText = response?.text || '';
+             // Try to append closing brackets if truncated
+             const openBraces = (fixedText.match(/\{/g) || []).length;
+             const closeBraces = (fixedText.match(/\}/g) || []).length;
+             const openBrackets = (fixedText.match(/\[/g) || []).length;
+             const closeBrackets = (fixedText.match(/\]/g) || []).length;
+             
+             // Very basic fix for truncated string arrays at the end
+             if (fixedText.lastIndexOf('"') > fixedText.lastIndexOf(',')) {
+                fixedText += '"]}]}';
+             }
+             try {
+                aiData = JSON.parse(fixedText);
+             } catch (e2) {
+                console.error("Could not recover JSON", e2);
+             }
+          }
+
+          if (aiData && Array.isArray(aiData.dates) && aiData.dates.length > 0) {
+            let aiAssignmentsCount = 0;
+            const aiFinalDates = [];
+            for (const d of aiData.dates) {
+              const mappedAssignments = [];
+              if (Array.isArray(d.assignments)) {
+                for (const assignStr of d.assignments) {
+                  if (typeof assignStr !== 'string') continue;
+                  const parts = assignStr.split(',').map(s => s.trim());
+                  const aiName = parts[0] || '';
+                  const aiBdNo = parts[1] || '';
+                  const aiDutyCode = parts[2] || 'GD';
+                  const aiShiftStr = parts[3];
+                  const aiShift = (aiShiftStr === 'Morning' || aiShiftStr === 'Afternoon' || aiShiftStr === 'Night') ? aiShiftStr : null;
+
+                  let foundAirman = null;
+                  for (const a of airmen) {
+                    if ((aiBdNo && a.bdNo.includes(aiBdNo)) || 
+                        (aiName && a.name.toLowerCase().includes(aiName.toLowerCase()))) {
+                      foundAirman = a;
+                      break;
+                    }
+                  }
+                  if (!foundAirman && aiName) {
+                     const matched = findBestAirmanMatch(aiName, targetFlight);
+                     if (matched.airman && matched.confidence > 0.5) {
+                        foundAirman = matched.airman;
+                     }
+                  }
+                  
+                  if (foundAirman) {
+                    mappedAssignments.push({
+                      rawText: assignStr,
+                      dutyCode: aiDutyCode,
+                      dutyName: aiDutyCode,
+                      idaShift: aiShift,
+                      matchedAirmanId: foundAirman.id,
+                      matchedAirmanName: foundAirman.name,
+                      matchedAirmanRank: foundAirman.rank,
+                      matchedAirmanFlight: foundAirman.flightName,
+                      matchedAirmanBdNo: foundAirman.bdNo,
+                      confidence: 0.99
+                    });
+                  } else if (aiName && aiName.length > 2) {
+                    mappedAssignments.push({
+                      rawText: assignStr,
+                      dutyCode: aiDutyCode,
+                      dutyName: aiDutyCode,
+                      idaShift: aiShift,
+                      matchedAirmanId: null,
+                      matchedAirmanName: aiName,
+                      confidence: 0
+                    });
+                  }
+                }
+              }
+              if (mappedAssignments.length > 0) {
+                aiFinalDates.push({
+                  date: d.date,
+                  assignments: mappedAssignments
+                });
+                aiAssignmentsCount += mappedAssignments.length;
+              }
+            }
+            
+            // Check if AI performed well compared to Heuristic
+            if (aiAssignmentsCount >= heuristicAssignmentsCount * 0.8 && aiAssignmentsCount > 0) {
+               // AI did a good job (extracted at least 80% of what heuristic found, or more)
+               // Let's merge them to ensure NO data is lost
+               const mergedMap = new Map();
+               
+               // Add AI Data first
+               for (const d of aiFinalDates) {
+                  mergedMap.set(d.date, [...d.assignments]);
+               }
+               
+               // Add missing from Heuristic
+               for (const d of heuristicFinalDates) {
+                  if (!mergedMap.has(d.date)) mergedMap.set(d.date, []);
+                  const existingArr = mergedMap.get(d.date);
+                  
+                  for (const heuAssign of d.assignments) {
+                     if (!existingArr.find((x: any) => x.matchedAirmanBdNo === heuAssign.matchedAirmanBdNo)) {
+                        existingArr.push(heuAssign);
+                     }
+                  }
+               }
+               
+               finalDates = Array.from(mergedMap.entries()).map(([date, assignments]) => ({ date, assignments }));
+               finalDates.sort((a, b) => a.date.localeCompare(b.date));
+               for (const d of finalDates) totalAssignmentsCount += d.assignments.length;
+               
+            } else {
+               console.warn(`AI extracted ${aiAssignmentsCount} vs Heuristic ${heuristicAssignmentsCount}. Discarding AI results to prevent data loss.`);
+               finalDates = heuristicFinalDates;
+               totalAssignmentsCount = heuristicAssignmentsCount;
+            }
+          } else {
+            console.warn(`AI did not return valid dates. Falling back to heuristic.`);
+            finalDates = heuristicFinalDates;
+            totalAssignmentsCount = heuristicAssignmentsCount;
+          }
+        } else {
+           finalDates = heuristicFinalDates;
+           totalAssignmentsCount = heuristicAssignmentsCount;
+        }
+      } catch (aiErr) {
+        console.warn('AI Parsing failed, falling back to heuristic:', aiErr);
+        finalDates = heuristicFinalDates;
+        totalAssignmentsCount = heuristicAssignmentsCount;
+      }
+
+      if (finalDates.length === 0) {
+         finalDates = heuristicFinalDates;
+         totalAssignmentsCount = heuristicAssignmentsCount;
       }
 
       if (finalDates.length === 0 || totalAssignmentsCount === 0) {
@@ -921,8 +1049,6 @@ async function startServer() {
         },
         dates: finalDates,
         totalAssignmentsCount,
-        matchedCount,
-        unmatchedCount,
         textExtracted: true,
         source: 'OCR_and_Text_Parser'
       });

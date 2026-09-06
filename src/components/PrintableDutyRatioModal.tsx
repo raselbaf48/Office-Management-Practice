@@ -50,7 +50,8 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
     };
     
     matrix.forEach(t => {
-      const isSecurity = t.id === 'security_duty';
+      const includesSgt = t.eligibleRanks ? t.eligibleRanks.includes('Sgt') : t.id !== 'security_duty';
+      const isCplOnly = !includesSgt;
       const dutyTotal = t.totalRequiredMonth || 0;
       
       const flights = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
@@ -64,7 +65,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
         if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
         if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
         
-        let fltPool = isSecurity ? fltCpl : (fltCpl + fltSgt);
+        let fltPool = isCplOnly ? fltCpl : (fltCpl + fltSgt);
         if (t.eligibleFlights && !t.eligibleFlights.includes(fl as any)) {
           fltPool = 0;
         }
@@ -123,7 +124,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
   const bgAlt = (idx: number) => idx % 2 === 1 ? '#f8fafc' : '#ffffff';
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn print:static print:block print:h-auto print:overflow-visible overflow-y-auto" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn print:static print:block print:h-auto print:overflow-visible overflow-y-auto text-black" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
       {/* Top Header Controls (Hidden on Print) */}
       <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10 sticky top-0">
         <div className="flex items-center space-x-3 text-white">
@@ -162,8 +163,169 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
       </div>
 
       {/* Printable Content Area */}
-      <div className="flex-1 print:overflow-visible">
-        <div className="max-w-[1200px] mx-auto py-8 px-4 sm:px-8 print:p-0 print:m-0 print:max-w-none text-black bg-white">
+      <div className="flex-1 overflow-auto print:overflow-visible flex justify-start sm:justify-center">
+        <div className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:max-w-none text-black bg-white">
+          
+          {/* PAGE 1: All Duties Summary */}
+          <div className="print:break-after-page pb-8 pt-4">
+            <div className="text-center mb-6">
+              <h2 className="text-lg font-black underline uppercase">All Duties</h2>
+              <h3 className="text-md font-black uppercase">155 UASU BAF</h3>
+            </div>
+
+            <div className="flex flex-col gap-10">
+              {/* Top two tables side-by-side */}
+              <div className="flex justify-center gap-12">
+                {/* TOTAL DUTY Table */}
+                <div>
+                  <h4 className="font-bold underline text-center mb-2">TOTAL DUTY</h4>
+                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black">
+                    <thead>
+                      <tr className="bg-slate-100 print:bg-white">
+                        <th className="border border-black p-1.5 w-40">Duty Name</th>
+                        <th className="border border-black p-1.5 w-20">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrix.filter(t => !t.isDisabled).map(t => (
+                        <tr key={t.id} className="even:bg-gray-100 print:even:bg-gray-100">
+                          <td className="border border-black p-1.5 text-left px-3">{t.title.split('(')[0].trim()}</td>
+                          <td className="border border-black p-1.5">{t.totalRequiredMonth}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* EFFECTIVE MANPOWER Table */}
+                <div>
+                  <h4 className="font-bold underline text-center mb-2">EFFECTIVE MANPOWER</h4>
+                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black">
+                    <thead>
+                      <tr className="bg-slate-100 print:bg-white">
+                        <th className="border border-black p-1.5 w-24">Flight</th>
+                        <th className="border border-black p-1.5 w-16">Sgt</th>
+                        <th className="border border-black p-1.5 w-24">Cpl & Below</th>
+                        <th className="border border-black p-1.5 w-16">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { name: 'Mech', sgt: currentManpower.mechSgt, cpl: currentManpower.mechCpl },
+                        { name: 'Avi', sgt: currentManpower.aviSgt, cpl: currentManpower.aviCpl },
+                        { name: 'GCS', sgt: currentManpower.gcsSgt, cpl: currentManpower.gcsCpl },
+                        { name: 'Admin', sgt: currentManpower.adminSgt, cpl: currentManpower.adminCpl }
+                      ].map(row => (
+                        <tr key={row.name} className="even:bg-gray-100 print:even:bg-gray-100">
+                          <td className="border border-black p-1.5">{row.name}</td>
+                          <td className="border border-black p-1.5">{row.sgt}</td>
+                          <td className="border border-black p-1.5">{row.cpl}</td>
+                          <td className="border border-black p-1.5">{row.sgt + row.cpl}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold bg-slate-100 print:bg-white">
+                        <td className="border border-black p-1.5">Total</td>
+                        <td className="border border-black p-1.5">{totalSgt}</td>
+                        <td className="border border-black p-1.5">{totalCpl}</td>
+                        <td className="border border-black p-1.5">{totalSgtAndBelow}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* DISTRIBUTION AS PER MANPOWER Table */}
+              <div>
+                <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
+                <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
+                <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black">
+                  <thead>
+                    <tr className="bg-slate-100 print:bg-white">
+                      <th className="border border-black p-1.5 w-40" rowSpan={2}>DUTY PER PERSON</th>
+                      {matrix.filter(t => !t.isDisabled).map(t => (
+                        <th key={t.id} className="border border-black p-1">{t.title.split('(')[0].trim()}</th>
+                      ))}
+                    </tr>
+                    <tr className="bg-slate-100 print:bg-white">
+                      {matrix.filter(t => !t.isDisabled).map(t => {
+                        const includesSgt = t.eligibleRanks ? t.eligibleRanks.includes('Sgt') : t.id !== 'security_duty';
+                        const isCplOnly = !includesSgt;
+                        return (
+                          <td key={t.id} className="border border-black p-1 text-[10px] leading-tight text-gray-800">
+                            Total {t.title.split('(')[0].trim()} ÷<br/>
+                            Total {isCplOnly ? 'Cpl & Below' : 'Sgt & Below'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-black p-1.5 font-bold text-left px-2">DUTY PER PERSON</td>
+                      {matrix.filter(t => !t.isDisabled).map(t => {
+                        const includesSgt = t.eligibleRanks ? t.eligibleRanks.includes('Sgt') : t.id !== 'security_duty';
+                        const isCplOnly = !includesSgt;
+                        const pool = isCplOnly ? totalCpl : totalSgtAndBelow;
+                        return (
+                          <td key={t.id} className="border border-black p-1.5 font-bold">
+                            {pool > 0 ? (t.totalRequiredMonth / pool).toFixed(2) : '0.00'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* DISTRIBUTION AS PER FLIGHT Table */}
+              <div>
+                <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
+                <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
+                <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black">
+                  <thead>
+                    <tr className="bg-slate-100 print:bg-white">
+                      <th className="border border-black p-1.5 w-40" rowSpan={2}>DUTY PER FLIGHT</th>
+                      {matrix.filter(t => !t.isDisabled).map(t => (
+                        <th key={t.id} className="border border-black p-1">{t.title.split('(')[0].trim()}</th>
+                      ))}
+                    </tr>
+                    <tr className="bg-slate-100 print:bg-white">
+                      {matrix.filter(t => !t.isDisabled).map(t => {
+                        const includesSgt = t.eligibleRanks ? t.eligibleRanks.includes('Sgt') : t.id !== 'security_duty';
+                        const isCplOnly = !includesSgt;
+                        return (
+                          <td key={`f-${t.id}`} className="border border-black p-1 text-[10px] leading-tight text-gray-800">
+                            Per Person {t.title.split('(')[0].trim()} x<br/>
+                            Total {isCplOnly ? 'Cpl & Below' : 'Sgt & Below'} of Flight
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Mechanics', 'Avionics', 'GCS', 'Admin'].map(fl => {
+                      const displayFl = fl === 'Mechanics' ? 'MECHANICS FLT' : fl === 'Avionics' ? 'AVIONICS FLT' : fl === 'GCS' ? 'GCS FLT' : 'ADMIN FLT';
+                      return (
+                        <tr key={fl} className="even:bg-gray-100 print:even:bg-gray-100">
+                          <td className="border border-black p-1 text-left px-2 font-bold">{displayFl}</td>
+                          {matrix.filter(t => !t.isDisabled).map(t => {
+                            const autoVal = calculatedMatrixDistributions[t.id]?.[fl]?.autoVal || 0;
+                            return <td key={t.id} className="border border-black p-1">{autoVal}</td>;
+                          })}
+                        </tr>
+                      );
+                    })}
+                    <tr className="font-bold bg-slate-100 print:bg-white">
+                      <td className="border border-black p-1.5 text-left px-2 uppercase">Total Duty</td>
+                      {matrix.filter(t => !t.isDisabled).map(t => (
+                        <td key={t.id} className="border border-black p-1.5">{t.totalRequiredMonth}</td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
           
           {/* PAGE 2+: Matrices */}
           <div className="pt-4">
@@ -180,7 +342,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     </div>
                   </div>
                   
-                  <table className="w-full border-collapse border border-black text-center text-[11px]">
+                  <table className="no-zebra w-full border-collapse border border-black text-center text-[11px]">
                     <thead>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         <th colSpan={2} className="border border-black font-bold p-1 w-20">Date</th>

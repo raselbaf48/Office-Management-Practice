@@ -1343,7 +1343,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  return (
  <div className="overflow-x-auto my-3">
 
- <table className="no-zebra w-full print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 dark:border-slate-600 text-[11px]">
+ <table className="no-zebra no-zebra w-full print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 dark:border-slate-600 text-[11px]">
  <thead>
  <tr className="text-slate-900 dark:text-white font-bold border-b-2 border-slate-900 dark:border-slate-600">
  <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Date</th>
