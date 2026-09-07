@@ -31,7 +31,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [newUser, setNewUser] = useState({ bdNo: '', name: '', rank: '', mobileNo: '', role: 'USER' as UserLoginRole, password: '' });
 
-  const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'ADMIN';
+  const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'ADMIN' || userSessionRole === 'OWNER';
   const isSuperAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'OWNER';
   const isOwner = userSessionRole === 'OWNER';
 
@@ -121,6 +121,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     setEditRank(user.rank || user.airman?.rank || '');
     setEditFlight(user.airman?.flightName || user.flightName || '');
     setEditMobile(user.airman?.mobileNo || user.mobileNo || '');
+    
     setIsEditingProfile(false);
   };
 
@@ -200,6 +201,17 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
       (window as any).updateUserDetails(selectedUser.cleanBd, { name: editName, rank: editRank, flightName: editFlight, mobileNo: editMobile });
     }
     
+    setSelectedUser({
+      ...selectedUser,
+      name: editName,
+      rank: editRank,
+      flightName: editFlight,
+      mobileNo: editMobile,
+      role: editRole,
+      status: editStatus,
+      password: editPassword,
+      adminPass: editAdminPass,
+    });
     setIsEditingProfile(false);
   };
 
@@ -233,7 +245,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase">User ID (BD No)</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase">User ID</p>
                     <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedUser.cleanBd}</p>
                   </div>
                   <div>
@@ -349,7 +361,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
-                  placeholder="Search by BD No or Name..." 
+                  placeholder="Search by User ID or Name..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:border-emerald-500 outline-none text-slate-900 dark:text-white"
@@ -377,7 +389,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Ser No</th>
-                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">BD No</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">User ID</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
@@ -394,7 +406,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{user.cleanBd}</td>
                       <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.rank || user.airman?.rank} {user.name || user.airman?.name}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${user.role === 'OWNER' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
                           {user.role}
                         </span>
                       </td>
@@ -425,7 +437,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700">
             <h4 className="text-base font-bold text-slate-900 dark:text-white mb-4">Add New User</h4>
             <div className="space-y-4">
-              <input type="text" placeholder="BD No" value={newUser.bdNo} onChange={e => setNewUser({...newUser, bdNo: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500" />
+              <input type="text" placeholder="User ID" value={newUser.bdNo} onChange={e => setNewUser({...newUser, bdNo: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500" />
               <input type="text" placeholder="Name" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500" />
               <input type="text" placeholder="Rank" value={newUser.rank} onChange={e => setNewUser({...newUser, rank: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500" />
               <input type="text" placeholder="Mobile No" value={newUser.mobileNo} onChange={e => setNewUser({...newUser, mobileNo: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500" />

@@ -131,14 +131,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => exportNominalRollDocx(filteredAirmen)}
-            className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
-            title="Download Nominal Roll as Document"
-          >
-            <FileDown className="w-4 h-4" />
-            <span>Download Document</span>
-          </button>
+          
 
           <button
             type="button"

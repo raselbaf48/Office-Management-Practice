@@ -173,7 +173,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           name: targetAirman.name,
           flightName: targetAirman.flightName,
           trade: targetAirman.trade,
-          role: cleanBd === '48456' ? 'SUPER_ADMIN' : 'USER',
+          role: cleanBd === '48456' ? 'OWNER' : 'USER',
           password: cleanBd,
           adminPass: newPass,
           status: 'ACTIVE',
@@ -187,7 +187,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
       
       setIsSuccess(true);
       setTimeout(() => {
-        const actualRole = cleanBd === '48456' ? 'SUPER_ADMIN' : userDetail.role;
+        const actualRole = cleanBd === '48456' ? 'OWNER' : userDetail.role;
         onSuccess(actualRole as UserRole);
       }, 800);
     }

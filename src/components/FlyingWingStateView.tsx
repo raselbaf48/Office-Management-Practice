@@ -35,7 +35,7 @@ const DISPOSAL_COLUMNS = [
   'AWOL/Detention',
   'Sick report',
   'ED/ EX PPGF',
-  'CMH/BNS/BSH/Qrnt',
+  'CMH/ BNS/ BSH/Qrnt',
   'U/C, U/Board',
   'Office Duty',
   'Aft/Ni flg/Ni Duty/Flg',
@@ -100,7 +100,7 @@ export function FlyingWingStateView({
             disposals: {
               'Leave': d.leave || 0,
               'ED/ EX PPGF': d.edExPpgf || 0,
-              'CMH/BNS/BSH/Qrnt': d.cmhBnsBsh || 0,
+              'CMH/ BNS/ BSH/Qrnt': d.cmhBnsBsh || 0,
               'Office Duty': d.officeDuty || 0,
               'TF/Base/Airfield Duty': d.baseAirfieldDuty || 0,
               'Driving': d.driving || 0
@@ -167,7 +167,7 @@ export function FlyingWingStateView({
           ...d.disposals,
           'Leave': uasuStats.leave,
           'ED/ EX PPGF': uasuStats.edExPpgf,
-          'CMH/BNS/BSH/Qrnt': uasuStats.cmhBnsBsh,
+          'CMH/ BNS/ BSH/Qrnt': uasuStats.cmhBnsBsh,
           'Office Duty': uasuStats.officeDuty,
           'TF/Base/Airfield Duty': uasuStats.baseAirfieldDuty
         }

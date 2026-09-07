@@ -61,7 +61,13 @@ export const getCurrentUserSession = (): UserSession | null => {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as UserSession;
+    const session = JSON.parse(raw) as UserSession;
+    const cleanBd = session.bdNo.replace(/^BD\/?/i, '').trim();
+    if (cleanBd === '48456' && session.role !== 'OWNER') {
+      session.role = 'OWNER';
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    }
+    return session;
   } catch {
     return null;
   }
@@ -134,7 +140,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
   }
   
   // Force 48456 to be OWNER
-  const ownerIdx = parsed.findIndex(u => u.bdNo === '48456');
+  const ownerIdx = parsed.findIndex(u => u.bdNo.replace(/^BD\/?/i, '').trim() === '48456');
   if (ownerIdx >= 0) {
     if (parsed[ownerIdx].role !== 'OWNER') {
       parsed[ownerIdx].role = 'OWNER';
@@ -155,8 +161,8 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       parsed.push(owner);
       modified = true;
     } else {
-      if (parsed[idx].role !== 'SUPER_ADMIN' || parsed[idx].password !== pass || parsed[idx].adminPass !== adminPass) {
-        parsed[idx].role = 'SUPER_ADMIN';
+      if (parsed[idx].role !== owner.role || parsed[idx].password !== pass || parsed[idx].adminPass !== adminPass) {
+        parsed[idx].role = owner.role;
         parsed[idx].password = pass;
         parsed[idx].adminPass = adminPass;
         modified = true;
@@ -225,7 +231,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       name: 'Rasel',
       flightName: 'Avionics',
       trade: 'E&I Fitt',
-      role: 'SUPER_ADMIN',
+      role: 'OWNER',
       password: '48456',
       status: 'ACTIVE',
       detailOrder: 'DO-155/ADMIN/01',
@@ -318,7 +324,7 @@ export const batchDetailAllAirmen = (airmen: Airman[]): DetailedUserLogin[] => {
       name: airman.name,
       flightName: airman.flightName,
       trade: airman.trade,
-      role: idx >= 0 ? updatedList[idx].role : (isPrimary ? 'SUPER_ADMIN' : 'USER'),
+      role: idx >= 0 ? updatedList[idx].role : (isPrimary ? 'OWNER' : 'USER'),
       password: idx >= 0 && updatedList[idx].password ? updatedList[idx].password : cleanBd,
       status: idx >= 0 ? updatedList[idx].status : 'ACTIVE',
       detailOrder: idx >= 0 && updatedList[idx].detailOrder ? updatedList[idx].detailOrder : `DO-155/NR/${cleanBd}`,
@@ -449,7 +455,7 @@ export const validateUserLogin = (
     const isPrimary = cleanInput === '48456';
     const newDetail = detailAirmanForLogin(
       matchedAirman,
-      isPrimary ? 'SUPER_ADMIN' : 'USER',
+      isPrimary ? 'OWNER' : 'USER',
       'ACTIVE',
       `DO-155/AUTO/${matchedAirman.bdNo}`,
       'Automatic Detail on Nominal Match'

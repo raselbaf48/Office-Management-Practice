@@ -629,7 +629,7 @@ export async function exportParadeStateSingleDocx(
     'Eff\nstr',
     'Leave',
     'Essn',
-    'CMH/BNS/BSH',
+    'CMH/ BNS/ BSH',
     'Sick\nReport',
     'Drill\nCat-C',
     'Guard Duty\nOn/Off',

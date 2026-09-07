@@ -10,6 +10,7 @@ import {
  IDAShift,
 } from '../types';
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
+import { exportHtmlToWord } from '../utils/htmlExport';
 import { formatDutyOnShortName, formatDutyOffShortName } from '../utils/dutyFormatter';
 import {
  Calendar,
@@ -676,143 +677,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  }
  };
 
- const handleDownloadDocx = async () => {
- if (isMultiDay) {
- const rows: MultiParadeDayItem[] = datesInRange.map((dStr) => {
- const resData = multiDayStates[dStr];
- const rawPersonnel = resData?.personnelStatusList || [];
- const pList =
- selectedFlight === 'Overall'
- ? rawPersonnel
- : rawPersonnel.filter((s) => s.airman.flightName === selectedFlight);
-
- const pParts = dStr.split('-');
- const dateObj = new Date(
- parseInt(pParts[0]),
- parseInt(pParts[1]) - 1,
- parseInt(pParts[2])
- );
- const days = [
- 'Sunday',
- 'Monday',
- 'Tuesday',
- 'Wednesday',
- 'Thursday',
- 'Friday',
- 'Saturday',
- ];
- const dayName = days[dateObj.getDay()];
-
- const baseSec = pList.filter(
- (s) => s.dutyCode === 'GD' || s.notes?.toLowerCase().includes('base sec')
- );
- const btf = pList.filter((s) => s.dutyCode === 'BTF');
- const ntf = pList.filter((s) => s.dutyCode === 'NTF');
- const airfield = pList.filter(
- (s) =>
- s.dutyCode === 'AIRPORT' ||
- s.dutyCode === 'AIR_FD' ||
- s.notes?.toLowerCase().includes('airfield') ||
- s.notes?.toLowerCase().includes('air fd')
- );
- const halishahar = pList.filter((s) => s.dutyCode === 'HALISHAHAR');
- const bakeBite = pList.filter(
- (s) =>
- s.dutyCode === 'BAKE_BITE' ||
- s.dutyCode === 'BAKE_N_BITE' ||
- s.statusCategory === 'BAKE_N_BITE'
- );
- const tdy = pList.filter((s) => ['TDY', 'ATT', 'DETT'].includes(s.dutyCode));
- const leave = pList.filter((s) => s.dutyCode === 'LEAVE');
- const idaMorn = pList.filter(
- (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Morning'
- );
- const idaAft = pList.filter(
- (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Afternoon'
- );
- const idaNight = pList.filter(
- (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Night'
- );
- const dutyOff = pList.filter(
- (s) => s.dutyCode === 'DUTY_OFF' || s.statusCategory === 'OFF'
- );
- const onParade = pList.filter(
- (s) => s.dutyCode === 'ON_PARADE' || s.statusCategory === 'PARADE'
- );
-
- const formatListStr = (items: typeof pList) =>
- items.length > 0
- ? items
- .map((it, idx) => `${idx + 1}. ${it.airman.rank} ${it.airman.name}`)
- .join('\n')
- : '-';
-
- return {
- dateDisplay: formatDateSuperShort(dStr),
- dayDisplay: dayName,
- baseSec: formatListStr(baseSec),
- btf: formatListStr(btf),
- ntf: formatListStr(ntf),
- airfield: formatListStr(airfield),
- halishahar: formatListStr(halishahar),
- bakeBite: formatListStr(bakeBite),
- tdy: formatListStr(tdy),
- leave: formatListStr(leave),
- idaMorning: formatListStr(idaMorn),
- idaAfternoon: formatListStr(idaAft),
- idaNight: formatListStr(idaNight),
- dutyOff: formatListStr(dutyOff),
- onParade: formatListStr(onParade),
- };
- });
-
- const unitHeader =
- selectedFlight === 'Overall'
- ? '155 UASU BAF'
- : `155 UASU BAF (${selectedFlight.toUpperCase()} FLT)`;
- const dateRangeHeader = `${formatDateShort(fromDate)} to ${formatDateShort(toDate)}`;
- const p = getSavedPreparedBy();
- const a = getSavedAuthorizedBy();
- await exportParadeStateMultiDocx(
- unitHeader,
- dateRangeHeader,
- rows,
- `Multi_Day_Parade_State_${selectedFlight}_${formatDateShort(fromDate)}_to_${formatDateShort(toDate)}.docx`,
- { name: p.name, rank: p.rank, desig: p.designation },
- { name: a.name, rank: a.rank, desig: a.designation }
- );
- } else {
- const stats = getFlightStats(selectedFlight);
- const p = getSavedPreparedBy();
- const a = getSavedAuthorizedBy();
- await exportParadeStateSingleDocx({
- dateStr: formatDateShort(fromDate),
- flight: selectedFlight,
- documentType: isPtDocument ? 'PT' : 'PARADE',
- stats,
- onParade: onPtList.map((i) => i.airman),
- leave: leaveList.map((i) => i.airman),
- bakeBite: bakeBiteList.map((i) => i.airman),
- tdy: tdyList.map((i) => i.airman),
- canteen: canteenList.map((i) => i.airman),
- reception: receptionList.map((i) => i.airman),
- dutyOn: dutyOnList,
- dutyOff: dutyOffList,
- airFdDuty: [], // Merged into Duty On
- essn: essnList.map((i) => i.airman),
- cmh: cmhList.map((i) => i.airman),
- sickReport: sickReportList.map((i) => i.airman),
- adminOrder: adminOrderList.map((i) => i.airman),
- classTrg: classTrgList.map((i) => i.airman),
- games: gamesList.map((i) => i.airman),
- absent: absentList.map((i) => i.airman),
- otherDisposals,
- leftSig: { name: p.name, rank: p.rank, desig: p.designation },
- rightSig: { name: a.name, rank: a.rank, desig: a.designation },
- });
- }
- };
-
+ 
  // Compute Flight Stats for Single-Day Summary Matrix
  const getFlightStats = (fl: FlightName | 'Overall') => {
  const flightAirmen = fl === 'Overall' ? airmen : airmen.filter((a) => a.flightName === fl);
@@ -1111,115 +976,31 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  return (
  <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/90 backdrop-blur-sm overflow-hidden print:bg-white print:block">
  {/* MODAL HEADER - HIDDEN ON PRINT */}
- <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10">
- <div className="flex items-center space-x-4">
- <button
- onClick={onClose}
- className="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer"
- title="Close Preview"
- >
- <X className="w-5 h-5" />
- </button>
- <div>
- <h2 className="text-lg font-black text-white">Print Preview</h2>
- <p className="text-xs font-medium text-slate-400">
- {isPtDocument ? 'PT State' : 'Parade State'}
- </p>
- </div>
- </div>
- <div className="flex items-center space-x-3 flex-wrap justify-end gap-y-2">
- {isPtDocument ? null : (
- <>
- {/* Quick Date Presets */}
- <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs mr-2">
- <button
- onClick={() => handleSetPreset('today')}
- className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
- activePreset === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
- }`}
- >
- Today
- </button>
- <button
- onClick={() => handleSetPreset('7days')}
- className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '7days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white' }`}
- >
- 7 Days
- </button>
- <button
- onClick={() => handleSetPreset('15days')}
- className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === '15days' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white' }`}
- >
- 15 Days
- </button>
- <button
- onClick={() => handleSetPreset('month')}
- className={`px-2.5 py-1 rounded-lg font-bold transition-all ${ activePreset === 'month' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white' }`}
- >
- Month
- </button>
- </div>
-
- {/* From / To Date Filter */}
- <div className="flex items-center bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold space-x-2 mr-2">
- <span className="text-slate-500 font-semibold">From:</span>
- <DateNavigator
- value={fromDate}
- onChange={(e) => {
- setFromDate(e.target.value);
- setSelectedDate(e.target.value);
- }}
- className="bg-transparent text-white font-black outline-none cursor-pointer"
- />
- <span className="text-slate-500 font-semibold">To:</span>
- <DateNavigator
- value={toDate}
- onChange={(e) => { setToDate(e.target.value); setActivePreset('custom'); }}
- className="bg-transparent text-white font-black outline-none cursor-pointer"
- />
- </div>
-
- {/* Flight Selector */}
- <div className="flex items-center space-x-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-bold mr-4">
- <Filter className="w-3.5 h-3.5 text-slate-400" />
- <select
- value={selectedFlight}
- onChange={(e) => setSelectedFlight(e.target.value as any)}
- className="bg-transparent text-white font-black outline-none cursor-pointer"
- >
- <option value="Overall">Overall ({airmen.length})</option>
- <option value="Avionics">Avionics</option>
- <option value="Mechanics">Mechanics</option>
- <option value="GCS">GCS</option>
- <option value="Admin">Admin</option>
- </select>
- </div>
- </>
- )}
-
- {isMultiDay && (
- <label className="flex items-center space-x-1.5 text-xs font-bold text-slate-300 ml-4 cursor-pointer select-none">
- <input 
- type="checkbox" 
- className="w-3.5 h-3.5 cursor-pointer accent-emerald-600" 
- checked={hideEmptyColumns}
- onChange={(e) => setHideEmptyColumns(e.target.checked)}
- />
- <span>Hide Empty Columns</span>
- </label>
- )}
- <button
- onClick={() => { document.title = getPdfTitle(); window.print(); }}
- className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer"
- >
- <Printer className="w-5 h-5" />
- <span>Official Export / Print</span>
- </button>
- </div>
- </div>
+        <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10 sticky top-0">
+          <div className="flex items-center space-x-3 text-white">
+            
+            <button
+              onClick={() => {
+                document.title = getPdfTitle();
+                window.print();
+              }}
+              className="flex items-center space-x-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer"
+            >
+              <Printer className="w-5 h-5" />
+              <span>Official Export / Print</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-colors cursor-pointer ml-3"
+            >
+              <X className="w-5 h-5" />
+              <span>Close</span>
+            </button>
+          </div>
+        </div>
 
  {/* SCROLLABLE DOCUMENT CONTAINER */}
- <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center print:p-0 print:overflow-visible print:block">
+ <div id="print-parade-state-content" className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center print:p-0 print:overflow-visible print:block">
  <div className="space-y-6 w-full max-w-none 2xl:w-[98%] print:w-auto mx-auto print:mx-0 print:border-none print:rounded-none print:shadow-none bg-transparent">
  {/* PRINT STYLES */}
  <style>{`
@@ -1572,7 +1353,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Essn</div>
  </th>
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
- <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/BNS/BSH</div>
+ <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/ BNS/ BSH</div>
  </th>
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Sick Report</div>
@@ -1758,7 +1539,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  {cmhList.length > 0 && (
  <div>
  <h3 className="font-bold underline text-slate-900 dark:text-white mb-1 capitalize tracking-wide">
- CMH/BNS/BSH
+ CMH/ BNS/ BSH
  </h3>
  {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
  </div>

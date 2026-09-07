@@ -509,7 +509,7 @@ return () => mediaQuery.removeEventListener('change', listener);
         />
 
         {/* Main View Area (Opens on Right Side based on clicked tab) */}
-        <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full ${isPrintModalOpen ? 'print:hidden' : ''}`}>
+        <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full`}>
           {activeTab === 'overview' && (
             <DashboardParadeState
               role={role}
@@ -522,6 +522,8 @@ return () => mediaQuery.removeEventListener('change', listener);
               selectedFlight={selectedFlight}
               setSelectedFlight={setSelectedFlight}
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              isPrintMode={isPrintModalOpen}
+              onClosePrintMode={() => setIsPrintModalOpen(false)}
               onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
@@ -536,6 +538,8 @@ return () => mediaQuery.removeEventListener('change', listener);
               setSelectedDate={setSelectedDate}
               initialDocumentType="PARADE"
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              isPrintMode={isPrintModalOpen}
+              onClosePrintMode={() => setIsPrintModalOpen(false)}
               onViewAirmanProfile={(a, config) => setSelectedAirmanProfile({ airman: a, ...config })}
               onOpenImportModal={() => setIsPdfImportModalOpen(true)}
             />
@@ -722,16 +726,7 @@ return () => mediaQuery.removeEventListener('change', listener);
         />
       )}
 
-      {isPrintModalOpen && (
-        <PrintableParadeStateModal userFlight={userSession?.flightName} 
-          date={selectedDate}
-          shift={selectedShift}
-          flight={selectedFlight}
-          airmen={airmen}
-          documentType={activeTab === 'pt-state' ? 'PT' : 'PARADE'}
-          onClose={() => setIsPrintModalOpen(false)}
-        />
-      )}
+
 
       {/* AI PDF / Image Duty Data Import Modal */}
       <PdfDutyImportModal

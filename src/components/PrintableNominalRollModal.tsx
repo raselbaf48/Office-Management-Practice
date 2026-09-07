@@ -1,7 +1,7 @@
 import React from 'react';
 import { Airman } from '../types';
 import { Printer, X, Download } from 'lucide-react';
-import { exportNominalRollDocx } from '../utils/docxExport';
+import { exportHtmlToWord } from '../utils/htmlExport';
 import { getSavedPreparedBy, getSavedAuthorizedBy } from './SignatureConfigModal';
 
 interface PrintableNominalRollModalProps {
@@ -50,11 +50,11 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => exportNominalRollDocx(airmen)}
+            onClick={() => exportHtmlToWord('print-nominal-roll-content', 'Nominal_Roll_155_UASU_BAF.doc')}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Export DOCX</span>
+            <span>Export Document</span>
           </button>
           <button
             onClick={handlePrint}
@@ -68,7 +68,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
 
       {/* Printable Content Area */}
       <div className="flex-1 overflow-auto print:overflow-visible bg-slate-200/50 print:bg-white p-4 sm:py-8 print:p-0 flex justify-start sm:justify-center print:block">
-        <div className="w-max sm:w-[210mm] min-w-[min(100vw-32px,210mm)] h-fit min-h-[297mm] print:w-full print:min-h-0 print:h-auto shrink-0 bg-white text-black print:shadow-none print:border-none border border-slate-300 shadow-2xl p-4 sm:p-12 print:p-0 print:m-0">
+        <div id="print-nominal-roll-content" className="w-max sm:w-[210mm] min-w-[min(100vw-32px,210mm)] h-fit min-h-[297mm] print:w-full print:min-h-0 print:h-auto shrink-0 bg-white text-black print:shadow-none print:border-none border border-slate-300 shadow-2xl p-4 sm:p-12 print:p-0 print:m-0">
           <div className="w-full">
             {/* Document Header */}
             <div className="text-center mb-6">

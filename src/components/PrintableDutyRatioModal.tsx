@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
 import { FlightName } from '../types';
 import { Printer, X, Download } from 'lucide-react';
-import { exportDutyRatioDocx } from '../utils/docxExport';
+import { exportHtmlToWord } from '../utils/htmlExport';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 
 interface PrintableDutyRatioModalProps {
@@ -146,11 +146,11 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => exportDutyRatioDocx(matrix, `Duty_Ratio_Matrix_Complete.docx`)}
+            onClick={() => exportHtmlToWord('print-duty-ratio-content', 'Duty_Ratio_Matrix_Complete.doc')}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Export DOCX</span>
+            <span>Export Document</span>
           </button>
           <button
             onClick={handlePrint}
@@ -163,8 +163,8 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
       </div>
 
       {/* Printable Content Area */}
-      <div className="flex-1 overflow-auto print:overflow-visible flex justify-start sm:justify-center">
-        <div className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:max-w-none text-black bg-white">
+      <div className="flex-1 overflow-auto print:overflow-visible flex justify-start sm:justify-center print:block">
+        <div id="print-duty-ratio-content" className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:w-full print:max-w-none text-black bg-white">
           
           {/* PAGE 1: All Duties Summary */}
           <div className="print:break-after-page pb-8 pt-4">

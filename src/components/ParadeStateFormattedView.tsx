@@ -93,6 +93,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  // Internal Print Modal state
  const [isInternalPrintOpen, setIsInternalPrintOpen] = useState<boolean>(false);
+  const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(false);
 
  // Signature Config Modal state
  const [showSignatureModal, setShowSignatureModal] = useState<boolean>(false);
@@ -642,12 +643,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  };
 
  const handleExportOrPrint = () => {
- if (onOpenPrintModal) {
- onOpenPrintModal();
- } else {
- setIsInternalPrintOpen(true);
- }
- };
+    document.title = `${isPtDocument ? 'PT' : 'Parade'}_State_${isMultiDay ? 'MultiDay' : fromDate}`;
+    window.print();
+  };
 
  const handleDownloadDocx = async () => {
  if (isMultiDay) {
@@ -1219,15 +1217,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  )}
 
  
- {/* Download Document Button */}
- <button
- onClick={handleDownloadDocx}
- className="flex items-center space-x-1.5 px-6 py-2 bg-blue-600 hover:bg-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl font-black text-sm shadow-lg shadow-blue-900/20 transition-all cursor-pointer ml-4"
- title="Download Document"
- >
- <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
- <span>Download Document</span>
- </button>
+ 
  {/* Add Disposal Button */}
  {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
  <button
@@ -1250,9 +1240,31 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <span>Signatures</span>
  </button>
  )}
- {/* Official Export / Print Button */}
- <button
- onClick={handleExportOrPrint}
+ {/* Download Document Button */}
+          <button
+            onClick={handleDownloadDocx}
+            className="flex items-center space-x-1.5 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-900/20 transition-all cursor-pointer ml-4"
+            title="Download Document"
+          >
+            <Download className="w-5 h-5" />
+            <span>Download Document</span>
+          </button>
+
+          
+          {isMultiDay && (
+            <button
+              onClick={() => setHideEmptyColumns(!hideEmptyColumns)}
+              className={"flex items-center space-x-1.5 px-4 py-2 text-sm font-black rounded-xl shadow-lg transition-all cursor-pointer ml-4 " + (hideEmptyColumns ? "bg-amber-500 hover:bg-amber-400 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600")}
+              title="Hide Empty Columns"
+            >
+              <EyeOff className="w-4 h-4" />
+              <span>{hideEmptyColumns ? 'Show Empty Cols' : 'Hide Empty Cols'}</span>
+            </button>
+          )}
+
+          {/* Official Export / Print Button */}
+          <button
+            onClick={handleExportOrPrint}
  className="flex items-center space-x-1.5 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-xl font-black text-sm shadow-lg shadow-emerald-900/20 transition-all cursor-pointer ml-4"
  title="Official Export / Print"
  >
@@ -1335,7 +1347,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  
  // Hide empty logic
  const hasData = (dutyName: string) => {
- return true;
+ if (!hideEmptyColumns) return true;
  return datesInRange.some(dStr => {
  const resData = multiDayStates[dStr];
  const pList = selectedFlight === 'Overall' ? (resData?.personnelStatusList || []) : (resData?.personnelStatusList || []).filter(s => s.airman.flightName === selectedFlight);
@@ -1559,7 +1571,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">Essn</div>
  </th>
  <th className="border border-slate-800 dark:border-white print:border-black p-0.5 align-middle text-center">
- <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/BNS/BSH</div>
+ <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)]">CMH/ BNS/ BSH</div>
  </th>
  <th className="border border-slate-800 dark:border-white print:border-black p-0.5 align-middle text-center">
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Sick Report</div>
@@ -1745,7 +1757,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {cmhList.length > 0 && (
  <div>
  <h3 className="font-bold underline text-slate-900 dark:text-white print:text-black mb-1 capitalize tracking-wide">
- CMH/BNS/BSH
+ CMH/ BNS/ BSH
  </h3>
  {renderDisposalAirmenList(cmhList, 'CMH', 'CMH')}
  </div>

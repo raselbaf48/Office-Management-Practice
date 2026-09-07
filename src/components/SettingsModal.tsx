@@ -1179,7 +1179,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       </div>
     ) : (
       <div className="flex-1 h-full overflow-hidden">
-        {activeSection === "users" && (role === "SUPER_ADMIN" || role === "ADMIN") && (
+        {activeSection === "users" && (role === "SUPER_ADMIN" || role === "ADMIN" || role === "OWNER") && (
           <UserManagementTab nominalAirmen={nominalAirmen} userSessionRole={role} userFlight={userFlight} />
         )}
       </div>

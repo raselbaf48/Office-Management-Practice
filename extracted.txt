@@ -1,0 +1,147 @@
+ const handleExportOrPrint = () => {
+ if (onOpenPrintModal) {
+ onOpenPrintModal();
+ } else {
+ setIsInternalPrintOpen(true);
+ }
+ };
+
+ const handleDownloadDocx = async () => {
+ if (isMultiDay) {
+ const rows: MultiParadeDayItem[] = datesInRange.map((dStr) => {
+ const resData = multiDayStates[dStr];
+ const rawPersonnel = resData?.personnelStatusList || [];
+ const pList =
+ selectedFlight === 'Overall'
+ ? rawPersonnel
+ : rawPersonnel.filter((s) => s.airman.flightName === selectedFlight);
+
+ const pParts = dStr.split('-');
+ const dateObj = new Date(
+ parseInt(pParts[0]),
+ parseInt(pParts[1]) - 1,
+ parseInt(pParts[2])
+ );
+ const days = [
+ 'Sunday',
+ 'Monday',
+ 'Tuesday',
+ 'Wednesday',
+ 'Thursday',
+ 'Friday',
+ 'Saturday',
+ ];
+ const dayName = days[dateObj.getDay()];
+
+ const baseSec = pList.filter(
+ (s) => s.dutyCode === 'GD' || s.notes?.toLowerCase().includes('base sec')
+ );
+ const btf = pList.filter((s) => s.dutyCode === 'BTF');
+ const ntf = pList.filter((s) => s.dutyCode === 'NTF');
+ const airfield = pList.filter(
+ (s) =>
+ s.dutyCode === 'AIRPORT' ||
+ s.dutyCode === 'AIR_FD' ||
+ s.notes?.toLowerCase().includes('airfield') ||
+ s.notes?.toLowerCase().includes('air fd')
+ );
+ const halishahar = pList.filter((s) => s.dutyCode === 'HALISHAHAR');
+ const bakeBite = pList.filter(
+ (s) =>
+ s.dutyCode === 'BAKE_BITE' ||
+ s.dutyCode === 'BAKE_N_BITE' ||
+ s.statusCategory === 'BAKE_N_BITE'
+ );
+ const tdy = pList.filter((s) => ['TDY', 'ATT', 'DETT'].includes(s.dutyCode));
+ const leave = pList.filter((s) => s.dutyCode === 'LEAVE');
+ const idaMorn = pList.filter(
+ (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Morning'
+ );
+ const idaAft = pList.filter(
+ (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Afternoon'
+ );
+ const idaNight = pList.filter(
+ (s) => ['IDAC', 'IDA'].includes(s.dutyCode) && s.idaShift === 'Night'
+ );
+ const dutyOff = pList.filter(
+ (s) => s.dutyCode === 'DUTY_OFF' || s.statusCategory === 'OFF'
+ );
+ const onParade = pList.filter(
+ (s) => s.dutyCode === 'ON_PARADE' || s.statusCategory === 'PARADE'
+ );
+
+ const formatListStr = (items: typeof pList) =>
+ items.length > 0
+ ? items
+ .map((it, idx) => `${idx + 1}. ${it.airman.rank} ${it.airman.name}`)
+ .join('\n')
+ : '-';
+
+ return {
+ dateDisplay: formatDateSuperShort(dStr),
+ dayDisplay: dayName,
+ baseSec: formatListStr(baseSec),
+ btf: formatListStr(btf),
+ ntf: formatListStr(ntf),
+ airfield: formatListStr(airfield),
+ halishahar: formatListStr(halishahar),
+ bakeBite: formatListStr(bakeBite),
+ tdy: formatListStr(tdy),
+ leave: formatListStr(leave),
+ idaMorning: formatListStr(idaMorn),
+ idaAfternoon: formatListStr(idaAft),
+ idaNight: formatListStr(idaNight),
+ dutyOff: formatListStr(dutyOff),
+ onParade: formatListStr(onParade),
+ };
+ });
+
+ const unitHeader =
+ selectedFlight === 'Overall'
+ ? '155 UASU BAF'
+ : `155 UASU BAF (${selectedFlight.toUpperCase()} FLT)`;
+ const dateRangeHeader = `${formatDateShort(fromDate)} to ${formatDateShort(toDate)}`;
+ const p = getSavedPreparedBy();
+ const a = getSavedAuthorizedBy();
+ await exportParadeStateMultiDocx(
+ unitHeader,
+ dateRangeHeader,
+ rows,
+ `${isPtDocument ? 'PT' : 'Parade'} State - Airmen (${formatDateShort(fromDate)}).docx`,
+ { name: p.name, rank: p.rank, desig: p.designation },
+ { name: a.name, rank: a.rank, desig: a.designation }
+ );
+ } else {
+ const stats = getFlightStats(selectedFlight);
+ const p = getSavedPreparedBy();
+ const a = getSavedAuthorizedBy();
+ await exportParadeStateSingleDocx({
+ dateStr: formatDateShort(fromDate),
+ flight: selectedFlight,
+ documentType: isPtDocument ? 'PT' : 'PARADE',
+ stats,
+ onParade: onPtList.map((i) => i.airman),
+ leave: leaveList.map((i) => i.airman),
+ bakeBite: bakeBiteList.map((i) => i.airman),
+ tdy: tdyList.map((i) => i.airman),
+ canteen: canteenList.map((i) => i.airman),
+ reception: receptionList.map((i) => i.airman),
+ dutyOn: dutyOnList,
+ dutyOff: dutyOffList,
+ airFdDuty: [], // Merged into Duty On
+ essn: essnList.map((i) => i.airman),
+ cmh: cmhList.map((i) => i.airman),
+ sickReport: sickReportList.map((i) => i.airman),
+ adminOrder: adminOrderList.map((i) => i.airman),
+ classTrg: classTrgList.map((i) => i.airman),
+ games: gamesList.map((i) => i.airman),
+ absent: absentList.map((i) => i.airman),
+ otherDisposals,
+ leftSig: { name: p.name, rank: p.rank, desig: p.designation },
+ rightSig: { name: a.name, rank: a.rank, desig: a.designation },
+    }, `${isPtDocument ? 'PT' : 'Parade'} State - Airmen (${formatDateShort(fromDate)}).docx`);
+ }
+ };
+
+ // Compute Flight Stats for Single-Day Summary Matrix
+ const getFlightStats = (fl: FlightName | 'Overall') => {

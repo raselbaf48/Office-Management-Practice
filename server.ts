@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import pdfParsePkg from 'pdf-parse';
+import pdfParsePkg from 'pdf-parse/lib/pdf-parse.js';
 
 import { INITIAL_AIRMEN } from './src/data/initialAirmen';
 import { DUTY_TYPES } from './src/data/dutyTypes';

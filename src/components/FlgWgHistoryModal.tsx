@@ -232,7 +232,7 @@ export const FlgWgHistoryModal: React.FC<FlgWgHistoryModalProps> = ({ onClose })
                               {renderEditField('Det/Tdy', 'detTdy')}
                               {renderEditField('Leave', 'leave')}
                               {renderEditField('ED/EX/PP/GF', 'edExPpgf')}
-                              {renderEditField('CMH/BNS/BSH', 'cmhBnsBsh')}
+                              {renderEditField('CMH/ BNS/ BSH', 'cmhBnsBsh')}
                               {renderEditField('Office Duty', 'officeDuty')}
                               {renderEditField('Base/Airfield', 'baseAirfieldDuty')}
                               {renderEditField('Driving', 'driving')}
