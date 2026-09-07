@@ -20,7 +20,7 @@
   header, nav, footer, aside, .print\:hidden, .no-print, [role="navigation"] {
     display: none !important;
   }
-  #root, #root > div {
+  #root {
     background: #ffffff !important;
     background-color: #ffffff !important;
     color: #000000 !important;

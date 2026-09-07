@@ -124,7 +124,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
   const bgAlt = (idx: number) => idx % 2 === 1 ? '#f8fafc' : '#ffffff';
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden print:block text-black" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden print:static print:block text-black print-wrapper" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
       {/* Top Header Controls (Hidden on Print) */}
       <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10 sticky top-0">
         <div className="flex items-center space-x-3 text-white">
@@ -163,7 +163,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
       </div>
 
       {/* Printable Content Area */}
-      <div className="flex-1 overflow-auto print:overflow-visible flex justify-start sm:justify-center print:block">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible flex justify-start sm:justify-center print:block">
         
         <div id="print-duty-ratio-content" className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:w-full print:max-w-none text-black bg-white">
           <style>{`
@@ -178,9 +178,14 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               /* Hide scrollbars during print */
               ::-webkit-scrollbar { display: none; }
               
+              #root > div:not(.print-wrapper) {
+                display: none !important;
+              }
+              
               /* Ensure the content spans pages correctly */
               #print-duty-ratio-content {
                 width: 100% !important;
+                max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
               }
