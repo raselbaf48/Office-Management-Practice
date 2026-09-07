@@ -236,6 +236,11 @@ async function handleLocalApiRequest(urlStr: string, init?: RequestInit): Promis
       const ok = localDb.undoHistory(historyId);
       return jsonResponse({ success: ok });
     }
+    if (pathname === '/api/system/log-action') {
+      const { airmanId, airmanName, description } = body || {};
+      localDb.logSystemAction(airmanId, airmanName, description);
+      return jsonResponse({ success: true });
+    }
 
     // 9. Auth & Passcode
     if (pathname === '/api/auth/verify') {

@@ -84,7 +84,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const isPtDocument = false;
   const [fromDate, setFromDate] = useState<string>(selectedDate);
   const [toDate, setToDate] = useState<string>(selectedDate);
-  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isSuperAdmin = (role === 'SUPER_ADMIN' || role === 'OWNER');
   const isAdmin = role === 'ADMIN';
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
@@ -1910,7 +1910,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
-                    const isSuperAdmin = role === 'SUPER_ADMIN';
+                    const isSuperAdmin = (role === 'SUPER_ADMIN' || role === 'OWNER');
                     const isPastDate = disposalFromDate < todayStr;
                     const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (isPastDate && !isSuperAdmin);
                     return (
@@ -2320,7 +2320,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       {isInternalPrintOpen && (
         <PrintableNightCountModal userFlight={userFlight} 
           role={role}
-          selectedDate={selectedDate}
+          selectedDate={selectedDate} initialFromDate={fromDate} initialToDate={toDate}
           setSelectedDate={setSelectedDate}
           airmen={airmen}
           onClose={() => setIsInternalPrintOpen(false)}

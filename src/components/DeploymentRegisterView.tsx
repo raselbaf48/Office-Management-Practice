@@ -31,7 +31,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
 }) => {
   const session = getCurrentUserSession();
   const isAdmin = session?.assignedRole === 'ADMIN';
-  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isSuperAdmin = (role === 'SUPER_ADMIN' || role === 'OWNER');
   const adminFlight = session?.flightName;
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedFlight, setSelectedFlight] = useState<FlightName | 'All'>(isAdmin && adminFlight ? adminFlight : 'All');
@@ -307,7 +307,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
               <span>Deployment History</span>
             </button>
 
-            {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+            {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
               <button
                 onClick={() => {
                   setAttAirmanId('');

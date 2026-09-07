@@ -146,16 +146,17 @@ export interface PersonnelStatusItem {
 export interface ActivityHistoryItem {
   id: string;
   timestamp: string;
-  actionType: 'ASSIGN_DUTY' | 'ASSIGN_RANGE' | 'GRANT_LEAVE' | 'DELETE_ASSIGNMENT' | 'CLEAR_RANGE' | 'EDIT_DUTY' | 'IMPORT_PDF_ROSTER';
+  actionType: 'ASSIGN_DUTY' | 'ASSIGN_RANGE' | 'GRANT_LEAVE' | 'DELETE_ASSIGNMENT' | 'CLEAR_RANGE' | 'EDIT_DUTY' | 'IMPORT_PDF_ROSTER' | 'SYSTEM_ACTION';
   airmanId: string;
   airmanName: string;
   airmanRank?: string;
   airmanTrade?: string;
-  dutyCode: DutyCategoryCode;
+  dutyCode?: DutyCategoryCode;
   idaShift?: IDAShift;
   fromDate?: string;
   toDate?: string;
   notes?: string;
+  description?: string;
   previousAssignments?: Array<{ airmanId: string; date: string; dutyCode?: DutyCategoryCode; idaShift?: IDAShift; notes?: string }>;
 }
 

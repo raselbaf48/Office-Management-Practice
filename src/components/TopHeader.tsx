@@ -130,7 +130,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <div className="flex items-center space-x-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1.5 rounded-xl shadow-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs font-black text-emerald-800 dark:text-emerald-200">
-                {role === 'SUPER_ADMIN' ? 'Super Admin Active' : 'Admin Active'}
+                {role === 'OWNER' ? 'Owner Active' : (role === 'SUPER_ADMIN' || role === 'OWNER') ? 'Super Admin Active' : 'Admin Active'}
               </span>
               {onLogoutAdmin && (
                 <button

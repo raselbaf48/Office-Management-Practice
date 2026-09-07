@@ -186,7 +186,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
 
           <div className="flex items-center space-x-2">
             
-            {onEditAirman && !historyOnly && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+            {onEditAirman && !historyOnly && (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
               <button
                 onClick={() => { onClose(); onEditAirman(airman); }}
                 className="p-2 rounded-xl text-emerald-400 hover:text-white hover:bg-slate-800 transition-colors"

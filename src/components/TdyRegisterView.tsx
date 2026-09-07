@@ -300,7 +300,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
               <span>TDY History</span>
             </button>
 
-            {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+            {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
               <button
                 onClick={() => {
                   setTdyAirmanId('');
@@ -546,7 +546,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
-                    const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
+                    const isSuperAdmin = ((session?.assignedRole === 'SUPER_ADMIN' || session?.assignedRole === 'OWNER') || session?.assignedRole === 'OWNER');
                     const isPastDate = tdyFromDate < todayStr;
                     const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                     const setterStateValue = grantTdyFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file

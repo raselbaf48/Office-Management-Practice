@@ -260,7 +260,7 @@ return () => mediaQuery.removeEventListener('change', listener);
             alert('Your account has been suspended or disabled by admin.');
           } else {
             // Only demote if their current active role is higher than what's allowed in myDetail
-            const roleHierarchy = { 'SUPER_ADMIN': 3, 'ADMIN': 2, 'USER': 1 };
+            const roleHierarchy = { 'OWNER': 4, 'SUPER_ADMIN': 3, 'ADMIN': 2, 'USER': 1 };
             const currentActiveRole = sessionStorage.getItem('baf_user_role') || 'USER';
             if (roleHierarchy[currentActiveRole] > roleHierarchy[myDetail.role]) {
               handleRoleChange(myDetail.role);

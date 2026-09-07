@@ -66,7 +66,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 }) => {
   // Date Mode: Single Date vs Multi-Date Range
   const session = getCurrentUserSession();
-  const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
+  const isSuperAdmin = ((session?.assignedRole === 'SUPER_ADMIN' || session?.assignedRole === 'OWNER') || session?.assignedRole === 'OWNER');
   const isAdmin = session?.assignedRole === 'ADMIN';
   const adminFlight = session?.flightName;
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | null>(1);

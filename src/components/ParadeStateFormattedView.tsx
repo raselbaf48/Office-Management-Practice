@@ -82,7 +82,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  const isPtDocument = initialDocumentType === 'PT';
  const [fromDate, setFromDate] = useState<string>(selectedDate);
  const [toDate, setToDate] = useState<string>(selectedDate);
- const isSuperAdmin = role === 'SUPER_ADMIN';
+ const isSuperAdmin = (role === 'SUPER_ADMIN' || role === 'OWNER');
  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
  
@@ -642,10 +642,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  }
  };
 
- const handleExportOrPrint = () => {
-    document.title = `${isPtDocument ? 'PT' : 'Parade'}_State_${isMultiDay ? 'MultiDay' : fromDate}`;
-    window.print();
-  };
+ const handleExportOrPrint = () => { setIsInternalPrintOpen(true); };
 
  const handleDownloadDocx = async () => {
  if (isMultiDay) {
@@ -1052,16 +1049,16 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <li
  key={item.airman.id || i}
  onClick={() => {
- if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+ if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
  openEditDisposal(item.airman, dutyCode, dutyName, item.note);
  }
  }}
  className={`truncate group flex items-center justify-between ${
- (role === 'ADMIN' || role === 'SUPER_ADMIN')
+ (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')
  ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
  : ''
  }`}
- title={(role === 'ADMIN' || role === 'SUPER_ADMIN') ? 'Click to edit, change or remove disposal' : undefined}
+ title={(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? 'Click to edit, change or remove disposal' : undefined}
  >
  <span className="truncate">
  {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
@@ -1071,7 +1068,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <span className="text-[9px] text-slate-400 ml-1">({noteText})</span>
  ) : null}
  </span>
- {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+ {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
  <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
  ✏️
  </span>
@@ -1219,7 +1216,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  
  
  {/* Add Disposal Button */}
- {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+ {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
  <button
  onClick={() => setShowAddDisposalModal(true)}
  className="flex items-center space-x-1.5 px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-sm shadow-lg shadow-rose-900/20 transition-all cursor-pointer ml-4"
@@ -1230,7 +1227,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  </button>
  )}
  {/* Signature Settings Button */}
- {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+ {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
  <button
  onClick={() => setShowSignatureModal(true)}
  className="flex items-center space-x-1.5 px-6 py-2 bg-slate-100 dark:bg-slate-800 print:bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-black text-sm shadow-lg transition-all cursor-pointer ml-4"
@@ -2051,7 +2048,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  </div>
  <div className="grid grid-cols-4 gap-1.5">
  {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((fl) => {
- const isSuperAdmin = role === 'SUPER_ADMIN';
+ const isSuperAdmin = (role === 'SUPER_ADMIN' || role === 'OWNER');
  const isPastDate = disposalFromDate < todayStr;
  const isDisabledFlt = (role === 'ADMIN' && userFlight && fl !== userFlight) || (isPastDate && !isSuperAdmin);
  return (
@@ -2448,7 +2445,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {showRatioModal && (
  <FlightDutyRatioModal
  airmen={airmen}
- date={fromDate}
+ initialFromDate={fromDate} initialToDate={toDate}
  onClose={() => setShowRatioModal(false)}
  onRatiosUpdated={() => setRatioRefreshTrigger((prev) => prev + 1)}
  />
@@ -2456,8 +2453,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  {/* Internal Printable Parade State Modal (Fallback) */}
  {isInternalPrintOpen && (
- <PrintableParadeStateModal userFlight={userFlight} 
- date={fromDate}
+<PrintableParadeStateModal userFlight={userFlight} initialHideEmptyColumns={hideEmptyColumns}
+ initialFromDate={fromDate} initialToDate={toDate}
  shift="Morning"
  flight={selectedFlight}
  airmen={airmen}

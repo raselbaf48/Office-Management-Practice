@@ -442,6 +442,23 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                     </div>
 
                     <div className="space-y-1.5">
+                      {item.actionType === 'SYSTEM_ACTION' ? (
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                              SYSTEM ACTION
+                            </span>
+                            <span className="flex items-center space-x-1 text-slate-400 text-[11px]">
+                              <Clock className="w-3 h-3" />
+                              <span>Logged: {dateStr} at {timeStr}</span>
+                            </span>
+                          </div>
+                          <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                            {item.description || item.notes}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="flex items-center space-x-2 flex-wrap">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
                           isDelete
@@ -489,12 +506,15 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                           <Clock className="w-3 h-3" />
                           <span>Logged: {dateStr} at {timeStr}</span>
                         </span>
-                      </div>
+                                            </div>
+                        </>
+                      )}
                     </div>
                   </div>
-
                   {/* Actions */}
                   <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                    {item.actionType !== 'SYSTEM_ACTION' && (
+                      <>
                     <button
                       onClick={() => startEditing(item)}
                       className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg transition-colors flex items-center space-x-1"
@@ -517,6 +537,8 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                       )}
                       <span>Revert / Undo</span>
                     </button>
+                    </>
+                    )}
                   </div>
                 </div>
               );

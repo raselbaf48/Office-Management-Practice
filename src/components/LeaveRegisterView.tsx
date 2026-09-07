@@ -573,7 +573,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           
 
           {/* Entry History & Undo Button */}
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
             <button
               onClick={() => setShowHistoryModal(true)}
               className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
@@ -914,7 +914,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => {
-                    const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
+                    const isSuperAdmin = ((session?.assignedRole === 'SUPER_ADMIN' || session?.assignedRole === 'OWNER') || session?.assignedRole === 'OWNER');
                     const isPastDate = leaveFromDate < todayStr;
                     const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
                     const setterStateValue = grantLeaveFlight === flt; // This is a bit hacky, let's just do an exact replace depending on the file

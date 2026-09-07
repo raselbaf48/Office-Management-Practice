@@ -77,10 +77,12 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  initialDocumentType = 'NIGHT',
  onOpenPrintModal,
  onViewAirmanProfile,
+  initialFromDate,
+  initialToDate,
 }) => {
  const isPtDocument = false;
- const [fromDate, setFromDate] = useState<string>(selectedDate);
- const [toDate, setToDate] = useState<string>(selectedDate);
+ const [fromDate, setFromDate] = useState<string>(initialFromDate || selectedDate);
+ const [toDate, setToDate] = useState<string>(initialToDate || selectedDate);
  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
 
  const [singleParadeData, setSingleParadeData] = useState<ParadeStateResponse | null>(null);
@@ -959,16 +961,16 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  <li
  key={item.airman.id || i}
  onClick={() => {
- if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+ if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
  openEditDisposal(item.airman, dutyCode, dutyName, item.note);
  }
  }}
  className={`truncate group flex items-center justify-between ${
- (role === 'ADMIN' || role === 'SUPER_ADMIN')
+ (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')
  ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
  : ''
  }`}
- title={(role === 'ADMIN' || role === 'SUPER_ADMIN') ? 'Click to edit, change or remove disposal' : undefined}
+ title={(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? 'Click to edit, change or remove disposal' : undefined}
  >
  <span className="truncate">
  {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
@@ -978,7 +980,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  <span className="text-[9px] text-slate-400 ml-1">({noteText})</span>
  ) : null}
  </span>
- {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+ {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
  <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
  ✏️
  </span>

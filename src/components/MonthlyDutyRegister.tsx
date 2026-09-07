@@ -879,7 +879,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
           
 
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowHistoryModal(true)}
@@ -1018,7 +1018,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
           </div>
 
           <div className="text-xs text-slate-500 font-medium hidden md:flex items-center space-x-3">
-            {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+            {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
               <>
                 <button
                   onClick={() => handleOpenBulkModal()}
@@ -1191,7 +1191,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                         <button
                                           key={a.id}
                                           onClick={() => {
-                                            if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+                                            if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
                                               setCellEditModal({
                                                 flight: fl,
                                                 dutyCode: cat.dutyCode,
@@ -1215,7 +1215,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                       <button
                                         key={`slot-${sIdx}`}
                                         onClick={() => {
-                                          if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+                                          if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
                                             setCellEditModal({
                                               flight: fl,
                                               dutyCode: cat.dutyCode,
@@ -1239,7 +1239,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                       <button
                                         key={`empty-slot-${sIdx}`}
                                         onClick={() => {
-                                          if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+                                          if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
                                             setCellEditModal({
                                               flight: fl,
                                               dutyCode: cat.dutyCode,
@@ -1260,7 +1260,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                 ) : (
                                   <button
                                     onClick={() => {
-                                      if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+                                      if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
                                         setCellEditModal({
                                           flight: fl,
                                           dutyCode: cat.dutyCode,
@@ -1408,7 +1408,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                               {airman.name}
                             </span>
                           </div>
-                          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                          {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

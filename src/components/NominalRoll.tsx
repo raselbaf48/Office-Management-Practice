@@ -152,7 +152,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
             <span>History</span>
           </button>
 
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
             <button
               onClick={onAddAirman}
               className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer"

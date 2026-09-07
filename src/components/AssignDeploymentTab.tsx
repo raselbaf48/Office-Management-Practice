@@ -15,7 +15,7 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
   const session = getCurrentUserSession();
   const isAdmin = session?.assignedRole === 'ADMIN';
   const adminFlight = session?.flightName;
-  const isSuperAdmin = session?.assignedRole === 'SUPER_ADMIN';
+  const isSuperAdmin = ((session?.assignedRole === 'SUPER_ADMIN' || session?.assignedRole === 'OWNER') || session?.assignedRole === 'OWNER');
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [deploymentFlight, setDeploymentFlight] = useState<FlightName>('Avionics');

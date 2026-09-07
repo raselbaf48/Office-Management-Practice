@@ -1,27 +1,14 @@
 const fs = require('fs');
-let lines = fs.readFileSync('src/components/PrintableParadeStateModal.tsx', 'utf8').split('\n');
+let code = fs.readFileSync('src/components/EntryHistoryModal.tsx', 'utf8');
 
-let start = -1;
-for (let i = 1000; i < lines.length; i++) {
-  if (lines[i].includes('const handleDownloadDocx = async () => {')) {
-    start = i;
-    break;
-  }
-}
+code = code.replace(/<\/div>\s*<\/div>\s*<\/div>\s*{\/\* Actions \*\/}\s*<div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">/,
+`                      </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">`
+);
 
-if (start !== -1) {
-  let end = -1;
-  // look for `if (!isOpen) return null;`
-  for (let i = start; i < lines.length; i++) {
-    if (lines[i].includes('if (!isOpen) return null;')) {
-      end = i;
-      break;
-    }
-  }
-  
-  if (end !== -1) {
-    lines.splice(start, end - start);
-    fs.writeFileSync('src/components/PrintableParadeStateModal.tsx', lines.join('\n'));
-    console.log("Deleted from", start, "to", end);
-  }
-}
+fs.writeFileSync('src/components/EntryHistoryModal.tsx', code);

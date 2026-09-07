@@ -255,7 +255,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden print:overflow-visible">
       <div className="flex-none pt-4 px-4 md:pt-6 md:px-6 w-full max-w-7xl mx-auto animate-fadeIn space-y-6 print:hidden">
       {/* Top Banner & Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
@@ -281,7 +281,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+          {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
             <button
               type="button"
               onClick={() => setIsPrintModalOpen(true)}
@@ -407,7 +407,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                         : (table.flightTargets?.[selectedFlightFilter as 'Mechanics' | 'Avionics' | 'GCS' | 'Admin'] || 0)}
                     </strong>
                   </span>
-                  {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                  {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
                     <>
                       <button
                         onClick={() => toggleTableInfo(tableIdx)}
@@ -461,7 +461,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                               <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 text-center align-middle">
                                 <div className="flex items-center justify-between">
                                   <span>{flight}</span>
-                                  {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+                                  {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
                                     <button
                                       onClick={() => setEditingCalendar({ tableIdx: matrix.findIndex(x => x.id === table.id), flight })}
                                       className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-500 transition-colors cursor-pointer"
@@ -611,7 +611,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                         <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 align-middle text-[11px] leading-tight">
                           <div className="flex items-center justify-between">
                             <span>{table.title}</span>
-                            {(role === 'ADMIN' || role === 'SUPER_ADMIN') ? (
+                            {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
                               <button
                                 onClick={() => setEditingCalendar({ tableIdx: matrix.findIndex(x => x.id === table.id), flight: selectedFlightFilter as FlightName })}
                                 className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-indigo-500 transition-colors cursor-pointer ml-2"
@@ -787,7 +787,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
       )}
 
       {/* Calendar Edit Modal */}
-      {editingCalendar && (role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+      {editingCalendar && (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
         <FlightDutyCalendarModal
           table={matrix[editingCalendar.tableIdx]}
           flight={editingCalendar.flight}

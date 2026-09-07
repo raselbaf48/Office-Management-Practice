@@ -71,7 +71,10 @@ interface PrintableParadeStateModalProps {
  initialDocumentType?: 'PARADE' | 'PT';
  onOpenPrintModal?: () => void;
  onViewAirmanProfile?: (airman: Airman) => void;
- onOpenImportModal?: () => void;
+  initialFromDate?: string;
+  initialToDate?: string;
+  initialHideEmptyColumns?: boolean;
+  onOpenImportModal?: () => void;
 }
 
 export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps> = ({
@@ -88,17 +91,20 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  selectedDate = new Date().toISOString().split('T')[0],
  setSelectedDate = (date: string) => {},
  initialDocumentType = 'PARADE',
+ initialFromDate,
+ initialToDate,
  onOpenPrintModal = () => {},
  onViewAirmanProfile,
- onOpenImportModal = () => {},
+ initialHideEmptyColumns = false,
+  onOpenImportModal = () => {},
 }) => {
  const currentFlight = flight || initialFlight || 'Overall';
  const onEditCell = undefined;
  const isPtDocument = initialDocumentType === 'PT' || documentType === 'PT';
- const [fromDate, setFromDate] = useState<string>(selectedDate || (date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
- const [toDate, setToDate] = useState<string>(selectedDate || (date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
+ const [fromDate, setFromDate] = useState<string>(initialFromDate || selectedDate || (date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
+ const [toDate, setToDate] = useState<string>(initialToDate || selectedDate || (date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]));
  const [selectedFlight, setSelectedFlight] = useState<FlightName | 'Overall'>('Overall');
- const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(false);
+ const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(initialHideEmptyColumns);
 
  
 
@@ -235,11 +241,11 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
   }, [fromDate, toDate, isPtDocument, selectedFlight]);
 
   useEffect(() => {
- setFromDate(selectedDate);
- setToDate(selectedDate);
- setDisposalFromDate(selectedDate);
- setDisposalToDate(selectedDate);
- }, [selectedDate]);
+ if (!initialFromDate) setFromDate(selectedDate);
+ if (!initialToDate) setToDate(selectedDate);
+ setDisposalFromDate(initialFromDate || selectedDate);
+ setDisposalToDate(initialToDate || selectedDate);
+ }, [selectedDate, initialFromDate, initialToDate]);
 
  // Listen for signature updates
  useEffect(() => {
@@ -941,16 +947,16 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <li
  key={item.airman.id || i}
  onClick={() => {
- if ((role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+ if ((role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')) {
  openEditDisposal(item.airman, dutyCode, dutyName, item.note);
  }
  }}
  className={`truncate group flex items-center justify-between ${
- (role === 'ADMIN' || role === 'SUPER_ADMIN')
+ (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER')
  ? 'cursor-pointer hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 px-1 rounded transition-colors'
  : ''
  }`}
- title={(role === 'ADMIN' || role === 'SUPER_ADMIN') ? 'Click to edit, change or remove disposal' : undefined}
+ title={(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? 'Click to edit, change or remove disposal' : undefined}
  >
  <span className="truncate">
  {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
@@ -960,7 +966,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <span className="text-[9px] text-slate-400 ml-1">({noteText})</span>
  ) : null}
  </span>
- {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+ {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
  <span className="opacity-0 group-hover:opacity-100 text-[10px] text-purple-600 font-bold ml-1 shrink-0 print:hidden">
  ✏️
  </span>

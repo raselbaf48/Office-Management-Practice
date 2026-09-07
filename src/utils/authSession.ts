@@ -63,8 +63,8 @@ export const getCurrentUserSession = (): UserSession | null => {
     if (!raw) return null;
     const session = JSON.parse(raw) as UserSession;
     const cleanBd = session.bdNo.replace(/^BD\/?/i, '').trim();
-    if (cleanBd === '48456' && session.role !== 'OWNER') {
-      session.role = 'OWNER';
+    if (cleanBd === '48456' && session.assignedRole !== 'OWNER') {
+      session.assignedRole = 'OWNER';
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     }
     return session;

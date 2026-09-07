@@ -366,6 +366,15 @@ export class LocalDatabaseEngine {
     }
   }
 
+  public logSystemAction(airmanId: string, airmanName: string, description: string) {
+    this.recordActivity({
+      actionType: 'SYSTEM_ACTION',
+      airmanId,
+      airmanName,
+      description
+    });
+  }
+
   // --- AIRMEN CRUD ---
   public getAirmen(filters?: { flight?: string; rank?: string; search?: string }): Airman[] {
     let list = [...this.db.airmen];

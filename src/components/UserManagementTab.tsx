@@ -31,7 +31,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [newUser, setNewUser] = useState({ bdNo: '', name: '', rank: '', mobileNo: '', role: 'USER' as UserLoginRole, password: '' });
 
-  const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'ADMIN' || userSessionRole === 'OWNER';
+  const isAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'OWNER' || userSessionRole === 'ADMIN' || userSessionRole === 'OWNER';
   const isSuperAdmin = userSessionRole === 'SUPER_ADMIN' || userSessionRole === 'OWNER';
   const isOwner = userSessionRole === 'OWNER';
 
@@ -100,8 +100,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     }
     
     return filtered.sort((a, b) => {
-      if (a.role === 'SUPER_ADMIN' && b.role !== 'SUPER_ADMIN') return -1;
-      if (a.role !== 'SUPER_ADMIN' && b.role === 'SUPER_ADMIN') return 1;
+      if ((a.role === 'SUPER_ADMIN' || a.role === 'OWNER') && b.role !== 'SUPER_ADMIN' && b.role !== 'OWNER') return -1;
+      if (a.role !== 'SUPER_ADMIN' && a.role !== 'OWNER' && (b.role === 'SUPER_ADMIN' || b.role === 'OWNER')) return 1;
       return 0;
     });
   }, [nominalAirmen, detailedUsers, searchQuery, roleFilter, flightFilter]);
@@ -319,7 +319,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     )}
                   </div>
                   
-                  {editRole === 'ADMIN' || editRole === 'SUPER_ADMIN' || selectedUser.role === 'ADMIN' || selectedUser.role === 'SUPER_ADMIN' ? (
+                  {editRole === 'ADMIN' || editRole === 'SUPER_ADMIN' || selectedUser.role === 'ADMIN' || (selectedUser.role === 'SUPER_ADMIN' || selectedUser.role === 'OWNER') ? (
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase">Admin Portal Password</label>
                       {isEditingProfile ? (
@@ -406,7 +406,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{user.cleanBd}</td>
                       <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{user.rank || user.airman?.rank} {user.name || user.airman?.name}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${user.role === 'OWNER' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : user.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${user.role === 'OWNER' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300' : (user.role === 'SUPER_ADMIN' || user.role === 'OWNER') ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
                           {user.role}
                         </span>
                       </td>
