@@ -330,7 +330,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
             {/* Assignments Table */}
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
                 {isGroupedView ? (
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
                         <th className="py-2.5 px-3.5">Ser No</th>
@@ -370,7 +370,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                     </tbody>
                   </table>
                 ) : (
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[10px] tracking-wider">
                         <th className="py-2.5 px-3.5">Date</th>

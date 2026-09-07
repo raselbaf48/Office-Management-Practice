@@ -385,7 +385,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
           
           <div className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full text-left">
+              <table className="w-full text-center">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Ser No</th>

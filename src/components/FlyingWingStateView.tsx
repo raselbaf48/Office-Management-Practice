@@ -346,7 +346,7 @@ export function FlyingWingStateView({
 
               return (
                 <tr key={d.unit} className={index === displayData.length - 1 ? 'font-bold' : ''}>
-                  <td className="border border-black dark:border-slate-500 print:border-black p-1 text-left font-bold">{d.unit}</td>
+                  <td className="border border-black dark:border-slate-500 print:border-black p-1 text-center font-bold">{d.unit}</td>
                   <td className="border border-black dark:border-slate-500 print:border-black p-1">{d.totalStr || 0}</td>
                   <td className="border border-black dark:border-slate-500 print:border-black p-1">{d.detTdy || 0}</td>
                   <td className="border border-black dark:border-slate-500 print:border-black p-1">{effStr}</td>
@@ -370,7 +370,7 @@ export function FlyingWingStateView({
             })}
             
             <tr className="font-bold">
-              <td className="border border-black dark:border-slate-500 print:border-black p-1 text-left">Total</td>
+              <td className="border border-black dark:border-slate-500 print:border-black p-1 text-center">Total</td>
               <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_totalStr}</td>
               <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_detTdy}</td>
               <td className="border border-black dark:border-slate-500 print:border-black p-1">{t_effStr}</td>

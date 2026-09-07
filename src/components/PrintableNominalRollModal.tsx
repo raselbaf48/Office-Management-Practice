@@ -80,7 +80,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
 
             {/* Matrix Table */}
             <div className="overflow-x-auto print:overflow-visible flex justify-center print:block">
-              <table className="no-zebra w-full text-left text-[12px] border-collapse border border-black font-sans" style={{ pageBreakInside: 'auto' }}>
+              <table className="no-zebra w-full text-center text-[12px] border-collapse border border-black font-sans" style={{ pageBreakInside: 'auto' }}>
                 <thead className="bg-slate-100 print:bg-white text-black" style={{ backgroundColor: '#f1f5f9', color: '#000000', display: 'table-header-group' }}>
                   <tr>
                     <th className="p-1.5 border border-black font-bold text-center w-8">Ser</th>
@@ -105,16 +105,16 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                       <td className="p-1.5 border border-black text-center">
                         {airman.rank}
                       </td>
-                      <td className="p-1.5 border border-black text-left">
+                      <td className="p-1.5 border border-black text-center">
                         {airman.name}
                       </td>
-                      <td className="p-1.5 border border-black text-left">
+                      <td className="p-1.5 border border-black text-center">
                         {airman.trade}
                       </td>
-                      <td className="p-1.5 border border-black text-left">
+                      <td className="p-1.5 border border-black text-center">
                         {airman.flightName}
                       </td>
-                      <td className="p-1.5 border border-black text-left">
+                      <td className="p-1.5 border border-black text-center">
                         {airman.addressBlock || '-'}
                       </td>
                       <td className="p-1.5 border border-black text-center">

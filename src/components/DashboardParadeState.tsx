@@ -584,7 +584,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                   });
 
                 return (
-                  <table className="w-full min-w-[700px] print:min-w-0 text-left text-xs border-collapse">
+                  <div className="overflow-x-auto"><table className="w-full min-w-[700px] print:min-w-0 text-center text-xs border-collapse">
                     <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold">
                       <tr>
                         <th className="py-2 px-3 w-10 text-center">#</th>
@@ -687,7 +687,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                         ))
                       )}
                     </tbody>
-                  </table>
+                  </table></div>
                 );
               })()}
             </div>

@@ -268,7 +268,7 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
                 {/* Manpower Table */}
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm col-span-1">
                   <h3 className="font-black text-slate-800 dark:text-slate-200 mb-4 flex items-center"><Info className="w-4 h-4 mr-2 text-indigo-500"/> Effective Manpower</h3>
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full text-sm text-center">
                     <thead className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
                       <tr>
                         <th className="p-2 font-bold rounded-tl-lg">Flight</th>
@@ -301,7 +301,7 @@ export const FlightDutyRatioModal: React.FC<FlightDutyRatioModalProps> = ({
                       Auto-Distribute to 31 Days
                     </button>
                   </h3>
-                  <table className="w-full text-xs text-left whitespace-nowrap">
+                  <table className="w-full text-xs text-center whitespace-nowrap">
                     <thead className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
                       <tr>
                         <th className="p-2 font-bold rounded-tl-lg">Duty Name</th>

@@ -126,7 +126,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden print:static print:block text-black print-wrapper" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
       {/* Top Header Controls (Hidden on Print) */}
-      <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10 sticky top-0">
+      <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl print:hidden z-10 sticky top-0">
         <div className="flex items-center space-x-3 text-white">
           <button
             onClick={onClose}
@@ -163,7 +163,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
       </div>
 
       {/* Printable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible flex justify-start sm:justify-center print:block">
+      <div className="flex-1 overflow-y-auto overflow-x-auto print:overflow-visible flex justify-start sm:justify-center print:block">
         
         <div id="print-duty-ratio-content" className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:w-full print:max-w-none text-black bg-white">
           <style>{`
@@ -178,10 +178,26 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               /* Hide scrollbars during print */
               ::-webkit-scrollbar { display: none; }
               
-              #root > div:not(.print-wrapper) {
-                display: none !important;
+
+              
+              
+              body * {
+                visibility: hidden;
               }
               
+              .print-wrapper, .print-wrapper * {
+                visibility: visible;
+              }
+              
+              .print-wrapper {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
               /* Ensure the content spans pages correctly */
               #print-duty-ratio-content {
                 width: 100% !important;
@@ -216,7 +232,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     <tbody>
                       {matrix.filter(t => !t.isDisabled).map(t => (
                         <tr key={t.id} className="even:bg-gray-100 print:even:bg-gray-100">
-                          <td className="border border-black p-1.5 text-left px-3">{t.title.split('(')[0].trim()}</td>
+                          <td className="border border-black p-1.5 text-center px-3">{t.title.split('(')[0].trim()}</td>
                           <td className="border border-black p-1.5">{t.totalRequiredMonth}</td>
                         </tr>
                       ))}
@@ -288,7 +304,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="border border-black p-1.5 font-bold text-left px-2">DUTY PER PERSON</td>
+                      <td className="border border-black p-1.5 font-bold text-center px-2">DUTY PER PERSON</td>
                       {matrix.filter(t => !t.isDisabled).map(t => {
                         const includesSgt = t.eligibleRanks ? t.eligibleRanks.includes('Sgt') : t.id !== 'security_duty';
                         const isCplOnly = !includesSgt;
@@ -334,7 +350,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                       const displayFl = fl === 'Mechanics' ? 'MECHANICS FLT' : fl === 'Avionics' ? 'AVIONICS FLT' : fl === 'GCS' ? 'GCS FLT' : 'ADMIN FLT';
                       return (
                         <tr key={fl} className="even:bg-gray-100 print:even:bg-gray-100">
-                          <td className="border border-black p-1 text-left px-2 font-bold">{displayFl}</td>
+                          <td className="border border-black p-1 text-center px-2 font-bold">{displayFl}</td>
                           {matrix.filter(t => !t.isDisabled).map(t => {
                             const autoVal = calculatedMatrixDistributions[t.id]?.[fl]?.autoVal || 0;
                             return <td key={t.id} className="border border-black p-1">{autoVal}</td>;
@@ -343,7 +359,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                       );
                     })}
                     <tr className="font-bold bg-slate-100 print:bg-white">
-                      <td className="border border-black p-1.5 text-left px-2 uppercase">Total Duty</td>
+                      <td className="border border-black p-1.5 text-center px-2 uppercase">Total Duty</td>
                       {matrix.filter(t => !t.isDisabled).map(t => (
                         <td key={t.id} className="border border-black p-1.5">{t.totalRequiredMonth}</td>
                       ))}

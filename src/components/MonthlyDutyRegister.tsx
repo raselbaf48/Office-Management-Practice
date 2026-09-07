@@ -1064,10 +1064,10 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
               </div>
             </div>
 
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-center border-collapse text-xs">
               <thead className="sticky top-0 z-20 bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider">
                 <tr>
-                  <th className="py-2.5 px-3 w-48 sticky left-0 z-30 bg-slate-900 border-r border-slate-800">
+                  <th className="py-2.5 px-3 w-48 sticky left-0 z-30 bg-slate-900 border-r border-slate-800 text-center">
                     Duty Name
                   </th>
                   <th className="py-2.5 px-2 w-24 sticky left-48 z-30 bg-slate-900 border-r border-slate-800 text-center">
@@ -1291,14 +1291,14 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
         ) : (
           /* AIRMEN GRID VIEW (Personal Roster - BD No removed, IDAC Morning/Afternoon/Night separate counters) */
           <div className="overflow-x-auto max-h-[620px]">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-center border-collapse text-xs">
               <thead className="sticky top-0 z-20 bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider">
                 <tr>
                   {/* Sticky left columns */}
-                  <th className="py-3 px-3 w-10 sticky left-0 z-30 bg-slate-900 border-r border-slate-800">
+                  <th className="py-3 px-3 w-10 sticky left-0 z-30 bg-slate-900 border-r border-slate-800 text-center">
                     Ser
                   </th>
-                  <th className="py-3 px-3 min-w-40 sticky left-10 z-30 bg-slate-900 border-r border-slate-800">
+                  <th className="py-3 px-3 min-w-40 sticky left-10 z-30 bg-slate-900 border-r border-slate-800 text-center">
                     Rank & Name
                   </th>
 
@@ -1391,11 +1391,11 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       {/* Sticky left info */}
-                      <td className="py-2.5 px-3 font-mono text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800">
+                      <td className="py-2.5 px-3 font-mono text-slate-400 sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center">
                         {airman.serNo}
                       </td>
 
-                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800">
+                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1.5 truncate">
                             <span className="font-bold text-[10px] text-slate-600 dark:text-slate-300 shrink-0">

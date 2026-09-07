@@ -623,7 +623,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2 w-12">Ser No</th>
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2">BD No</th>
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2">Rank</th>
- <th className="border border-black dark:border-white print:border-black py-1.5 px-3 text-left">Name</th>
+ <th className="border border-black dark:border-white print:border-black py-1.5 px-3 text-center">Name</th>
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2">Trade</th>
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2">Block</th>
  <th className="border border-black dark:border-white print:border-black py-1.5 px-2">Mobile No</th>
@@ -643,7 +643,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
  <td className="border border-black dark:border-white print:border-black py-1 px-2 font-bold">
  {item.rank}
  </td>
- <td className="border border-black dark:border-white print:border-black py-1 px-3 text-left font-bold">
+ <td className="border border-black dark:border-white print:border-black py-1 px-3 text-center font-bold">
  {item.name}
  </td>
  <td className="border border-black dark:border-white print:border-black py-1 px-2">

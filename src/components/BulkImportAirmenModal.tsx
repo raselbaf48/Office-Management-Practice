@@ -448,7 +448,7 @@ export const BulkImportAirmenModal: React.FC<BulkImportAirmenModalProps> = ({
               {/* Table */}
               <div className="border border-slate-200 dark:border-slate-700/80 rounded-2xl overflow-hidden shadow-xs">
                 <div className="overflow-x-auto max-h-80">
-                  <table className="w-full text-xs text-left border-collapse">
+                  <table className="w-full text-xs text-center border-collapse">
                     <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold sticky top-0 z-10">
                       <tr>
                         <th className="p-2.5 border-b border-slate-200 dark:border-slate-700">#</th>

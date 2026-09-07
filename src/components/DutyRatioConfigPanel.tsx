@@ -590,9 +590,9 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                             >
                               <td className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{idx + 1}</td>
                               <td className="px-3 py-2 text-center font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.rank}</td>
-                              <td className="px-3 py-2 text-left text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.name}</td>
-                              <td className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.trade}</td>
-                              <td className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.flightName}</td>
+                              <td className="px-3 py-2 text-center text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.name}</td>
+                              <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.trade}</td>
+                              <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.flightName}</td>
                               <td className="px-3 py-2 text-center whitespace-nowrap">
                                 <select
                                   value={currentVal}
@@ -711,7 +711,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
             <table className="border-collapse border border-slate-400 dark:border-slate-700 text-center w-full min-w-[900px] bg-white dark:bg-slate-900 text-sm">
               <thead>
                 <tr>
-                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-left w-32">DUTY PER FLIGHT</th>
+                  <th className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-center w-32">DUTY PER FLIGHT</th>
                   {matrix && matrix.map(t => (
                     <th key={t.id} className="border border-slate-400 dark:border-slate-700 px-2 py-2 font-bold bg-slate-100 dark:bg-slate-800">{t.title}</th>
                   ))}
@@ -721,7 +721,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                 {['Mechanics', 'Avionics', 'GCS', 'Admin'].map(fl => {
                   return (
                     <tr key={fl}>
-                      <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold text-left bg-slate-50 dark:bg-slate-800">
+                      <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 font-bold text-center bg-slate-50 dark:bg-slate-800">
                         {fl} FLT
                       </td>
                       {matrix && matrix.map(t => {
@@ -784,7 +784,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                   );
                 })}
                 <tr className="font-bold bg-slate-100 dark:bg-slate-800">
-                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-left">TOTAL</td>
+                  <td className="border border-slate-400 dark:border-slate-700 px-2 py-1 text-center">TOTAL</td>
                   {matrix && matrix.map(t => {
                     let totalVal = 0;
                     ['Mechanics', 'Avionics', 'GCS', 'Admin'].forEach(fl => {

@@ -563,7 +563,7 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
             </div>
 
             <div className="flex-1 overflow-auto bg-white dark:bg-slate-900 relative">
-              <table className="w-full text-left text-sm whitespace-nowrap">
+              <table className="w-full text-center text-sm whitespace-nowrap">
                 <thead className="sticky top-0 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm z-10 shadow-sm">
                   <tr>
                     <th className="px-4 py-3 font-bold text-slate-500 uppercase tracking-wider text-xs">Sl</th>

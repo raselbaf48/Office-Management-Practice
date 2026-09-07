@@ -241,7 +241,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
       {/* Table Container */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-center border-collapse">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-[11px] font-black uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
                 <th className="py-3 px-4 w-12 text-center">Ser</th>

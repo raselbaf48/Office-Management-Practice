@@ -427,7 +427,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                   <table className="w-full text-xs text-center border-collapse">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
-                        <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700 text-center align-middle">
+                        <th className="p-2 text-center sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-28 min-w-28 border-r border-slate-200 dark:border-slate-700 text-center align-middle">
                           Date
                         </th>
                         {daysArray.map((d) => (
@@ -458,7 +458,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                               key={flight}
                               className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                             >
-                              <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 text-center align-middle">
+                              <td className="p-2 text-center font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 text-center align-middle">
                                 <div className="flex items-center justify-between">
                                   <span>{flight}</span>
                                   {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
@@ -512,7 +512,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
                       {/* Daily Total Row (Sum across all flights for each day) */}
                       <tr className="bg-slate-100/90 dark:bg-slate-800/90 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                        <td className="p-2 text-left font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 text-center align-middle">
+                        <td className="p-2 text-center font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 text-center align-middle">
                           <div className="flex items-center justify-between">
                             <span className="uppercase text-[11px] font-black tracking-wider text-slate-800 dark:text-slate-200">
                               {showTableInfo[tableIdx] ? 'Total / Reqr.' : 'Daily Total'}
@@ -589,7 +589,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
               <table className="w-full text-xs text-center border-collapse">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
-                    <th className="p-2 text-left sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-32 min-w-32 border-r border-slate-200 dark:border-slate-700 align-middle">
+                    <th className="p-2 text-center sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 w-32 min-w-32 border-r border-slate-200 dark:border-slate-700 align-middle">
                       Duty Name / Date
                     </th>
                     {daysArray.map((d) => (
@@ -608,7 +608,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                     const rowSum = rowData.reduce((a, b) => a + b, 0);
                     return (
                       <tr key={table.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="p-2 text-left font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 align-middle text-[11px] leading-tight">
+                        <td className="p-2 text-center font-bold text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 align-middle text-[11px] leading-tight">
                           <div className="flex items-center justify-between">
                             <span>{table.title}</span>
                             {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? (
@@ -648,7 +648,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                   })}
                   {/* Daily Total Row */}
                   <tr className="bg-slate-100/90 dark:bg-slate-800/90 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                    <td className="p-2 text-left font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 align-middle">
+                    <td className="p-2 text-center font-black sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r border-slate-300 dark:border-slate-700 align-middle">
                       <div className="flex items-center justify-between">
                         <span className="uppercase text-[11px] font-black tracking-wider text-slate-800 dark:text-slate-200">
                           Daily Total

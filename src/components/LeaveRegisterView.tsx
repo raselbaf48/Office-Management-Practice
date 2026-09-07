@@ -723,7 +723,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
       {/* Leave Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-center border-collapse text-xs">
             <thead>
               <tr className="bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-extrabold uppercase text-[11px] tracking-wider">
                 <th className="py-3 px-4 text-center w-12">Ser</th>
