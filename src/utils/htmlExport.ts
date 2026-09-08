@@ -23,7 +23,7 @@ export function exportHtmlToWord(elementId: string, filename: string) {
   const ths = clone.querySelectorAll('th');
   ths.forEach((th) => {
     th.style.border = '1px solid black';
-    th.style.padding = '4px';
+    th.style.padding = '2px';
     th.style.backgroundColor = '#f1f5f9';
     th.style.fontWeight = 'bold';
     
@@ -36,7 +36,7 @@ export function exportHtmlToWord(elementId: string, filename: string) {
   const tds = clone.querySelectorAll('td');
   tds.forEach((td) => {
     td.style.border = '1px solid black';
-    td.style.padding = '4px';
+    td.style.padding = '2px';
     
     // Check classes for alignment
     if (td.classList.contains('text-left')) td.style.textAlign = 'left';
@@ -64,7 +64,8 @@ export function exportHtmlToWord(elementId: string, filename: string) {
     // Only convert horizontal flex rows that have multiple children
     // Specifically looking for the bottom disposal container and the onPt chunks container
     if ((flex.classList.contains('justify-between') && flex.classList.contains('items-start')) || 
-        (flex.classList.contains('space-x-6'))) {
+        flex.classList.contains('space-x-6') || 
+        (flex.classList.contains('justify-center') && (flex.classList.contains('gap-12') || flex.classList.contains('gap-10')))) {
       
       const children = Array.from(flex.children);
       if (children.length > 1) {
@@ -135,7 +136,7 @@ export function exportHtmlToWord(elementId: string, filename: string) {
         
         body, table, td, th, div, span, p, li { 
           font-family: Arial, sans-serif !important; 
-          font-size: 12pt !important; 
+          font-size: 10pt; 
           color: black; 
         }
         
@@ -153,10 +154,15 @@ export function exportHtmlToWord(elementId: string, filename: string) {
         .bg-slate-100 { background-color: #f1f5f9; }
         .bg-slate-200 { background-color: #e2e8f0; }
         .bg-white { background-color: #ffffff; }
-        .text-xs { font-size: 8pt; }
-        .text-sm { font-size: 10pt; }
+        .text-xs { font-size: 7pt !important; }
+        .text-sm { font-size: 9pt !important; }
         .text-lg { font-size: 14pt; }
-        .text-xl { font-size: 16pt; }
+        .text-xl { font-size: 16pt !important; }
+
+        .text-\[11px\] { font-size: 8pt !important; }
+        .text-\[12px\] { font-size: 9pt !important; }
+        .text-\[13px\] { font-size: 10pt !important; }
+
         .mb-2 { margin-bottom: 8px; }
         .mb-4 { margin-bottom: 16px; }
         .mb-6 { margin-bottom: 24px; }

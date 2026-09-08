@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Airman } from '../types';
 import { Printer, X, Download } from 'lucide-react';
 import { exportHtmlToWord } from '../utils/htmlExport';
@@ -27,8 +28,8 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
     }, 100);
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn print:static print:block print:h-auto print:overflow-visible text-black">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn  print:block print:h-auto print:overflow-visible text-black">
       {/* Top Header Controls (Hidden on Print) */}
       <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between shadow-2xl print:hidden z-10">
         <div className="flex items-center space-x-3 text-white">
@@ -137,5 +138,5 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
         </div>
       </div>
     </div>
-  );
+  , document.body);
 };

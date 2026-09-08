@@ -4,7 +4,9 @@ import { Airman, DutyAssignment, DutyCategoryCode, FlightName, UserRole, Conflic
 import { DUTY_TYPES, DUTY_TYPE_MAP } from '../data/dutyTypes';
 import { getDaysInMonth, calculateDutyStats, detectConflicts, resolveAirmanDutyForDate, getAirmanShortCode } from '../data/rosterGenerator';
 import { DutyCellPopover } from './DutyCellPopover';
-import { Calendar, CalendarRange, AlertTriangle, ShieldAlert, ChevronLeft, ChevronRight, Search, Filter, RefreshCw, CheckCircle, X, Plus, Clock, Trash2, FileText, RotateCcw, Sliders, Eye, EyeOff, History } from 'lucide-react';
+import { exportTableToCSV } from '../utils/csvExport';
+import { getOptimalMinColumnWidth } from '../utils/tableUtils';
+import { Download, Calendar, CalendarRange, AlertTriangle, ShieldAlert, ChevronLeft, ChevronRight, Search, Filter, RefreshCw, CheckCircle, X, Plus, Clock, Trash2, FileText, RotateCcw, Sliders, Eye, EyeOff, History } from 'lucide-react';
 import { getStoredDutyRatiosForDate } from '../data/dutyRatios';
 import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../data/officialDutyRatioMatrix';
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
@@ -767,7 +769,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="duty-register-print space-y-6">
       {/* Top Banner & Month/Year Selector */}
       <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -881,6 +883,16 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
           {(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') && (
             <div className="flex items-center space-x-2">
+              
+              <button
+                onClick={() => exportTableToCSV('duty-register-container', `Duty_Register_${currentYear}_${currentMonth}.csv`)}
+                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all active:scale-95"
+                title="Export current view to CSV"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+
               <button
                 onClick={() => setShowHistoryModal(true)}
                 className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-xs transition-all active:scale-95"
@@ -1395,7 +1407,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                         {airman.serNo}
                       </td>
 
-                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center">
+                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center" style={{ minWidth: getOptimalMinColumnWidth(`${airman.rank} ${airman.name}`, 140, 7.5, 24) }}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1.5 truncate">
                             <span className="font-bold text-[10px] text-slate-600 dark:text-slate-300 shrink-0">

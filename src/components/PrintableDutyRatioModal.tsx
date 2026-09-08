@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
 import { FlightName } from '../types';
-import { Printer, X, Download } from 'lucide-react';
+import { Printer, X, Download, FileSpreadsheet } from 'lucide-react';
+import { exportTableToCSV } from '../utils/csvExport';
 import { exportHtmlToWord } from '../utils/htmlExport';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 
@@ -123,8 +125,8 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
   const bgAlt = (idx: number) => idx % 2 === 1 ? '#f8fafc' : '#ffffff';
 
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden print:static print:block text-black print-wrapper" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden  print:block text-black " style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
       {/* Top Header Controls (Hidden on Print) */}
       <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl print:hidden z-10 sticky top-0">
         <div className="flex items-center space-x-3 text-white">
@@ -145,6 +147,15 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
         </div>
 
         <div className="flex items-center space-x-3">
+          
+          <button
+            onClick={() => exportTableToCSV('print-duty-ratio-content', 'Duty_Ratio_Matrix_Complete.csv')}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+
           <button
             onClick={() => exportHtmlToWord('print-duty-ratio-content', 'Duty_Ratio_Matrix_Complete.doc')}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
@@ -170,40 +181,17 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
             @media print {
               @page { size: A4 landscape; margin: 8mm; }
               body { 
-                background: white !important; 
-                color: black !important;
+                 background: white !important; 
+                 color: black !important;
                 -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-              }
+                 print-color-adjust: exact !important; 
+               }
               /* Hide scrollbars during print */
               ::-webkit-scrollbar { display: none; }
               
-
-              
-              
-              body * {
-                visibility: hidden;
-              }
-              
-              .print-wrapper, .print-wrapper * {
-                visibility: visible;
-              }
-              
-              .print-wrapper {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-
-              /* Ensure the content spans pages correctly */
-              #print-duty-ratio-content {
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
+              /* Hide main app, only show portal */
+              #root {
+                display: none !important;
               }
             }
           `}</style>
@@ -375,10 +363,18 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
             {matrix.filter(t => !t.isDisabled).map((table, matrixIdx) => {
               const cleanTitle = table.title.split('(')[0].trim();
               
-              return (
-                <div key={table.id} className="mb-12 print:break-inside-avoid">
+              const MAX_COLS_PER_PAGE = 31;
+              const daysChunks = [];
+              for (let i = 0; i < 31; i += MAX_COLS_PER_PAGE) {
+                const daysArrayLocal = Array.from({ length: 31 }, (_, idx) => idx + 1);
+                daysChunks.push(daysArrayLocal.slice(i, i + MAX_COLS_PER_PAGE));
+              }
+
+              return daysChunks.map((chunk, chunkIdx) => {
+                return (
+                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-inside-avoid print:break-after-page">
                   <div className="flex justify-between items-end mb-1">
-                    <div className="font-bold underline uppercase text-[13px]">{cleanTitle}</div>
+                    <div className="font-bold underline uppercase text-[13px]">{cleanTitle} {daysChunks.length > 1 ? ` (Part ${chunkIdx + 1})` : ''}</div>
                     <div className="flex border border-black text-[12px]">
                       <div className="px-2 py-0.5 border-r border-black" style={{ backgroundColor: '#ffffff' }}>Total Duty</div>
                       <div className="px-4 py-0.5 font-bold" style={{ backgroundColor: '#ffffff' }}>{table.totalRequiredMonth}</div>
@@ -389,7 +385,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     <thead>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         <th colSpan={2} className="border border-black font-bold p-1 w-20">Date</th>
-                        {daysArray.map(d => (
+                        {chunk.map(d => (
                           <th key={d} className="border border-black font-bold p-1 w-6">{d}</th>
                         ))}
                         <th className="border border-black font-bold p-1 w-12">Total</th>
@@ -405,9 +401,12 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                         return (
                           <tr key={fl} style={{ backgroundColor: bgAlt(i) }}>
                             <td colSpan={2} className="border border-black font-bold p-1">{displayFl}</td>
-                            {daysArray.map((_, dayIdx) => (
-                              <td key={dayIdx} className="border border-black p-1">{rowData[dayIdx] > 0 ? rowData[dayIdx] : ''}</td>
-                            ))}
+                            {chunk.map(d => {
+                              const dayIdx = d - 1;
+                              return (
+                                <td key={dayIdx} className="border border-black p-1">{rowData[dayIdx] > 0 ? rowData[dayIdx] : ''}</td>
+                              );
+                            })}
                             <td className="border border-black p-1 font-bold">{rowSum > 0 ? rowSum : ''}</td>
                           </tr>
                         );
@@ -416,7 +415,8 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                       <tr style={{ backgroundColor: '#f1f5f9' }}>
                         <td rowSpan={2} className="border border-black font-bold p-1 text-center align-middle w-10">Daily</td>
                         <td className="border border-black font-bold p-1 w-10">Total</td>
-                        {daysArray.map((_, i) => {
+                        {chunk.map((d) => {
+                          const i = d - 1;
                           const sum = ['Mechanics', 'Avionics', 'GCS', 'Admin'].reduce((acc, fl) => {
                             const val = table.data[fl as FlightName]?.[i] || 0;
                             return acc + val;
@@ -427,7 +427,8 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                       </tr>
                       <tr style={{ backgroundColor: '#f1f5f9' }}>
                         <td className="border border-black font-bold p-1">Req.</td>
-                        {daysArray.map((_, i) => {
+                        {chunk.map((d) => {
+                          const i = d - 1;
                           const req = table.dailyRequirements?.[i] || table.totalRequiredDaily || 0;
                           return <td key={i} className="border border-black p-1">{req > 0 ? req : ''}</td>;
                         })}
@@ -436,12 +437,12 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     </tbody>
                   </table>
                 </div>
-              );
+                );
+              });
             })}
           </div>
-
         </div>
       </div>
     </div>
-  );
+  , document.body);
 };

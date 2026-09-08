@@ -2,8 +2,10 @@ import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
-import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Plus, RefreshCw, X, Check, FileText, MapPin, History } from 'lucide-react';
+import { Calendar, Search, Filter, Printer, Download, FileSpreadsheet, Eye, ShieldCheck, Plus, RefreshCw, X, Check, FileText, MapPin, History } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
+import { exportTableToCSV } from '../utils/csvExport';
+import { getOptimalMinColumnWidth } from '../utils/tableUtils';
 import { EntryHistoryModal } from './EntryHistoryModal';
 
 interface DeploymentRegisterViewProps {
@@ -267,7 +269,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
   const activeAttCount = attRecordsList.filter((r: AttRecord) => r.currentlyOnAtt).length;
 
   return (
-    <div className="space-y-6">
+    <div className="duty-register-print space-y-6">
       {/* Top Banner / Header Card */}
       <div className="bg-linear-to-r from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-slate-700/50">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -462,7 +464,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                       <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
                         {String(idx + 1).padStart(2, '0')}
                       </td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200" style={{ minWidth: getOptimalMinColumnWidth(airman.bdNo, 70, 7, 24) }}>
                         {airman.bdNo}
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">
@@ -470,7 +472,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                           {airman.rank}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-black text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 font-black text-slate-900 dark:text-white" style={{ minWidth: getOptimalMinColumnWidth(airman.name, 120, 7.5, 32) }}>
                         <button
                           onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'ATT', historyOnly: true })}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"

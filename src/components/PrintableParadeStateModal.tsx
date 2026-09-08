@@ -1,5 +1,6 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
  Airman,
  FlightName,
@@ -979,8 +980,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  };
 
  if (isOpen === false) return null;
- return (
- <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/90 backdrop-blur-sm overflow-hidden print:bg-white print:block">
+ return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/90 backdrop-blur-sm overflow-hidden print:bg-white print:block">
  {/* MODAL HEADER - HIDDEN ON PRINT */}
         <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl print:hidden z-10 sticky top-0">
           <div className="flex items-center space-x-3 text-white">
@@ -1010,32 +1011,26 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <div className="space-y-6 w-full max-w-none 2xl:w-[98%] print:w-auto mx-auto print:mx-0 print:border-none print:rounded-none print:shadow-none bg-transparent">
  {/* PRINT STYLES */}
  <style>{`
- @media print {
- @page {
+            @media print {
+              @page {
  size: A4 landscape;
  margin: 8mm;
  }
- body {
- background: white !important;
- color: black !important;
- -webkit-print-color-adjust: exact !important;
- print-color-adjust: exact !important;
- font-family: Arial, sans-serif !important;
- }
- #official-parade-document {
- font-family: Arial, sans-serif !important;
- font-size: 11px !important;
- padding: 0 !important;
- margin: 0 !important;
- width: 100% !important;
- border: none !important;
- box-shadow: none !important;
- }
- .print\\:hidden {
- display: none !important;
- }
- }
- `}</style>
+              body { 
+                 background: white !important; 
+                 color: black !important;
+                -webkit-print-color-adjust: exact !important; 
+                 print-color-adjust: exact !important; 
+               }
+              /* Hide scrollbars during print */
+              ::-webkit-scrollbar { display: none; }
+              
+              /* Hide main app, only show portal */
+              #root {
+                display: none !important;
+              }
+            }
+          `}</style>
 
  {/* OFFICIAL PARADE DOCUMENT SHEET */}
  <div
@@ -1128,7 +1123,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  };
  
  return (
- <div className="overflow-x-auto my-3">
+    <div className="overflow-x-auto my-3">
 
  <table className="no-zebra no-zebra w-full print:min-w-0 text-center align-middle border-collapse border-2 border-slate-900 dark:border-slate-600 text-[11px]">
  <thead>
@@ -1597,7 +1592,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  {Object.entries(customDisposalsMap).map(([catName, airmenList]) => {
  if (!airmenList || airmenList.length === 0) return null;
  return (
- <div key={catName}>
+    <div key={catName}>
  <h3 className="font-bold underline text-slate-900 dark:text-white mb-1 capitalize tracking-wide">
  {catName}
  </h3>
@@ -1756,7 +1751,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  {savedDisposals.map((cat) => {
  const isSelected = !isEditingDisposals && disposalCategory === cat.code && (cat.code !== 'OTHERS' || disposalCustomTitle === cat.customTitle);
  return (
- <div key={cat.label} className="relative group">
+    <div key={cat.label} className="relative group">
  <button
  type="button"
  onClick={() => {
@@ -1937,7 +1932,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  
  if (role === 'ADMIN' && selectedDate < todayStr) {
  return (
- <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 ">
+    <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 ">
  <div className="mb-2">🚫</div>
  Modifications are disabled for past dates.
  </div>
@@ -1945,7 +1940,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  }
 
  return (
- <div className="space-y-1.5">
+    <div className="space-y-1.5">
  {/* Selection Toolbar */}
  <div className="flex items-center justify-between px-1 text-xs">
  <span className="text-slate-600 dark:text-slate-400 font-medium">
@@ -2024,7 +2019,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
  // Airman with existing disposal / duty - with Edit / Change button
  return (
- <div
+    <div
  key={a.id}
  className="flex items-center justify-between p-2 rounded-lg border border-slate-200 dark:border-slate-700/80 dark:border-slate-800 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
  >

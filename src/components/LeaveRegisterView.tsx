@@ -2,8 +2,10 @@ import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Airman, FlightName, UserRole } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
-import { Calendar, Search, Filter, Printer, Download, Eye, ShieldCheck, Sun, Moon, Plus, RefreshCw, X, Check, FileText, History } from 'lucide-react';
+import { Calendar, Search, Filter, Printer, Download, FileSpreadsheet, Eye, ShieldCheck, Sun, Moon, Plus, RefreshCw, X, Check, FileText, History } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
+import { exportTableToCSV } from '../utils/csvExport';
+import { getOptimalMinColumnWidth } from '../utils/tableUtils';
 import { EntryHistoryModal } from './EntryHistoryModal';
 
 interface LeaveRegisterViewProps {
@@ -537,7 +539,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="duty-register-print space-y-6">
       {/* Header & Controls */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -585,6 +587,15 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           )}
 
           {/* Record / Grant Leave Button */}
+          
+          <button
+            onClick={() => exportTableToCSV('leave-register-container', `Leave_Register_${selectedFlight}_${currentYear}.csv`)}
+            className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+
           <button
             onClick={() => {
               setLeaveAirmanId('');
@@ -787,7 +798,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                       <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
                         {String(idx + 1).padStart(2, '0')}
                       </td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200" style={{ minWidth: getOptimalMinColumnWidth(airman.bdNo, 70, 7, 24) }}>
                         {airman.bdNo}
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">
@@ -795,7 +806,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                           {airman.rank}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-black text-slate-900 dark:text-white">
+                      <td className="py-3 px-4 font-black text-slate-900 dark:text-white" style={{ minWidth: getOptimalMinColumnWidth(airman.name, 120, 7.5, 32) }}>
                         <button
                           onClick={() => onViewProfile && onViewProfile(airman, { initialTab: 'history', initialCategory: 'LEAVE', historyOnly: true })}
                           className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left cursor-pointer"

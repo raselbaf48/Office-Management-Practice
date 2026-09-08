@@ -429,7 +429,7 @@ export const DutyRosterPeriodView: React.FC<DutyRosterPeriodViewProps> = ({
  };
 
  return (
- <div className="space-y-6">
+ <div className="duty-register-print space-y-6">
  {/* Top Header & Option Selector Card */}
  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:border-slate-700 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
  <div>

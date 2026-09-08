@@ -2,8 +2,21 @@
 
 @media print {
   @page {
-    
     margin: 8mm 12mm;
+  }
+  @page duty-register-page {
+    size: landscape;
+    margin: 5mm;
+  }
+  .duty-register-print {
+    page: duty-register-page;
+  }
+  .duty-register-print table {
+    white-space: nowrap;
+    width: max-content !important; /* Let it expand to fit content */
+  }
+  .duty-register-print th, .duty-register-print td {
+    white-space: nowrap !important;
   }
   html, body {
     background: #ffffff !important;
@@ -69,4 +82,9 @@
     width: 100% !important;
     max-width: 100% !important;
   }
+}
+
+@media print {
+  /* We still want flex containers to work if they are row, but column containers might stretch. */
+  /* Actually, setting position: static on everything might break some layouts if they rely on relative/absolute inside the print content. */
 }

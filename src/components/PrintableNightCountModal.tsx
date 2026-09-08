@@ -1,5 +1,6 @@
 import { DateNavigator } from './DateNavigator';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
  Airman,
  FlightName,
@@ -993,35 +994,29 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  };
 
  return (
- <div className="space-y-6">
+    <div className="space-y-6">
  {/* PRINT STYLES */}
  <style>{`
- @media print {
- @page {
+            @media print {
+              @page {
  size: A4 landscape;
  margin: 8mm;
  }
- body {
- background: white !important;
- color: black !important;
- -webkit-print-color-adjust: exact !important;
- print-color-adjust: exact !important;
- font-family: Arial, sans-serif !important;
- }
- #official-parade-document {
- font-family: Arial, sans-serif !important;
- font-size: 11px !important;
- padding: 0 !important;
- margin: 0 !important;
- width: 100% !important;
- border: none !important;
- box-shadow: none !important;
- }
- .print\\:hidden {
- display: none !important;
- }
- }
- `}</style>
+              body { 
+                 background: white !important; 
+                 color: black !important;
+                -webkit-print-color-adjust: exact !important; 
+                 print-color-adjust: exact !important; 
+               }
+              /* Hide scrollbars during print */
+              ::-webkit-scrollbar { display: none; }
+              
+              /* Hide main app, only show portal */
+              #root {
+                display: none !important;
+              }
+            }
+          `}</style>
 
  
  {/* MODAL OVERLAY */}
@@ -1533,7 +1528,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  {Object.entries(customDisposalsMap).map(([catName, airmenList]) => {
  if (!airmenList || airmenList.length === 0) return null;
  return (
- <div key={catName}>
+    <div key={catName}>
  <h3 className="font-bold underline text-black mb-1">
  {catName}
  </h3>
@@ -1693,7 +1688,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  {savedDisposals.map((cat) => {
  const isSelected = !isEditingDisposals && disposalCategory === cat.code && (cat.code !== 'OTHERS' || disposalCustomTitle === cat.customTitle);
  return (
- <div key={cat.label} className="relative group">
+    <div key={cat.label} className="relative group">
  <button
  type="button"
  onClick={() => {
@@ -1889,7 +1884,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  
  if (role === 'ADMIN' && selectedDate < todayStr) {
  return (
- <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 ">
+    <div className="py-8 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 ">
  <div className="mb-2">🚫</div>
  Modifications are disabled for past dates.
  </div>
@@ -1897,7 +1892,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  }
 
  return (
- <div className="space-y-1.5">
+    <div className="space-y-1.5">
  {/* Selection Toolbar */}
  <div className="flex items-center justify-between px-1 text-xs">
  <span className="text-slate-600 font-medium">
@@ -1976,7 +1971,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
 
  // Airman with existing disposal / duty - with Edit / Change button
  return (
- <div
+    <div
  key={a.id}
  className="flex items-center justify-between p-2 rounded-lg border border-slate-200 dark:border-slate-700/80 /80 bg-slate-100/80 dark:bg-slate-800/60 text-xs select-none"
  >
