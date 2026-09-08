@@ -210,15 +210,15 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
           
           {/* PAGE 1: All Duties Summary */}
-          <div className="print:break-after-page pb-8 pt-4">
+          <div className="print:break-after-page pb-8 pt-4 print:pb-0 print:pt-0">
             <div className="text-center mb-6">
               <h2 className="text-lg font-black underline uppercase">All Duties</h2>
               <h3 className="text-md font-black uppercase">155 UASU BAF</h3>
             </div>
 
-            <div className="flex flex-col gap-10 print:block print:space-y-10">
+            <div className="flex flex-col gap-10 print:gap-4">
               {/* Top two tables side-by-side */}
-              <div className="flex justify-center gap-12 print:block print:space-y-8">
+              <div className="flex justify-center gap-12">
                 {/* TOTAL DUTY Table */}
                 <div>
                   <h4 className="font-bold underline text-center mb-2">TOTAL DUTY</h4>
@@ -278,7 +278,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER MANPOWER Table */}
-              <div className="print:mt-8 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+              <div className="print:mt-2 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
@@ -321,7 +321,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER FLIGHT Table */}
-              <div className="print:mt-8 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+              <div className="print:mt-2 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
