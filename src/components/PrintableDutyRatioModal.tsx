@@ -278,7 +278,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER MANPOWER Table */}
-              <div className="print:mt-6 overflow-x-auto">
+              <div className="print:mt-6 overflow-x-auto print:overflow-visible print:break-inside-avoid">
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
@@ -321,7 +321,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER FLIGHT Table */}
-              <div className="print:mt-8 overflow-x-auto">
+              <div className="print:mt-8 overflow-x-auto print:overflow-visible print:break-inside-avoid">
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
@@ -384,7 +384,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
               return daysChunks.map((chunk, chunkIdx) => {
                 return (
-                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-after-page overflow-x-auto">
+                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-after-page overflow-x-auto print:overflow-visible">
                   <div className="flex justify-between items-end mb-1">
                     <div className="font-bold underline uppercase text-[13px]">{cleanTitle} {daysChunks.length > 1 ? ` (Part ${chunkIdx + 1})` : ''}</div>
                     <div className="flex border border-black text-[12px]">
