@@ -278,7 +278,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER MANPOWER Table */}
-              <div className="print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <div className="print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
@@ -321,7 +321,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER FLIGHT Table */}
-              <div className="print:break-inside-avoid print:mt-10" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <div className="print:break-inside-avoid print:mt-10" style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
