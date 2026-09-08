@@ -222,7 +222,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                 {/* TOTAL DUTY Table */}
                 <div>
                   <h4 className="font-bold underline text-center mb-2">TOTAL DUTY</h4>
-                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
                     <thead>
                       <tr className="bg-slate-100 print:bg-white">
                         <th className="border border-black p-1.5 w-40">Duty Name</th>
@@ -243,7 +243,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                 {/* EFFECTIVE MANPOWER Table */}
                 <div>
                   <h4 className="font-bold underline text-center mb-2">EFFECTIVE MANPOWER</h4>
-                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
                     <thead>
                       <tr className="bg-slate-100 print:bg-white">
                         <th className="border border-black p-1.5 w-24">Flight</th>
@@ -278,10 +278,10 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER MANPOWER Table */}
-              <div className="print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
+              <div className="print:mt-6 overflow-x-auto">
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
-                <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
                   <thead>
                     <tr className="bg-slate-100 print:bg-white">
                       <th className="border border-black p-1.5 w-40" rowSpan={2}>DUTY PER PERSON</th>
@@ -321,10 +321,10 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER FLIGHT Table */}
-              <div className="print:break-inside-avoid print:mt-10" style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'inline-block', width: '100%' }}>
+              <div className="print:mt-8 overflow-x-auto">
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
-                <table className="no-zebra border-collapse border border-black text-center text-[12px] w-full bg-white text-black" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
                   <thead>
                     <tr className="bg-slate-100 print:bg-white">
                       <th className="border border-black p-1.5 w-40" rowSpan={2}>DUTY PER FLIGHT</th>
@@ -384,7 +384,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
               return daysChunks.map((chunk, chunkIdx) => {
                 return (
-                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-inside-avoid print:break-after-page" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-after-page overflow-x-auto">
                   <div className="flex justify-between items-end mb-1">
                     <div className="font-bold underline uppercase text-[13px]">{cleanTitle} {daysChunks.length > 1 ? ` (Part ${chunkIdx + 1})` : ''}</div>
                     <div className="flex border border-black text-[12px]">
@@ -393,7 +393,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     </div>
                   </div>
                   
-                  <table className="no-zebra w-full border-collapse border border-black text-center text-[11px]" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <table className="no-zebra w-full border-collapse border border-black text-center text-[11px] print:min-w-0">
                     <thead>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         <th colSpan={2} className="border border-black font-bold p-1 w-20">Date</th>
