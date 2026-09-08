@@ -126,7 +126,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
   const bgAlt = (idx: number) => idx % 2 === 1 ? '#f8fafc' : '#ffffff';
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden  print:block text-black " style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 print:bg-white animate-fadeIn overflow-hidden print:static print:h-auto print:w-auto print:overflow-visible print:block text-black " style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
       {/* Top Header Controls (Hidden on Print) */}
       <div className="flex-none bg-slate-900 border-b border-slate-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl print:hidden z-10 sticky top-0">
         <div className="flex items-center space-x-3 text-white">
@@ -218,7 +218,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
             <div className="flex flex-col gap-10 print:block print:space-y-10">
               {/* Top two tables side-by-side */}
-              <div className="flex justify-center gap-12">
+              <div className="flex justify-center gap-12 print:block print:space-y-8">
                 {/* TOTAL DUTY Table */}
                 <div>
                   <h4 className="font-bold underline text-center mb-2">TOTAL DUTY</h4>
@@ -278,7 +278,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER MANPOWER Table */}
-              <div className="print:mt-6 overflow-x-auto print:overflow-visible print:break-inside-avoid">
+              <div className="print:mt-8 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER MANPOWER</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
@@ -321,7 +321,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
               </div>
 
               {/* DISTRIBUTION AS PER FLIGHT Table */}
-              <div className="print:mt-8 overflow-x-auto print:overflow-visible print:break-inside-avoid">
+              <div className="print:mt-8 print:block print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
                 <h4 className="font-bold underline text-center mb-2">DISTRIBUTION AS PER FLIGHT</h4>
                 <div className="text-center font-bold underline mb-1 text-[11px]">FORMULA</div>
                 <table className="no-zebra border-collapse border border-black text-center text-[12px] bg-white text-black w-full print:min-w-0">
