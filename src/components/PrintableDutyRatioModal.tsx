@@ -179,7 +179,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
         <div id="print-duty-ratio-content" className="w-max sm:w-full max-w-none sm:max-w-[1200px] mx-auto py-4 sm:py-8 px-2 sm:px-8 print:p-0 print:m-0 print:w-full print:max-w-none text-black bg-white">
           <style>{`
             @media print {
-              @page { size: A4 landscape; margin: 8mm; }
+              @page { size: A4 portrait; margin: 8mm; }
               body { 
                  background: white !important; 
                  color: black !important;
@@ -210,7 +210,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
           
           {/* PAGE 1: All Duties Summary */}
-          <div className="print:break-after-page pb-8 pt-4 print:pb-0 print:pt-0">
+          <div className="pb-8 pt-4 print:pb-4 print:pt-0">
             <div className="text-center mb-6">
               <h2 className="text-lg font-black underline uppercase">All Duties</h2>
               <h3 className="text-md font-black uppercase">155 UASU BAF</h3>
@@ -393,7 +393,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                     </div>
                   </div>
                   
-                  <table className="no-zebra w-full border-collapse border border-black text-center text-[11px] print:min-w-0">
+                  <table className="no-zebra w-full border-collapse border border-black text-center text-[11px] sm:text-[10px] print:text-[10px] print:min-w-0">
                     <thead>
                       <tr style={{ backgroundColor: '#ffffff' }}>
                         <th colSpan={2} className="border border-black font-bold p-1 w-20">Date</th>
