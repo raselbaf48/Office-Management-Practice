@@ -377,8 +377,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   />
                   {isPasswordFocused && (
                     <div className="pt-2">
-                       <RandomizedKeypad value={newPass} onChange={setNewPass} maxLength={20} />
-                       <div className="text-right mt-1"><button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-400 font-bold p-1">Done</button></div>
+                       <RandomizedKeypad value={newPass} onChange={setNewPass} onSubmit={() => setIsPasswordFocused(false)} maxLength={20} />
                     </div>
                   )}
                 </div>
@@ -394,8 +393,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   />
                   {isConfirmFocused && (
                     <div className="pt-2">
-                       <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} maxLength={20} />
-                       <div className="text-right mt-1"><button type="button" onClick={() => setIsConfirmFocused(false)} className="text-xs text-emerald-400 font-bold p-1">Done</button></div>
+                       <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} onSubmit={() => setIsConfirmFocused(false)} maxLength={20} />
                     </div>
                   )}
                 </div>

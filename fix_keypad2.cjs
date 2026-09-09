@@ -1,56 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Delete } from 'lucide-react';
+const fs = require('fs');
+let content = fs.readFileSync('src/components/RandomizedKeypad.tsx', 'utf8');
 
-interface RandomizedKeypadProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit?: () => void;
-  maxLength?: number;
-  className?: string;
-}
-
-export const RandomizedKeypad: React.FC<RandomizedKeypadProps> = ({ 
-  value, 
-  onChange, 
-  onSubmit, 
-  maxLength = 10,
-  className = ""
-}) => {
-  const [keys, setKeys] = useState<number[]>([]);
-
-  // Shuffle keys every time the component mounts
-  useEffect(() => {
-    const shuffleArray = () => {
-      const array = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    };
-    setKeys(shuffleArray());
-  }, []);
-
-  const handleKeyPress = (num: number) => {
-    if (value.length < maxLength) {
-      onChange(value + num.toString());
-    }
-  };
-
-  const handleDelete = () => {
-    if (value.length > 0) {
-      onChange(value.slice(0, -1));
-    }
-  };
-
-  if (keys.length === 0) return null;
-
-  return (
-    <div className={`w-full max-w-[280px] mx-auto mt-2 ${className}`}>
+const correctGrid = `
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {keys.slice(0, 9).map((num) => (
           <button
-            key={`key-${num}`}
+            key={\`key-\${num}\`}
             type="button"
             onClick={(e) => { e.preventDefault(); handleKeyPress(num); }}
             className="h-12 sm:h-14 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600 rounded-xl text-xl font-bold text-slate-800 dark:text-slate-100 transition-colors shadow-sm cursor-pointer flex items-center justify-center"
@@ -85,6 +40,8 @@ export const RandomizedKeypad: React.FC<RandomizedKeypadProps> = ({
           Done
         </button>
       </div>
-    </div>
-  );
-};
+`;
+
+content = content.replace(/<div className="grid grid-cols-3 gap-2 sm:gap-3">[\s\S]*?<\/div>/, correctGrid.trim());
+
+fs.writeFileSync('src/components/RandomizedKeypad.tsx', content, 'utf8');

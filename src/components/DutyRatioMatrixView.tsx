@@ -150,7 +150,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     tableObj.data = flightData;
     updated[tableIndex] = tableObj;
     setMatrix(updated);
-    setIsSaved(false);
+    saveDutyMatrix(updated);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
   };
 
   const handleResetTable = (tableIndex: number) => {
@@ -164,7 +166,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
     tableObj.data = flightData;
     updated[tableIndex] = tableObj;
     setMatrix(updated);
-    setIsSaved(false);
+    saveDutyMatrix(updated);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
   };
 
 
@@ -301,14 +305,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
           </button>
         )}
 
-        <button
-          onClick={handleSave}
-          className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 dark:shadow-none rounded-xl transition-colors flex items-center space-x-2 cursor-pointer"
-        >
-          {isSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          <span className="hidden sm:inline">{isSaved ? 'Saved!' : 'Save All Changes'}</span>
-          <span className="sm:hidden">{isSaved ? 'Saved' : 'Save'}</span>
-        </button>
+        {/* Auto-saved instantly, button removed as requested */}
     </div>
 
     {/* LAST UPDATING DATE */}
@@ -730,6 +727,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                       updated[settingsTableIdx].dailyRequirements = new Array(31).fill(val);
                       updated[settingsTableIdx].totalRequiredDaily = val;
                       setMatrix(updated);
+                      saveDutyMatrix(updated);
                     }}
                     className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors"
                   >
@@ -754,6 +752,7 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                             currentReqs[idx] = val;
                             updated[settingsTableIdx].dailyRequirements = currentReqs;
                             setMatrix(updated);
+                            saveDutyMatrix(updated);
                           }}
                           className="w-full text-center px-1 py-1.5 text-sm font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                         />
@@ -772,14 +771,11 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  handleSave();
-                  setSettingsTableIdx(null);
-                }}
+                onClick={() => { setSettingsTableIdx(null); }}
                 className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md rounded-xl transition-colors flex items-center space-x-2"
               >
-                <Save className="w-4 h-4" />
-                <span>Save & Close</span>
+                <Check className="w-4 h-4" />
+                <span>Done</span>
               </button>
         </div>
           </div>
@@ -796,7 +792,9 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
             const updated = [...matrix];
             updated[editingCalendar.tableIdx].data[editingCalendar.flight] = newData;
             setMatrix(updated);
-            setIsSaved(false);
+            saveDutyMatrix(updated);
+            setIsSaved(true);
+            setTimeout(() => setIsSaved(false), 2000);
             setEditingCalendar(null);
           }}
         />

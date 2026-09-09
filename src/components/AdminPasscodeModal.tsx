@@ -249,7 +249,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 
                 {isPasswordFocused && !isSuccess && !isVerifying && lockRemainingSec === 0 && (
                   <div className="pt-2 animate-fadeIn">
-                    <RandomizedKeypad value={passcode} onChange={setPasscode} maxLength={10} />
+                    <RandomizedKeypad value={passcode} onChange={setPasscode} onSubmit={handleSubmit} maxLength={10} />
                   </div>
                 )}
                 
@@ -349,8 +349,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                     />
                     {isPasswordFocused && (
                       <div className="pt-2">
-                         <RandomizedKeypad value={newPass} onChange={setNewPass} maxLength={10} />
-                         <div className="text-right mt-1"><button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold p-1">Done</button></div>
+                         <RandomizedKeypad value={newPass} onChange={setNewPass} onSubmit={() => setIsPasswordFocused(false)} maxLength={10} />
                       </div>
                     )}
                   </div>
@@ -366,8 +365,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                     />
                     {isConfirmFocused && (
                       <div className="pt-2">
-                         <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} maxLength={10} />
-                         <div className="text-right mt-1"><button type="button" onClick={() => setIsConfirmFocused(false)} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold p-1">Done</button></div>
+                         <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} onSubmit={() => setIsConfirmFocused(false)} maxLength={10} />
                       </div>
                     )}
                   </div>
