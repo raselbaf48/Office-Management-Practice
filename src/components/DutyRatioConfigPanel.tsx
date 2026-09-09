@@ -57,6 +57,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_total_duty', JSON.stringify(totalDuty));
     localStorage.setItem('baf_duty_distribution_custom_flt', JSON.stringify(customFltDist));
+    window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated'));
   }, [totalDuty, customFltDist]);
 
 
@@ -97,6 +98,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
 
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_disposals_' + (targetDate || 'default'), JSON.stringify(disposals));
+    window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated'));
   }, [disposals, targetDate]);
 
   const airmanDefaults = useMemo(() => {
@@ -181,6 +183,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
 
   useEffect(() => {
     localStorage.setItem('baf_duty_distribution_manpower', JSON.stringify(currentManpower));
+    window.dispatchEvent(new CustomEvent('baf_duty_ratio_updated'));
   }, [JSON.stringify(currentManpower)]);
 
   const calculatedMatrixDistributions = useMemo(() => {
