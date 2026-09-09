@@ -384,7 +384,7 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
 
               return daysChunks.map((chunk, chunkIdx) => {
                 return (
-                  <div key={`${table.id}-${chunkIdx}`} className="mb-12 print:break-after-page overflow-x-auto print:overflow-visible">
+                  <div key={`${table.id}-${chunkIdx}`} className="mb-8 print:mb-4 overflow-x-auto print:overflow-visible" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <div className="flex justify-between items-end mb-1">
                     <div className="font-bold underline uppercase text-[13px]">{cleanTitle} {daysChunks.length > 1 ? ` (Part ${chunkIdx + 1})` : ''}</div>
                     <div className="flex border border-black text-[12px]">
