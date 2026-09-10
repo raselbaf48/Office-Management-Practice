@@ -252,7 +252,10 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
                 onChange={(e) => {
                   const val = e.target.value;
                   setDeploymentFromDate(val);
-                  if (deploymentToDate < val) setDeploymentToDate(val);
+                  
+                  if (!deploymentToDate || deploymentToDate < val) {
+                    setDeploymentToDate(val);
+                  }
                   
                   if (selectedPresetDays !== null) {
                     const d = new Date(val);

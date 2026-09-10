@@ -241,7 +241,7 @@ export class LocalDatabaseEngine {
           activityHistory: dbToSave.activityHistory,
           lastUpdated: dbToSave.lastUpdated,
         });
-        if (success === 'SIMULATED') {
+        if (success as unknown as string === 'SIMULATED') {
           firebaseConnected = true;
           firebaseLastSyncTime = new Date().toLocaleTimeString();
           addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Dev Mode: Simulated save (Live DB is Protected)" });

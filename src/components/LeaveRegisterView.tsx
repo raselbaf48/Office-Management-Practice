@@ -257,6 +257,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
       applyPresetDays(selectedPresetDays, enabled, f295Option, f295CustomDays);
     } else if (isCustomPresetActive) {
       applyPresetDays(customLeaveDays, enabled, f295Option, f295CustomDays);
+    } else {
+      const oldF295 = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+      const base = Math.max(1, (modalDaysCalc?.totalCalendarDays || 1) - oldF295);
+      applyPresetDays(base, enabled, f295Option, f295CustomDays);
     }
   };
 
@@ -267,6 +271,10 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
         applyPresetDays(selectedPresetDays, true, opt, customVal);
       } else if (isCustomPresetActive) {
         applyPresetDays(customLeaveDays, true, opt, customVal);
+      } else {
+        const oldF295 = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+        const base = Math.max(1, (modalDaysCalc?.totalCalendarDays || 1) - oldF295);
+        applyPresetDays(base, true, opt, customVal);
       }
     }
   };
@@ -589,7 +597,7 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
           {/* Record / Grant Leave Button */}
           
           <button
-            onClick={() => exportTableToCSV('leave-register-container', `Leave_Register_${selectedFlight}_${currentYear}.csv`)}
+            onClick={() => exportTableToCSV('leave-register-container', `Leave_Register_${selectedFlight}_${selectedYear}.csv`)}
             className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -1007,13 +1015,15 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                       if (!leaveToDate || leaveToDate < newFrom) {
                         setLeaveToDate(newFrom);
                       }
+                      
+                      const extra = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
                       if (selectedPresetDays !== null) {
                         const d = new Date(newFrom);
-                        d.setDate(d.getDate() + selectedPresetDays - 1);
+                        d.setDate(d.getDate() + selectedPresetDays + extra - 1);
                         setLeaveToDate(d.toISOString().split('T')[0]);
                       } else if (isCustomPresetActive) {
                         const d = new Date(newFrom);
-                        d.setDate(d.getDate() + customLeaveDays - 1);
+                        d.setDate(d.getDate() + customLeaveDays + extra - 1);
                         setLeaveToDate(d.toISOString().split('T')[0]);
                       }
                     }}
@@ -1106,20 +1116,20 @@ export const LeaveRegisterView: React.FC<LeaveRegisterViewProps> = ({
                 {/* F-295 Option */}
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center space-x-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={includeF295}
-                        onChange={(e) => handleF295Toggle(e.target.checked)}
-                        className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                      />
+                    <div 
+                      className="flex items-center space-x-2.5 cursor-pointer select-none group"
+                      onClick={() => handleF295Toggle(!includeF295)}
+                    >
+                      <div className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out ${includeF295 ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'}`}>
+                        <span className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out ${includeF295 ? 'translate-x-4.5' : 'translate-x-0.5'}`} style={{ transform: includeF295 ? 'translateX(18px)' : 'translateX(3px)' }} />
+                      </div>
                       <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                        F-295
+                        Include F-295 (Journey Time)
                       </span>
-                    </label>
+                    </div>
                     {includeF295 && (
                       <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                        +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added (Free Leave)
+                        +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added
                       </span>
                     )}
                   </div>

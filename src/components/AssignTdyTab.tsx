@@ -283,6 +283,10 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
                   const val = e.target.value;
                   setTdyFromDate(val);
                   
+                  if (!tdyToDate || tdyToDate < val) {
+                    setTdyToDate(val);
+                  }
+
                   // Keep To Date in sync if it's a single day selection
                   if (selectedPresetDays === 1 || selectedPresetDays === -1) {
                       setTdyToDate(val);
@@ -292,8 +296,6 @@ export const AssignTdyTab: React.FC<AssignTdyTabProps> = ({ airmen, onClose, onS
                       const d = new Date(val);
                       d.setDate(d.getDate() + selectedPresetDays - 1);
                       setTdyToDate(d.toISOString().split('T')[0]);
-                  } else {
-                      if (tdyToDate < val) setTdyToDate(val);
                   }
                 }}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"

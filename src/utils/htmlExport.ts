@@ -49,13 +49,14 @@ export function exportHtmlToWord(elementId: string, filename: string) {
   // Convert OL and UL to div to prevent double numbering in MS Word
   const lists = clone.querySelectorAll('ol, ul');
   lists.forEach(list => {
+    const listElement = list as HTMLElement;
     const div = document.createElement('div');
-    div.className = list.className;
-    div.style.cssText = list.style.cssText;
+    div.className = listElement.className;
+    div.style.cssText = listElement.style.cssText;
     div.style.margin = '0';
     div.style.padding = '0';
-    div.innerHTML = list.innerHTML;
-    list.parentNode?.replaceChild(div, list);
+    div.innerHTML = listElement.innerHTML;
+    listElement.parentNode?.replaceChild(div, listElement);
   });
 
   // Convert Flexbox rows into HTML Tables for MS Word layout support

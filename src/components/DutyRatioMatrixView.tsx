@@ -525,7 +525,14 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
                             (sum, fl) => sum + (table.data[fl]?.[dayIdx] || 0),
                             0
                           );
-                          const dailyReq = table.dailyRequirements?.[dayIdx] ?? (table.totalRequiredDaily || 0);
+                          let dailyReq = table.dailyRequirements?.[dayIdx];
+                          if (dailyReq === undefined) {
+                              if (table.totalRequiredDaily && (table.totalRequiredDaily * 31 === table.totalRequiredMonth)) {
+                                  dailyReq = table.totalRequiredDaily;
+                              } else {
+                                  dailyReq = ['Mechanics', 'Avionics', 'GCS', 'Admin'].reduce((acc, fl) => acc + (table.data[fl as FlightName]?.[dayIdx] || 0), 0);
+                              }
+                          }
                           const isPositive = dailySum > 0;
 
                           return (

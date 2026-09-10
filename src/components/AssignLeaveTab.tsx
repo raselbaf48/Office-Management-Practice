@@ -57,6 +57,18 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
     if (leaveDurationDays <= 10) setLeaveType('Casual');
   }, [leaveDurationDays]);
 
+  const getF295Days = (checked: boolean, opt: string, customVal: number) => {
+    return checked ? (opt === '2' ? 2 : opt === '3' ? 3 : customVal) : 0;
+  };
+
+  const updateToDateWithBase = (baseDays: number, f295Days: number) => {
+    if (leaveFromDate) {
+      const d = new Date(leaveFromDate);
+      d.setDate(d.getDate() + baseDays + f295Days - 1);
+      setLeaveToDate(d.toISOString().split('T')[0]);
+    }
+  };
+
   const handlePresetToggle = (days: number) => {
     if (selectedPresetDays === days) {
       setSelectedPresetDays(null);
@@ -64,33 +76,53 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
     } else {
       setSelectedPresetDays(days);
       setIsCustomPresetActive(false);
-      if (leaveFromDate) {
-        const d = new Date(leaveFromDate);
-        d.setDate(d.getDate() + days - 1);
-        setLeaveToDate(d.toISOString().split('T')[0]);
-      }
+      updateToDateWithBase(days, getF295Days(includeF295, f295Option, f295CustomDays));
     }
   };
 
   const handleCustomLeaveDaysChange = (days: number) => {
     setCustomLeaveDays(days);
-    if (leaveFromDate) {
-      const d = new Date(leaveFromDate);
-      d.setDate(d.getDate() + days - 1);
-      setLeaveToDate(d.toISOString().split('T')[0]);
-      setSelectedPresetDays(null);
-      setIsCustomPresetActive(true);
-    }
+    setSelectedPresetDays(null);
+    setIsCustomPresetActive(true);
+    updateToDateWithBase(days, getF295Days(includeF295, f295Option, f295CustomDays));
   };
 
   const handleF295Toggle = (checked: boolean) => {
     setIncludeF295(checked);
-    if (checked && f295Option === 'custom' && f295CustomDays === 0) setF295CustomDays(1);
+    let currentCustom = f295CustomDays;
+    if (checked && f295Option === 'custom' && f295CustomDays === 0) {
+      currentCustom = 1;
+      setF295CustomDays(1);
+    }
+    
+    if (selectedPresetDays !== null) {
+      updateToDateWithBase(selectedPresetDays, getF295Days(checked, f295Option, currentCustom));
+    } else if (isCustomPresetActive) {
+      updateToDateWithBase(customLeaveDays, getF295Days(checked, f295Option, currentCustom));
+    } else {
+      const oldF295 = getF295Days(includeF295, f295Option, f295CustomDays);
+      const base = Math.max(1, leaveDurationDays - oldF295);
+      updateToDateWithBase(base, getF295Days(checked, f295Option, currentCustom));
+    }
   };
 
   const handleF295OptionChange = (opt: '2' | '3' | 'custom', customVal?: number) => {
     setF295Option(opt);
-    if (opt === 'custom') setF295CustomDays(customVal ?? Math.max(1, f295CustomDays));
+    let currentCustom = f295CustomDays;
+    if (opt === 'custom') {
+      currentCustom = customVal ?? Math.max(1, f295CustomDays);
+      setF295CustomDays(currentCustom);
+    }
+    
+    if (selectedPresetDays !== null) {
+      updateToDateWithBase(selectedPresetDays, getF295Days(includeF295, opt, currentCustom));
+    } else if (isCustomPresetActive) {
+      updateToDateWithBase(customLeaveDays, getF295Days(includeF295, opt, currentCustom));
+    } else {
+      const oldF295 = getF295Days(includeF295, f295Option, f295CustomDays);
+      const base = Math.max(1, leaveDurationDays - oldF295);
+      updateToDateWithBase(base, getF295Days(includeF295, opt, currentCustom));
+    }
   };
 
   const calculateLeaveDaysWithF295 = (from: string, to: string, f295: number) => {
@@ -241,11 +273,13 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
                   
                   if (selectedPresetDays !== null) {
                     const d = new Date(val);
-                    d.setDate(d.getDate() + selectedPresetDays - 1);
+                    const extra = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+                    d.setDate(d.getDate() + selectedPresetDays + extra - 1);
                     setLeaveToDate(d.toISOString().split('T')[0]);
                   } else if (isCustomPresetActive) {
                     const d = new Date(val);
-                    d.setDate(d.getDate() + customLeaveDays - 1);
+                    const extra = includeF295 ? (f295Option === '2' ? 2 : f295Option === '3' ? 3 : f295CustomDays) : 0;
+                    d.setDate(d.getDate() + customLeaveDays + extra - 1);
                     setLeaveToDate(d.toISOString().split('T')[0]);
                   }
                 }}
@@ -276,7 +310,7 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
               <span className="text-[11px] text-slate-400">Click to Select / Unselect</span>
             </div>
             
-            <div className="grid grid-cols-6 gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {[3, 4, 7, 15, 21, 30].map((days) => {
                 const isSelected = selectedPresetDays === days;
                 return (
@@ -284,7 +318,7 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
                     key={days}
                     type="button"
                     onClick={() => handlePresetToggle(days)}
-                    className={`py-1.5 px-1 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
+                    className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
                       isSelected
                         ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
                         : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
@@ -294,14 +328,20 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
                   </button>
                 );
               })}
-            </div>
-
-            <div className="flex items-center justify-between bg-white dark:bg-slate-700/60 p-2 rounded-xl border border-slate-200 dark:border-slate-600">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  Custom Leave:
-                </span>
-                <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                onClick={() => { setSelectedPresetDays(null); setIsCustomPresetActive(true); handleCustomLeaveDaysChange(customLeaveDays); }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs text-center border ${
+                  isCustomPresetActive
+                    ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/50 shadow-sm'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300'
+                }`}
+              >
+                Custom
+              </button>
+              
+              {isCustomPresetActive && (
+                <div className="flex items-center space-x-1 ml-1 animate-fadeIn">
                   <input
                     type="number"
                     min="1"
@@ -311,40 +351,29 @@ export const AssignLeaveTab: React.FC<AssignLeaveTabProps> = ({ airmen, onClose,
                       const val = Math.max(1, parseInt(e.target.value, 10) || 1);
                       handleCustomLeaveDaysChange(val);
                     }}
-                    className="w-16 px-2 py-1 text-xs font-black text-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-14 px-2 py-1 text-xs font-black text-center bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
                   />
-                  <span className="text-xs text-slate-500 font-semibold">Days</span>
+                  <span className="text-[11px] text-slate-500 font-semibold">Days</span>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleCustomLeaveDaysChange(customLeaveDays)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                  isCustomPresetActive
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {isCustomPresetActive ? '✓ Custom Set' : 'Apply Custom'}
-              </button>
+              )}
             </div>
 
             <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="flex items-center space-x-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeF295}
-                    onChange={(e) => handleF295Toggle(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
+                <div 
+                  className="flex items-center space-x-2.5 cursor-pointer select-none group"
+                  onClick={() => handleF295Toggle(!includeF295)}
+                >
+                  <div className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out ${includeF295 ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'}`}>
+                    <span className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out ${includeF295 ? 'translate-x-4.5' : 'translate-x-0.5'}`} style={{ transform: includeF295 ? 'translateX(18px)' : 'translateX(3px)' }} />
+                  </div>
                   <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                    F-295
+                    Include F-295 (Journey Time)
                   </span>
-                </label>
+                </div>
                 {includeF295 && (
                   <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                    +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added (Free Leave)
+                    +{f295Option === '2' ? '2' : f295Option === '3' ? '3' : f295CustomDays} Days Added
                   </span>
                 )}
               </div>

@@ -409,7 +409,8 @@ export function getFlightDutyQuotaForDate(
     } else if (shiftLabel === 'Night') {
       table = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
     } else {
-      table = matrix.find((t) => t.dutyCode === 'IDAC');
+      // If no shift is selected, we return 0 quota so no flights are auto-selected or shown
+      return 0;
     }
   } else if (dutyCode === 'GD') {
     table = matrix.find((t) => t.id === 'security_duty' || t.dutyCode === 'GD');
@@ -434,4 +435,32 @@ export function getFlightDutyQuotaForDate(
   }
 
   return table.data[flight]?.[dayIndex] || 0;
+}
+
+export function getFlightsForIdacShift(dateStr: string, shift: string): import('../types').FlightName[] {
+  if (!dateStr || !shift) return [];
+  const dayNum = parseDayNumber(dateStr);
+  const dayIndex = Math.max(0, Math.min(30, dayNum - 1));
+  const matrix = getStoredDutyMatrix();
+  
+  let table;
+  if (shift === 'Morning') {
+    table = matrix.find((t) => t.id === 'idac_mor' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Morning'));
+  } else if (shift === 'Afternoon') {
+    table = matrix.find((t) => t.id === 'idac_an' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Afternoon'));
+  } else if (shift === 'Night') {
+    table = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
+  }
+  
+  if (!table) return [];
+  
+  const validFlights: import('../types').FlightName[] = [];
+  const flights: import('../types').FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
+  flights.forEach(f => {
+    if (table?.data[f] && table.data[f][dayIndex] > 0) {
+      validFlights.push(f);
+    }
+  });
+  
+  return validFlights;
 }

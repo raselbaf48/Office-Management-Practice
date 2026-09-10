@@ -441,7 +441,14 @@ export const PrintableDutyRatioModal: React.FC<PrintableDutyRatioModalProps> = (
                         <td className="border border-black font-bold p-1">Req.</td>
                         {chunk.map((d) => {
                           const i = d - 1;
-                          const req = table.dailyRequirements?.[i] || table.totalRequiredDaily || 0;
+                          let req = table.dailyRequirements?.[i];
+                          if (req === undefined) {
+                              if (table.totalRequiredDaily && (table.totalRequiredDaily * 31 === table.totalRequiredMonth)) {
+                                  req = table.totalRequiredDaily;
+                              } else {
+                                  req = ['Mechanics', 'Avionics', 'GCS', 'Admin'].reduce((acc, fl) => acc + (table.data[fl as FlightName]?.[i] || 0), 0);
+                              }
+                          }
                           return <td key={i} className="border border-black p-1">{req > 0 ? req : ''}</td>;
                         })}
                         <td className="border border-black p-1">{table.totalRequiredMonth}</td>

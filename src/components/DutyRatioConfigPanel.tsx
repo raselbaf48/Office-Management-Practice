@@ -29,6 +29,112 @@ const DEFAULT_MANPOWER = {
 
 import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
 
+
+// Helper function to auto-distribute duty data based on manpower
+const autoDistributeTableData = (table: DutyRatioTable, currentManpower: any) => {
+    const includesSgt = table.eligibleRanks ? table.eligibleRanks.includes('Sgt') : table.id !== 'security_duty';
+    const isCplOnly = !includesSgt;
+    const dutyTotal = table.totalRequiredMonth || 0;
+    
+    const flights = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
+    const flightPools: Record<string, number> = {};
+    let actualPoolSize = 0;
+    
+    flights.forEach(fl => {
+        let fltCpl = 0, fltSgt = 0;
+        if (fl === 'Mechanics') { fltCpl = currentManpower.mechCpl; fltSgt = currentManpower.mechSgt; }
+        if (fl === 'Avionics') { fltCpl = currentManpower.aviCpl; fltSgt = currentManpower.aviSgt; }
+        if (fl === 'GCS') { fltCpl = currentManpower.gcsCpl; fltSgt = currentManpower.gcsSgt; }
+        if (fl === 'Admin') { fltCpl = currentManpower.adminCpl; fltSgt = currentManpower.adminSgt; }
+        
+        let fltPool = isCplOnly ? fltCpl : (fltCpl + fltSgt);
+        if (table.eligibleFlights && !table.eligibleFlights.includes(fl as any)) {
+            fltPool = 0;
+        }
+        flightPools[fl] = fltPool;
+        actualPoolSize += fltPool;
+    });
+    
+    const flightQuotas: Record<string, number> = { Mechanics: 0, Avionics: 0, GCS: 0, Admin: 0 };
+    
+    if (dutyTotal > 0 && actualPoolSize > 0) {
+        const exactVals = flights.map(fl => {
+            const exact = (flightPools[fl] / actualPoolSize) * dutyTotal;
+            return { flight: fl, exact: exact, floor: Math.floor(exact), remainder: exact - Math.floor(exact) };
+        });
+        
+        let allocated = 0;
+        exactVals.forEach(item => { flightQuotas[item.flight] = item.floor; allocated += item.floor; });
+        let remaining = dutyTotal - allocated;
+        
+        const sortedForDistribution = [...exactVals]
+            .filter(item => flightPools[item.flight] > 0)
+            .sort((a, b) => b.remainder - a.remainder);
+            
+        for (let i = 0; i < remaining && i < sortedForDistribution.length; i++) {
+            flightQuotas[sortedForDistribution[i].flight] += 1;
+        }
+    }
+    
+    if (!table.data) table.data = { Mechanics: [], Avionics: [], GCS: [], Admin: [] } as any;
+    
+    // Determine daily slots. If dailyRequirements is present and its sum matches dutyTotal, use it.
+    // Otherwise, generate a default dailyRequirements that perfectly spreads dutyTotal.
+    let dailyReqs = table.dailyRequirements || new Array(31).fill(0);
+    const reqSum = dailyReqs.reduce((a, b) => a + b, 0);
+    
+    if (reqSum !== dutyTotal || reqSum === 0) {
+        dailyReqs = new Array(31).fill(0);
+        if (dutyTotal > 0) {
+            const step = 31 / dutyTotal;
+            let current = 0;
+            for (let i = 0; i < dutyTotal; i++) {
+                let idx = Math.floor(current);
+                if (idx > 30) idx = 30;
+                dailyReqs[idx]++;
+                current += step;
+            }
+        }
+        table.dailyRequirements = dailyReqs; // Update it so UI shows perfectly
+    }
+    
+    // Create an array of available slots based on dailyReqs
+    const availableSlots: number[] = [];
+    dailyReqs.forEach((count, dayIdx) => {
+        for (let i = 0; i < count; i++) {
+            availableSlots.push(dayIdx);
+        }
+    });
+    
+    // Sort flights by quota descending to assign the biggest quotas first
+    const sortedFlights = flights.map(f => ({ name: f, quota: flightQuotas[f] || 0 })).sort((a, b) => b.quota - a.quota);
+    
+    const assignedData: Record<string, number[]> = {
+        Mechanics: new Array(31).fill(0),
+        Avionics: new Array(31).fill(0),
+        GCS: new Array(31).fill(0),
+        Admin: new Array(31).fill(0)
+    };
+    
+    // Distribute quotas evenly across the available slots
+    let slotIdx = 0;
+    sortedFlights.forEach(fl => {
+        const step = availableSlots.length / fl.quota;
+        let current = 0;
+        for (let i = 0; i < fl.quota; i++) {
+            // Assign to the slot
+            const actualSlot = availableSlots[Math.floor(slotIdx + current) % availableSlots.length];
+            assignedData[fl.name][actualSlot]++;
+            current += step;
+        }
+        slotIdx += (step / 2); // Offset to avoid overlapping same days too much
+    });
+    
+    table.data = assignedData as any;
+    
+    return table;
+};
+
 export interface DutyRatioConfigPanelProps {
   matrix?: DutyRatioTable[];
   onMatrixChange?: (newMatrix: DutyRatioTable[]) => void;
@@ -410,9 +516,11 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                               if (isNaN(val)) return;
                               if (onMatrixChange) {
                                 const updated = [...matrix];
+                                updated[settingsTableIdx] = { ...updated[settingsTableIdx] };
                                 updated[settingsTableIdx].dailyRequirements = new Array(31).fill(val);
                                 updated[settingsTableIdx].totalRequiredDaily = val;
                                 updated[settingsTableIdx].totalRequiredMonth = val * 31;
+                                updated[settingsTableIdx] = autoDistributeTableData(updated[settingsTableIdx], manpower);
                                 onMatrixChange(updated);
                               }
                             }}
@@ -425,7 +533,15 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
 
                       <div className="grid grid-cols-7 gap-2 sm:gap-3">
                         {Array.from({ length: 31 }, (_, i) => i + 1).map((dayNum, idx) => {
-                          const req = matrix[settingsTableIdx]?.dailyRequirements?.[idx] ?? (matrix[settingsTableIdx]?.totalRequiredDaily || 0);
+                          const table = matrix[settingsTableIdx];
+                          let req = table?.dailyRequirements?.[idx];
+                          if (req === undefined && table) {
+                              if (table.totalRequiredDaily && (table.totalRequiredDaily * 31 === table.totalRequiredMonth)) {
+                                  req = table.totalRequiredDaily;
+                              } else {
+                                  req = ['Mechanics', 'Avionics', 'GCS', 'Admin'].reduce((acc, fl) => acc + (table.data[fl as FlightName]?.[idx] || 0), 0);
+                              }
+                          }
                           return (
                             <div key={dayNum} className="flex flex-col">
                               <label className="text-[10px] font-bold text-slate-500 mb-1 text-center">Day {dayNum}</label>
@@ -437,10 +553,12 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                                   const val = parseInt(e.target.value, 10) || 0;
                                   if (onMatrixChange) {
                                     const updated = [...matrix];
+                                    updated[settingsTableIdx] = { ...updated[settingsTableIdx] };
                                     const currentReqs = updated[settingsTableIdx].dailyRequirements || new Array(31).fill(updated[settingsTableIdx].totalRequiredDaily || 0);
                                     currentReqs[idx] = val;
                                     updated[settingsTableIdx].dailyRequirements = currentReqs;
                                     updated[settingsTableIdx].totalRequiredMonth = currentReqs.reduce((a, b) => a + b, 0);
+                                    updated[settingsTableIdx] = autoDistributeTableData(updated[settingsTableIdx], manpower);
                                     onMatrixChange(updated);
                                   }
                                 }}
@@ -1059,12 +1177,12 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                     if (!editDutyName.trim()) return;
                     if (matrix && onMatrixChange) {
                       const newMatrix = [...matrix];
-                      newMatrix[editingDutyIdx] = {
+                      newMatrix[editingDutyIdx] = autoDistributeTableData({
                         ...newMatrix[editingDutyIdx],
                         title: editDutyName,
                         eligibleFlights: editDutyFlights,
                         eligibleRanks: editDutyRanks
-                      };
+                      }, manpower);
                       onMatrixChange(newMatrix);
                     }
                     setEditingDutyIdx(null);

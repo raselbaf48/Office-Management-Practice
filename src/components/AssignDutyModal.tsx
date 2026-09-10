@@ -115,10 +115,11 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     }
   }, [isOpen, selectedDate, onlyIdac, initialDutyCode]);
 
-  // Dynamically compute available IDAC shifts based on ratio matrix for fromDate and activeFlight
+  // Dynamically compute available IDAC shifts based on ratio matrix for fromDate
+  // DO NOT filter by activeFlight, otherwise users can't switch to a shift assigned to a different flight!
   const availableIdaShifts = useMemo(() => {
-    return getIdacShiftsForDateAndFlight(fromDate, activeFlight !== 'All' ? activeFlight : undefined);
-  }, [fromDate, activeFlight]);
+    return getIdacShiftsForDateAndFlight(fromDate, undefined);
+  }, [fromDate]);
 
   // Auto-select removed as requested by user.
 
@@ -202,6 +203,12 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
   // Reset manual flight selection tracking when duty config changes
   useEffect(() => {
     userManuallySelectedFlightRef.current = false;
+    if (activeDutyCode !== 'IDAC' && activeDutyCode !== 'IDA') {
+        setActiveIdaShift(undefined);
+    } else {
+        // When switching to IDAC, also reset shift to ensure no shift/flight is selected initially
+        setActiveIdaShift(undefined);
+    }
   }, [activeDutyCode, fromDate]);
 
   // Auto-select flight for matrix-tracked duties based on quota and unfulfilled assignments
@@ -211,6 +218,12 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     if (isMatrixTracked) {
       const orderedFlights: FlightName[] = ["Avionics", "Mechanics", "GCS", "Admin"];
       let targetFlight: FlightName | "All" = "All";
+      
+      // Do not auto-select flight for IDAC until a shift is explicitly chosen
+      if ((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && !activeIdaShift) {
+         setActiveFlight("All");
+         return;
+      }
 
       for (const flt of orderedFlights) {
         const required = getFlightDutyQuotaForDate(

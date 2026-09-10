@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Airman, FlightName, IDAShift } from '../types';
 import { X, Calendar, Clock, User, Check, RefreshCw, Sparkles, Shield } from 'lucide-react';
 import { sortAirmenBySeniority } from '../utils/seniority';
-import { getFlightDutyQuotaForDate, getIdacShiftsForDateAndFlight } from '../data/officialDutyRatioMatrix';
+import { getFlightDutyQuotaForDate, getIdacShiftsForDateAndFlight, getFlightsForIdacShift } from '../data/officialDutyRatioMatrix';
 
 interface IdacDutyAssignModalProps {
   isOpen: boolean;
@@ -21,13 +21,9 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
   onAssignSuccess,
 }) => {
   const [date, setDate] = useState<string>(selectedDate || new Date().toISOString().split('T')[0]);
-  const [selectedFlight, setSelectedFlight] = useState<FlightName>('Avionics');
+  const [selectedFlight, setSelectedFlight] = useState<FlightName | ''>('');
 
-  const availableShifts = React.useMemo(() => {
-    return getIdacShiftsForDateAndFlight(date, selectedFlight);
-  }, [date, selectedFlight]);
-
-  const [shift, setShift] = useState<IDAShift>('Night');
+  const [shift, setShift] = useState<IDAShift | "">("");
   const [selectedAirmanId, setSelectedAirmanId] = useState<string>('');
   const [notes, setNotes] = useState<string>('IDA Center Standby / Surveillance Monitor');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -35,11 +31,20 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
   const [autoScheduleDays, setAutoScheduleDays] = useState<number>(7);
   const [statusMessage, setStatusMessage] = useState<string>('');
 
+  const availableFlights = React.useMemo(() => {
+    if (!shift) return [];
+    return getFlightsForIdacShift(date, shift);
+  }, [date, shift]);
+
   React.useEffect(() => {
-    if (availableShifts.length > 0 && !availableShifts.includes(shift)) {
-      setShift(availableShifts[0]);
+    if (shift && availableFlights.length > 0) {
+      if (!selectedFlight || !availableFlights.includes(selectedFlight as any)) {
+        setSelectedFlight(availableFlights[0]);
+      }
+    } else if (!shift) {
+      setSelectedFlight('');
     }
-  }, [availableShifts, shift]);
+  }, [shift, availableFlights, selectedFlight]);
 
   // Filter airmen by flight
   const flightAirmen = sortAirmenBySeniority(airmen.filter((a) => a.flightName === selectedFlight));
@@ -58,6 +63,14 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
   // Single Manual Assign
   const handleManualAssign = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!shift) {
+      alert('Please select a shift');
+      return;
+    }
+    if (!selectedFlight) {
+      alert('Please select a flight');
+      return;
+    }
     if (!selectedAirmanId) {
       alert('Please select an airman');
       return;
@@ -73,7 +86,7 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
           airmanId: selectedAirmanId,
           date,
           dutyCode: 'IDAC',
-          idaShift: shift,
+          idaShift: shift as IDAShift,
           notes,
         }),
       });
@@ -243,7 +256,8 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
                   onChange={(e) => setShift(e.target.value as IDAShift)}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  {(availableShifts.length > 0 ? availableShifts : (['Morning', 'Afternoon', 'Night'] as IDAShift[])).map((s) => {
+                  <option value="" disabled>Select Shift</option>
+                  {(['Morning', 'Afternoon', 'Night'] as IDAShift[]).map((s) => {
                     const timeLabel = s === 'Morning' ? '07:30 - 14:30' : s === 'Afternoon' ? '14:30 - 21:00' : '21:00 - 07:30';
                     return (
                       <option key={s} value={s}>
@@ -261,11 +275,13 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
                 Flight (Duty Ratio Allocation)
               </label>
               <div className="grid grid-cols-4 gap-1.5">
-                {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).map((flt) => (
+                {!shift && <div className="col-span-4 text-xs text-slate-500">Please select a shift first</div>}
+                {shift ? (availableFlights.length > 0 ? availableFlights : (['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[])).map((flt) => (
                   <button
                     key={flt}
                     type="button"
                     onClick={() => setSelectedFlight(flt)}
+                    disabled={availableFlights.length > 0 && !availableFlights.includes(flt)}
                     className={`py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                       selectedFlight === flt
                         ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
@@ -274,7 +290,7 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
                   >
                     {flt}
                   </button>
-                ))}
+                )) : null}
               </div>
             </div>
 
