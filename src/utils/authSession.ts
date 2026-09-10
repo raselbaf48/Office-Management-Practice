@@ -161,10 +161,8 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       parsed.push(owner);
       modified = true;
     } else {
-      if (parsed[idx].role !== owner.role || parsed[idx].password !== pass || parsed[idx].adminPass !== adminPass) {
+      if (parsed[idx].role !== owner.role) {
         parsed[idx].role = owner.role;
-        parsed[idx].password = pass;
-        parsed[idx].adminPass = adminPass;
         modified = true;
       }
     }

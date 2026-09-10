@@ -357,7 +357,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             </div>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="relative max-w-sm w-full">
+              <div className="relative w-full sm:max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
@@ -367,31 +367,30 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:border-emerald-500 outline-none text-slate-900 dark:text-white"
                 />
               </div>
-              <select 
-                value={flightFilter} 
-                onChange={(e) => setFlightFilter(e.target.value)} 
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-emerald-500 outline-none h-10"
-              >
-                <option value="ALL">All Flights</option>
-                <option value="Avionics">Avionics</option>
-                <option value="Line">Line</option>
-                <option value="Servicing">Servicing</option>
-                <option value="Out Of Flt">Out Of Flt</option>
-                <option value="Quality Assurance">Quality Assurance</option>
-                <option value="Admin">Admin</option>
-                <option value="Supply">Supply</option>
-              </select>
-              <select 
-                value={roleFilter} 
-                onChange={(e) => setRoleFilter(e.target.value as any)} 
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-emerald-500 outline-none h-10"
-              >
-                <option value="ALL">All Roles</option>
-                <option value="USER">User</option>
-                <option value="ADMIN">Admin</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
-              </select>
-              <button onClick={() => setIsAddingUser(true)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-colors whitespace-nowrap">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select 
+                  value={flightFilter} 
+                  onChange={(e) => setFlightFilter(e.target.value)} 
+                  className="flex-1 sm:w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2 text-sm text-slate-900 dark:text-white focus:border-emerald-500 outline-none h-10"
+                >
+                  <option value="ALL">All Flights</option>
+                  <option value="Mechanics">Mechanics</option>
+                  <option value="Avionics">Avionics</option>
+                  <option value="GCS">GCS</option>
+                  <option value="Admin">Admin</option>
+                </select>
+                <select 
+                  value={roleFilter} 
+                  onChange={(e) => setRoleFilter(e.target.value as any)} 
+                  className="flex-1 sm:w-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2 text-sm text-slate-900 dark:text-white focus:border-emerald-500 outline-none h-10"
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="USER">User</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                </select>
+              </div>
+              <button onClick={() => setIsAddingUser(true)} className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-colors whitespace-nowrap">
                 Add New User
               </button>
             </div>

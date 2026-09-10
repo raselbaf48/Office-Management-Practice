@@ -116,7 +116,8 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
 
   // For Add Admin specific filtering
   const candidateUsers = mergedUsers.filter(u => u.role === 'USER' && !u.isDefaultOwner);
-  const flightsForFilter = Array.from(new Set(candidateUsers.map(u => u.airman.flightName || 'Unknown'))).sort();
+  // Define standard flights
+  const flightsForFilter = ['Mechanics', 'Avionics', 'GCS', 'Admin'];
   const displayedCandidates = candidateUsers.filter(u => {
     const matchFlt = addAdminFlight === 'ALL' || u.airman.flightName === addAdminFlight;
     const searchLower = addAdminSearch.toLowerCase();
@@ -326,12 +327,12 @@ export const UserLoginDetailModal: React.FC<UserLoginDetailModalProps> = ({
                   <select 
                      value={addAdminFlight} 
                      onChange={e => { setAddAdminFlight(e.target.value); setAddAdminBd(''); setErrorMsg(''); }}
-                     className="w-1/3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none text-xs font-bold text-slate-700 dark:text-slate-300 focus:border-emerald-500"
+                     className="w-1/4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2 outline-none text-xs font-bold text-slate-700 dark:text-slate-300 focus:border-emerald-500"
                   >
                      <option value="ALL">All Flt</option>
                      {flightsForFilter.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
-                  <div className="relative w-2/3">
+                  <div className="relative w-3/4">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                      <input 
                         type="text" 
