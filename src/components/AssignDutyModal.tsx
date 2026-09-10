@@ -650,8 +650,19 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
         if (targetFlight !== 'All' && airman.flightName !== targetFlight) return false;
 
+        // If IDAC duty is selected but no shift is selected, show empty list
+        if ((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && !activeIdaShift) {
+           return false;
+        }
+
         const isAssigned = isAirmanAssignedToActiveDuty(airman.id);
         if (isAssigned) return true;
+
+        // Ensure airman's flight actually has a quota for this IDAC shift (if filterByRatio is ON)
+        if (filterByRatio && (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && activeIdaShift) {
+          const quota = getFlightDutyQuotaForDate(fromDate, airman.flightName, 'IDAC', activeIdaShift);
+          if (quota <= 0) return false;
+        }
 
         const dutyConfig = DUTY_TYPE_MAP.get(activeDutyCode as any);
         if (dutyConfig) {
@@ -1051,6 +1062,18 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                   {availableIdaShifts.map((s) => {
                     const shiftQuota = getRequiredCountForDuty('IDAC', s);
                     const shiftAssigned = getAssignedAirmenForDuty('IDAC', s);
+                    const allFlights: import('../types').FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];
+                    const unfulfilledFlights: import('../types').FlightName[] = [];
+                    allFlights.forEach(flt => {
+                      const fltQuota = getFlightDutyQuotaForDate(fromDate, flt, 'IDAC', s);
+                      if (fltQuota > 0) {
+                        const fltAssigned = shiftAssigned.filter(item => item.airman.flightName === flt).length;
+                        const remaining = fltQuota - fltAssigned;
+                        for (let i = 0; i < remaining; i++) {
+                           unfulfilledFlights.push(flt);
+                        }
+                      }
+                    });
                     const isShiftSelected = activeIdaShift === s;
 
                     return (
@@ -1077,26 +1100,42 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                         </div>
 
                         <div className="space-y-1">
-                          {shiftAssigned.length === 0 ? (
+                          {shiftAssigned.length === 0 && unfulfilledFlights.length === 0 ? (
                             <span className={`text-[10.5px] italic ${isShiftSelected ? 'text-teal-100' : 'text-slate-400'}`}>
                               — None Assigned
                             </span>
                           ) : (
-                            shiftAssigned.map((item, idx) => (
-                              <div
-                                key={`${item.airman.id}-${s}-${idx}`}
-                                className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate ${
-                                  isShiftSelected ? 'bg-teal-700/90 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                                }`}
-                                title={`${item.airman.rank} ${item.airman.name} (${item.airman.flightName})`}
-                              >
-                                <span className="opacity-70 mr-1.5">{idx + 1}.</span>
-                                {item.airman.rank} {item.airman.name}
-                                <span className="ml-1 opacity-75 font-normal text-[10px]">
-                                  ({item.airman.flightName})
-                                </span>
-                              </div>
-                            ))
+                            <>
+                              {shiftAssigned.map((item, idx) => (
+                                <div
+                                  key={`${item.airman.id}-${s}-${idx}`}
+                                  className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate ${
+                                    isShiftSelected ? 'bg-teal-700/90 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                                  }`}
+                                  title={`${item.airman.rank} ${item.airman.name} (${item.airman.flightName})`}
+                                >
+                                  <span className="opacity-70 mr-1.5">{idx + 1}.</span>
+                                  {item.airman.rank} {item.airman.name}
+                                  <span className="ml-1 opacity-75 font-normal text-[10px]">
+                                    ({item.airman.flightName})
+                                  </span>
+                                </div>
+                              ))}
+                              {unfulfilledFlights.map((flt, fltIdx) => (
+                                <div
+                                  key={`unfulfilled-${s}-${fltIdx}`}
+                                  className={`text-[11px] px-2 py-1 rounded-lg font-bold truncate border border-dashed ${
+                                    isShiftSelected ? 'bg-teal-800/40 text-teal-200 border-teal-500/50' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700'
+                                  }`}
+                                >
+                                  <span className="opacity-70 mr-1.5">{shiftAssigned.length + fltIdx + 1}.</span>
+                                  Not Assigned
+                                  <span className="ml-1 opacity-75 font-normal text-[10px]">
+                                    ({flt})
+                                  </span>
+                                </div>
+                              ))}
+                            </>
                           )}
                         </div>
                       </div>
