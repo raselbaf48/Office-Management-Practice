@@ -943,7 +943,12 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  const isPtIdacA = isPtDocument && codeUpper === 'IDAC' && idaShift === 'Morning';
 
- if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE' || isPtIdacA) {
+ const isCanteen = codeUpper === 'CANTEEN' || notesLower?.includes('canteen') || statusCategory === 'CANTEEN';
+        if (isCanteen) {
+          canteenList.push({ airman, note: 'Canteen' });
+        }
+        
+        if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE' || isPtIdacA) {
  onPtList.push({ airman, note: '' });
  } else if (codeUpper === 'LEAVE' || statusCategory === 'LEAVE') {
  leaveList.push({ airman, note: '' });
@@ -971,9 +976,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  gamesList.push({ airman, note: 'G/H & Games' });
  } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
  absentList.push({ airman, note: 'Absent' });
- } else if (codeUpper === 'CANTEEN' || notesLower?.includes('canteen')) {
- canteenList.push({ airman, note: 'Canteen' });
- } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
+ } else if (codeUpper === 'CANTEEN' && !notesLower?.includes('canteen') && statusCategory === 'CANTEEN') {
+        // Handled independently 
+        } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
  const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
  dutyOffList.push({ airman, note: offName });
  } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
@@ -983,7 +988,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  // Other dynamic custom disposal
  let customKey = dutyCode === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || dutyCode || 'OTHER DISPOSAL');
  if (notes) {
- if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+ if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT', 'CANTEEN'].includes(codeUpper)) {
  customKey = notes;
  }
  }

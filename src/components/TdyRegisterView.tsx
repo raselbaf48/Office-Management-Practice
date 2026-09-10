@@ -583,7 +583,7 @@ export const TdyRegisterView: React.FC<TdyRegisterViewProps> = ({
                   </span>
                 </div>
                 
-                {tdyFromDate < todayStr && session?.assignedRole !== 'SUPER_ADMIN' ? (
+                {tdyFromDate < todayStr && session?.assignedRole !== 'SUPER_ADMIN' && session?.assignedRole !== 'OWNER' ? (
                   <div className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-xs font-bold text-slate-500 text-center">
                     🚫 Cannot modify past dates.
                   </div>

@@ -1062,6 +1062,23 @@ export class LocalDatabaseEngine {
           dutyName = 'G/H & Games';
           statusCategory = 'GAMES';
         }
+        else if (codeStr === 'CANTEEN') {
+          if (isPT) {
+             return {
+                dutyCode: 'RECEPTION',
+                idaShift: ass.idaShift,
+                proxyForFlight: ass.proxyForFlight,
+                disposalScope: scope,
+                notes: ass.notes ? `${ass.notes} (Canteen)` : 'Canteen',
+                dutyName: 'K/O & Reception',
+                previousDutyName,
+                statusCategory: 'RECEPTION',
+             };
+          } else {
+             dutyName = 'Canteen';
+             statusCategory = 'CANTEEN';
+          }
+        }
         else if (codeStr === 'ABSENT') {
           dutyName = 'Absent';
           statusCategory = 'ABSENT';

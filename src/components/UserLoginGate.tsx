@@ -15,14 +15,18 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
   airmen,
   onAuthenticated,
 }) => {
-  const [bdInput, setBdInput] = useState('');
+  const [bdInput, setBdInput] = useState(() => {
+    try {
+      return localStorage.getItem('baf_last_used_id') || '';
+    } catch { return ''; }
+  });
   const [passwordInput, setPasswordInput] = useState('');
   const [showPin, setShowPin] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [successAirman, setSuccessAirman] = useState<Airman | null>(null);
   const [isUserIdFocused, setIsUserIdFocused] = useState<boolean>(false);
-  const [isPasswordFocused, setIsPasswordFocused] = useState<boolean>(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState<boolean>(true);
   const [isConfirmFocused, setIsConfirmFocused] = useState<boolean>(false);
 
   const [recentLogins, setRecentLogins] = useState<string[]>(() => {
@@ -82,12 +86,13 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         const updatedRecents = [cleanInput, ...recentLogins.filter(x => x !== cleanInput)].slice(0, 4);
         setRecentLogins(updatedRecents);
         localStorage.setItem('baf_recent_logins', JSON.stringify(updatedRecents));
+        localStorage.setItem('baf_last_used_id', cleanInput);
         setTimeout(() => {
           setIsLoading(false);
           onAuthenticated();
         }, 400);
       } else {
-        setErrorMsg(validation.message || 'Invalid User ID or Password.');
+        setErrorMsg(validation.message || 'Invalid User ID or PIN.');
         setIsLoading(false);
       }
     }, 500);
@@ -129,11 +134,11 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
     }
     else if (resetStep === 4) {
       if (!newPass || !confirmPass) {
-        setErrorMsg('Please enter both password fields.');
+        setErrorMsg('Please enter both PIN fields.');
         return;
       }
       if (newPass !== confirmPass) {
-        setErrorMsg('Passwords do not match.');
+        setErrorMsg('PINs do not match.');
         return;
       }
       if (!targetAirman) return;
@@ -158,7 +163,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
           password: newPass,
           status: 'ACTIVE',
           detailedAt: new Date().toISOString(),
-          detailedBy: 'Password Reset',
+          detailedBy: 'PIN Reset',
         };
         users.push(userDetail);
       }
@@ -229,9 +234,8 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
               <div className="relative">
                 <input
                   type="text"
-                  autoFocus
                   value={bdInput}
-                  onFocus={() => setIsUserIdFocused(true)}
+                  onFocus={() => { setIsUserIdFocused(true); setIsPasswordFocused(false); }}
                   onBlur={() => setTimeout(() => setIsUserIdFocused(false), 200)}
                   onChange={(e) => { setBdInput(e.target.value); setErrorMsg(''); }}
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-white outline-none transition-all"
@@ -261,13 +265,14 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
               </div>
             </div>
             <div className="text-left space-y-2">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">PIN</label>
               <div className="relative">
                 <input
                   type={showPin ? "text" : "password"}
                   value={passwordInput}
                   readOnly
-                  onFocus={() => setIsPasswordFocused(true)}
+                  autoFocus
+                  onFocus={() => { setIsPasswordFocused(true); setIsUserIdFocused(false); }}
                   className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3.5 pr-12 text-sm font-mono font-bold text-white outline-none transition-all cursor-pointer"
                   placeholder="Tap to open keypad"
                 />
@@ -284,11 +289,10 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   <RandomizedKeypad 
                     value={passwordInput} 
                     onChange={(val) => { setPasswordInput(val); setErrorMsg(''); }} 
+                    onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
                     maxLength={20}
                   />
-                  <div className="mt-2 text-right">
-                    <button type="button" onClick={() => setIsPasswordFocused(false)} className="text-xs text-emerald-400 font-bold p-2 hover:bg-emerald-900/30 rounded-lg">Done</button>
-                  </div>
+                  
                 </div>
               )}
             </div>
@@ -306,12 +310,12 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                 onClick={() => { setIsResetMode(true); setErrorMsg(''); }}
                 className="text-xs font-bold text-slate-500 hover:text-emerald-500 transition-colors cursor-pointer underline"
               >
-                Forgot Login Password?
+                Forgot Login PIN?
               </button>
             </div>
           </form>
         ) : (
-          /* Password Reset Flow */
+          /* PIN Reset Flow */
           <form onSubmit={handleNextStep} className="space-y-5 animate-fadeIn">
             {resetStep === 1 && (
               <div className="space-y-2 text-left">
@@ -366,7 +370,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
             {resetStep === 4 && (
               <div className="space-y-4 text-left">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Enter New Password</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Enter New PIN</label>
                   <input
                     type="password"
                     value={newPass}
@@ -382,7 +386,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirm Your Password</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirm Your PIN</label>
                   <input
                     type="password"
                     value={confirmPass}
@@ -412,7 +416,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
                 type="submit"
                 className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center space-x-1 cursor-pointer"
               >
-                <span>{resetStep === 4 ? 'Save Password' : 'Next'}</span>
+                <span>{resetStep === 4 ? 'Save PIN' : 'Next'}</span>
                 {resetStep < 4 && <ChevronRight className="w-4 h-4" />}
               </button>
             </div>

@@ -387,10 +387,10 @@ export const validateUserLogin = (
   const matchedDetail = detailedList.find((u) => u.bdNo.toLowerCase() === cleanInput);
 
   if (matchedDetail) {
-    // Password Verification
+    // PIN Verification
     const expectedPassword = matchedDetail.password || matchedDetail.bdNo;
     if (passwordInput !== expectedPassword) {
-      return { success: false, message: 'Invalid User ID or Password. Please try again.' };
+      return { success: false, message: 'Invalid User ID or PIN. Please try again.' };
     }
     if (matchedDetail.status === 'DISABLED') {
       return {
@@ -449,7 +449,7 @@ export const validateUserLogin = (
     // For auto-detailed airman, password is their BD No
     const expectedPassword = matchedAirman.bdNo.replace(/^BD\/?/i, '').trim().toLowerCase();
     if (passwordInput.trim().toLowerCase() !== expectedPassword) {
-      return { success: false, message: 'Invalid User ID or Password. Please try again.' };
+      return { success: false, message: 'Invalid User ID or PIN. Please try again.' };
     }
     // Auto-detail this airman and allow login
     const isPrimary = cleanInput === '48456';
@@ -616,7 +616,7 @@ export const changeUserPassword = (bdNo: string, currentPass: string, newPass: s
 
   current[idx].password = newPass;
   saveDetailedUsers(current);
-  return { success: true, message: 'Password updated successfully.' };
+  return { success: true, message: 'PIN updated successfully.' };
 };
 
 /**
@@ -639,7 +639,7 @@ export const changeAdminPassword = (bdNo: string, currentPass: string, newPass: 
 
   current[idx].adminPass = newPass;
   saveDetailedUsers(current);
-  return { success: true, message: 'Admin Password updated successfully.' };
+  return { success: true, message: 'Admin PIN updated successfully.' };
 };
 
 export const changeUserRole = (bdNo: string, newRole: UserLoginRole): DetailedUserLogin | null => {

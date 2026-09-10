@@ -152,7 +152,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
         return;
       }
       if (newPass !== confirmPass) {
-        setErrorMsg('Passwords do not match.');
+        setErrorMsg('PINs do not match.');
         return;
       }
 
@@ -249,7 +249,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                 
                 {isPasswordFocused && !isSuccess && !isVerifying && lockRemainingSec === 0 && (
                   <div className="pt-2 animate-fadeIn">
-                    <RandomizedKeypad value={passcode} onChange={setPasscode} onSubmit={handleSubmit} maxLength={10} />
+                    <RandomizedKeypad value={passcode} onChange={setPasscode} onSubmit={handleVerify} maxLength={10} />
                   </div>
                 )}
                 
