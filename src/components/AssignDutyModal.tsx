@@ -81,7 +81,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     onlyIdac ? 'IDAC' : (initialDutyCode || 'GD')
   );
   const [activeFlight, setActiveFlight] = useState<FlightName | 'All'>(initialFlight);
-  const [activeIdaShift, setActiveIdaShift] = useState<IDAShift>('Morning');
+  const [activeIdaShift, setActiveIdaShift] = useState<IDAShift | undefined>(undefined);
   const [activeLeaveType, setActiveLeaveType] = useState<'Casual' | 'Annual' | 'Recreation'>('Casual');
   const [isProxyEnabled, setIsProxyEnabled] = useState<boolean>(false);
   const [proxyForFlight, setProxyForFlight] = useState<FlightName | ''>('');
@@ -120,12 +120,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     return getIdacShiftsForDateAndFlight(fromDate, activeFlight !== 'All' ? activeFlight : undefined);
   }, [fromDate, activeFlight]);
 
-  // Ensure activeIdaShift is in availableIdaShifts
-  useEffect(() => {
-    if (availableIdaShifts.length > 0 && !availableIdaShifts.includes(activeIdaShift)) {
-      setActiveIdaShift(availableIdaShifts[0]);
-    }
-  }, [availableIdaShifts, activeIdaShift]);
+  // Auto-select removed as requested by user.
 
   // Map of airman ID to Airman object for fast lookup
   const airmanMap = useMemo(() => {
@@ -386,6 +381,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
   // Direct Click Assignment Action (No Draft System)
   const handleToggleAssignAirman = async (airman: Airman) => {
+    if ((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && !activeIdaShift) {
+      alert("Please select a shift first.");
+      return;
+    }
     const isCurrentlyAssignedToThisDuty = isAirmanAssignedToActiveDuty(airman.id);
 
     setProcessingAirmanId(airman.id);
