@@ -394,7 +394,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer'
               }`}
             >
-              {fl === 'All' ? 'All Flights (48)' : `${fl} Flight`}
+              {fl === 'All' ? 'All Flights' : `${fl} Flight`}
             </button>
             );
           })}
@@ -786,7 +786,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
       {showHistoryModal && (
         <EntryHistoryModal
           airmen={airmen}
-          filterType="Deployment"
+          filterType="DEPLOYMENT"
           onClose={() => setShowHistoryModal(false)}
           onRefreshData={() => {
             fetchAttRecords();

@@ -429,6 +429,7 @@ export class LocalDatabaseEngine {
     };
 
     this.db.airmen.push(newAirman);
+    this.logSystemAction(newAirman.id, `${newAirman.rank} ${newAirman.name}`, 'Added new airman to Nominal Roll');
     this.saveToStorage();
 
     return newAirman;
@@ -480,11 +481,19 @@ export class LocalDatabaseEngine {
   public updateAirman(id: string, data: Partial<Airman>): Airman | null {
     const idx = this.db.airmen.findIndex((a) => a.id === id);
     if (idx === -1) return null;
+    const previous = this.db.airmen[idx];
     this.db.airmen[idx] = {
-      ...this.db.airmen[idx],
+      ...previous,
       ...data,
       id,
     };
+    
+    if (previous.active && !data.active) {
+      this.logSystemAction(id, `${previous.rank} ${previous.name}`, 'Posted out / Marked inactive from Nominal Roll');
+    } else if (!previous.active && data.active) {
+      this.logSystemAction(id, `${previous.rank} ${previous.name}`, 'Reactivated in Nominal Roll');
+    }
+
     this.saveToStorage();
 
     return this.db.airmen[idx];
@@ -492,6 +501,10 @@ export class LocalDatabaseEngine {
 
   public deleteAirman(id: string): boolean {
     const initialCount = this.db.airmen.length;
+    const target = this.db.airmen.find((a) => a.id === id);
+    if (target) {
+        this.logSystemAction(id, `${target.rank} ${target.name}`, 'Permanently deleted from Nominal Roll');
+    }
     this.db.airmen = this.db.airmen.filter((a) => a.id !== id);
     if (this.db.airmen.length === initialCount) return false;
 
@@ -935,7 +948,7 @@ export class LocalDatabaseEngine {
         else if (codeStr === 'BTF') dutyName = 'Base Taskforce Duty';
         else if (codeStr === 'NTF') dutyName = 'Najirpara Taskforce Duty';
         else if (codeStr === 'HALISHAHAR') dutyName = 'Halishahar Duty';
-        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'ATT' || codeStr === 'DETT') dutyName = 'Airfield Duty';
+        else if (codeStr === 'AIRPORT' || codeStr === 'AIRFIELD' || codeStr === 'ATT' || codeStr === 'DETT') dutyName = 'Airfield';
         else if (codeStr === 'IDAC' || codeStr === 'IDA') {
           const s = ass.idaShift || 'Morning';
           dutyName = `IDAC Duty (${s})`;
@@ -1055,7 +1068,7 @@ export class LocalDatabaseEngine {
           statusCategory = 'TDY';
         }
         else if (codeStr === 'RECEPTION') {
-          dutyName = 'K/O & Reception';
+          dutyName = isPT ? 'Reception Duty' : 'K/O & Reception';
           statusCategory = 'RECEPTION';
         }
         else if (codeStr === 'GAMES') {
@@ -1069,8 +1082,8 @@ export class LocalDatabaseEngine {
                 idaShift: ass.idaShift,
                 proxyForFlight: ass.proxyForFlight,
                 disposalScope: scope,
-                notes: ass.notes ? `${ass.notes} (Canteen)` : 'Canteen',
-                dutyName: 'K/O & Reception',
+                notes: ass.notes || '',
+                dutyName: 'Reception Duty',
                 previousDutyName,
                 statusCategory: 'RECEPTION',
              };
@@ -1078,6 +1091,25 @@ export class LocalDatabaseEngine {
              dutyName = 'Canteen';
              statusCategory = 'CANTEEN';
           }
+        }
+        else if (codeStr === 'DEPLOYMENT') {
+          let dest = ass.notes || 'Deployment';
+          if (dest.includes(' - ')) {
+            dest = dest.split(' - ')[0].trim();
+          }
+          dutyName = dest;
+          statusCategory = 'OTHERS'; // Treated as dynamic disposal
+          
+          return {
+            dutyCode: dest,
+            idaShift: ass.idaShift,
+            proxyForFlight: ass.proxyForFlight,
+            disposalScope: scope,
+            notes: (ass.notes || '').toLowerCase().includes('imported') ? '' : (ass.notes || ''),
+            dutyName: dest,
+            previousDutyName,
+            statusCategory: 'OTHERS'
+          };
         }
         else if (codeStr === 'ABSENT') {
           dutyName = 'Absent';
@@ -1301,7 +1333,13 @@ export class LocalDatabaseEngine {
           if (existingIdx >= 0) list[existingIdx] = restored;
           else list.push(restored);
         } else {
-          if (existingIdx >= 0) list.splice(existingIdx, 1);
+          if (item.dutyCode) {
+            const exactIdx = list.findIndex(a => a.airmanId === prev.airmanId && a.date === prev.date && a.dutyCode === item.dutyCode && (item.idaShift ? a.idaShift === item.idaShift : true));
+            if (exactIdx >= 0) list.splice(exactIdx, 1);
+            else if (existingIdx >= 0) list.splice(existingIdx, 1);
+          } else {
+            if (existingIdx >= 0) list.splice(existingIdx, 1);
+          }
         }
       }
     }

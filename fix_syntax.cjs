@@ -1,9 +1,19 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/IdacDutyAssignModal.tsx', 'utf8');
+const files = [
+  'src/components/PrintableParadeStateModal.tsx',
+  'src/components/ParadeStateFormattedView.tsx'
+];
 
-code = code.replace(
-  "                ))}              </div>",
-  "                )) : null}              </div>"
-);
+files.forEach(file => {
+  let content = fs.readFileSync(file, 'utf8');
 
-fs.writeFileSync('src/components/IdacDutyAssignModal.tsx', code);
+  // Fix the double wrap
+  content = content.replace(
+    /\{\!isPtDocument && \(\n\{\!isPtDocument && \((.*?)\)\}\n\)\}/g,
+    '{!isPtDocument && ($1)}'
+  );
+
+  fs.writeFileSync(file, content, 'utf8');
+});
+
+console.log("Patched syntax");

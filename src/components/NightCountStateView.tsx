@@ -900,7 +900,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
       } else if (['TDY', 'ATT', 'DETT', 'ATTACHMENT', 'DETACHMENT'].includes(codeUpper) || statusCategory === 'TDY') {
         tdyList.push({ airman, note: 'TDY' });
       }  else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
-        dutyOnList.push({ airman, note: 'Air Fd Duty' });
+        dutyOnList.push({ airman, note: 'Airfield' });
       } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
         adminOrderList.push({ airman, note: 'Admin Order' });
       } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
@@ -1993,7 +1993,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       return { isOnParade: false, label: 'Class / Trg', dutyCode: 'CLASS_TRG', notes, dutyName: 'Class / Trg' };
                     }
                     if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper)) {
-                      return { isOnParade: false, label: 'Airfield Duty', dutyCode: 'ATT', notes, dutyName: 'Airfield Duty' };
+                      return { isOnParade: false, label: 'Airfield', dutyCode: 'ATT', notes, dutyName: 'Airfield' };
                     }
                     if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper)) {
                       return { isOnParade: false, label: 'G/H & Games', dutyCode: 'GAMES', notes, dutyName: 'G/H & Games' };

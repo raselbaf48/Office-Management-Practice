@@ -200,7 +200,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
             >
               {flightsList.map((fl) => (
                 <option key={fl} value={fl} className="bg-white dark:bg-slate-900">
-                  {fl === 'All' ? 'All Flights (48)' : `${fl} Flight`}
+                  {fl === 'All' ? 'All Flights' : `${fl} Flight`}
                 </option>
               ))}
             </select>
@@ -435,7 +435,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
       {isHistoryModalOpen && (
         <EntryHistoryModal
           airmen={airmen}
-          filterType="ALL"
+          filterType="SYSTEM"
           onClose={() => setIsHistoryModalOpen(false)}
           onRefreshData={onRefresh}
         />

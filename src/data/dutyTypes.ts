@@ -48,7 +48,7 @@ export const INITIAL_DUTY_TYPES: DutyTypeInfo[] = [
   },
   {
     code: 'AIRPORT',
-    name: 'Airfield Duty',
+    name: 'Airfield',
     shortName: 'APT',
     category: 'Special',
     color: 'bg-blue-600 text-white',

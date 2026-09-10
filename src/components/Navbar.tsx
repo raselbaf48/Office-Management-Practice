@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Layers className="w-4 h-4" />
-              <span>Nominal Roll (48)</span>
+              <span>Nominal Roll</span>
             </button>
 
             <button

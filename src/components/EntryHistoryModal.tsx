@@ -6,7 +6,7 @@ import { DUTY_TYPES } from '../data/dutyTypes';
 import {
   History,
   X,
-  RotateCcw,
+  Trash2,
   Edit3,
   Search,
   Check,
@@ -20,7 +20,7 @@ interface EntryHistoryModalProps {
   airmen: Airman[];
   onClose: () => void;
   onRefreshData?: () => void;
-  filterType?: 'LEAVE' | 'TDY' | 'DUTY' | 'ALL';
+  filterType?: 'LEAVE' | 'TDY' | 'DEPLOYMENT' | 'DUTY' | 'SYSTEM' | 'ALL';
 }
 
 export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
@@ -38,6 +38,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
 
   // Editing state
   const [editingItem, setEditingItem] = useState<ActivityHistoryItem | null>(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<ActivityHistoryItem | null>(null);
   const [editAirmanId, setEditAirmanId] = useState<string>('');
   const [editDutyCode, setEditDutyCode] = useState<DutyCategoryCode>('GD');
   const [editIdaShift, setEditIdaShift] = useState<IDAShift>('Morning');
@@ -71,23 +72,25 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
     fetchHistory();
   }, []);
 
-  const handleUndo = async (item: ActivityHistoryItem) => {
+  const handleDelete = (item: ActivityHistoryItem) => {
     if (isAdmin && adminFlight && item.airmanId) {
       const target = airmen.find(a => a.id === item.airmanId);
       if (target && target.flightName !== adminFlight) {
-        alert("You cannot undo entries for personnel outside your flight.");
+        alert("You cannot delete entries for personnel outside your flight.");
         return;
       }
     }
     if (isAdmin && item.fromDate < todayStr) {
-      alert("You cannot undo entries for past dates.");
+      alert("You cannot delete entries for past dates.");
       return;
     }
-    if (!window.confirm(`Are you sure you want to undo and revert this entry for ${item.airmanName}?`)) {
-      return;
-    }
+    setConfirmDeleteItem(item);
+  };
 
-    setActionLoadingId(item.id);
+  const confirmDeleteAction = async () => {
+    if (!confirmDeleteItem) return;
+    
+    setActionLoadingId(confirmDeleteItem.id);
     setSuccessMsg('');
     setErrorMsg('');
 
@@ -95,21 +98,22 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
       const res = await fetch('/api/roster/undo-history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ historyId: item.id }),
+        body: JSON.stringify({ historyId: confirmDeleteItem.id }),
       });
 
       const result = await res.json();
       if (res.ok && result.success) {
-        setSuccessMsg(result.message || 'Successfully reverted entry.');
+        setSuccessMsg(result.message || 'Successfully deleted entry.');
         fetchHistory();
         if (onRefreshData) onRefreshData();
       } else {
-        setErrorMsg(result.error || 'Failed to revert entry.');
+        setErrorMsg(result.error || 'Failed to delete entry.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to revert entry.');
+      setErrorMsg(err.message || 'Failed to delete entry.');
     } finally {
       setActionLoadingId(null);
+      setConfirmDeleteItem(null);
     }
   };
 
@@ -191,7 +195,9 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
   const filteredHistory = last10Entries.filter((item) => {
     if (filterType === 'LEAVE' && item.dutyCode !== 'LEAVE') return false;
     if (filterType === 'TDY' && item.dutyCode !== 'TDY') return false;
-    if (filterType === 'DUTY' && (item.dutyCode === 'LEAVE' || item.dutyCode === 'TDY')) return false;
+    if (filterType === 'DEPLOYMENT' && item.dutyCode !== 'DEPLOYMENT') return false;
+    if (filterType === 'DUTY' && (item.dutyCode === 'LEAVE' || item.dutyCode === 'TDY' || item.dutyCode === 'DEPLOYMENT' || !item.dutyCode)) return false;
+    if (filterType === 'SYSTEM' && item.actionType !== 'SYSTEM_ACTION') return false;
 
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -525,17 +531,17 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                     </button>
 
                     <button
-                      onClick={() => handleUndo(item)}
+                      onClick={() => handleDelete(item)}
                       disabled={actionLoadingId === item.id}
                       className="px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold rounded-lg transition-colors flex items-center space-x-1"
-                      title="Undo or revert this entry back to its previous state"
+                      title="Delete this entry and revert its effect"
                     >
                       {actionLoadingId === item.id ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <RotateCcw className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                       )}
-                      <span>Revert / Undo</span>
+                      <span>Delete</span>
                     </button>
                     </>
                     )}
@@ -570,6 +576,50 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Confirm Delete Popup */}
+      {confirmDeleteItem && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-sm w-full mx-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Confirm Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+              Are you sure you want to delete this entry for <span className="font-bold text-slate-800 dark:text-slate-200">{confirmDeleteItem.airmanName}</span>?
+              This action will revert the assignment and cannot be undone.
+            </p>
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setConfirmDeleteItem(null)}
+                disabled={actionLoadingId !== null}
+                className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAction}
+                disabled={actionLoadingId !== null}
+                className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl flex items-center space-x-2 transition-colors disabled:opacity-50"
+              >
+                {actionLoadingId === confirmDeleteItem.id ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

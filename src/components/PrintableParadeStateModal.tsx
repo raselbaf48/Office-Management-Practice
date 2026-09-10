@@ -746,6 +746,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  gamesCount++;
  } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
  absentCount++;
+ } else if (codeUpper === 'CANTEEN' || statusCategory === 'CANTEEN') {
+ if (isPtDocument) { koReceptionCount++; } else { canteenCount++; }
  } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'DUTY_OFF'].includes(codeUpper) || statusCategory === 'DUTY' || statusCategory === 'OFF') {
  guardDutyCount++;
  } else {
@@ -772,6 +774,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  airFdDutyCount +
  gamesCount +
  absentCount +
+ canteenCount +
  othersCount;
 
  const onPtParadeCount = Math.max(0, effStr - totalOutPt);
@@ -842,10 +845,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
 
  const isPtIdacA = isPtDocument && codeUpper === 'IDAC' && idaShift === 'Morning';
 
- const isCanteen = codeUpper === 'CANTEEN' || notesLower?.includes('canteen') || statusCategory === 'CANTEEN';
-        if (isCanteen) {
-          canteenList.push({ airman, note: 'Canteen' });
-        }
+ 
         
         if (statusCategory === 'PARADE' || codeUpper === 'ON_PARADE' || isPtIdacA) {
  onPtList.push({ airman, note: '' });
@@ -866,7 +866,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  } else if (codeUpper === 'RECEPTION' || notesLower.includes('reception') || notesLower.includes('k/o')) {
  receptionList.push({ airman, note: 'Reception' });
  } else if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper) || notesLower.includes('air fd') || notesLower.includes('airfield')) {
- dutyOnList.push({ airman, note: 'Air Fd Duty' });
+ dutyOnList.push({ airman, note: 'Airfield' });
  } else if (['ADMIN_ORDER', 'BOI', 'COMMITTEE'].includes(codeUpper) || notesLower.includes('admin order') || notesLower.includes('boi')) {
  adminOrderList.push({ airman, note: 'Admin Order' });
  } else if (['CLASS_TRG', 'CLASS', 'TRG', 'LTTB'].includes(codeUpper) || notesLower.includes('class') || notesLower.includes('trg')) {
@@ -875,9 +875,13 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  gamesList.push({ airman, note: 'G/H & Games' });
  } else if (['ABSENT', 'AWL', 'OSL'].includes(codeUpper) || notesLower.includes('absent')) {
  absentList.push({ airman, note: 'Absent' });
- } else if (codeUpper === 'CANTEEN' && !notesLower?.includes('canteen') && statusCategory === 'CANTEEN') {
-        // Handled independently 
-        } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
+ } else if (codeUpper === 'CANTEEN' || statusCategory === 'CANTEEN') {
+         if (isPtDocument) {
+           receptionList.push({ airman, note: 'Reception Duty' });
+         } else {
+           canteenList.push({ airman, note: 'Canteen' });
+         }
+       } else if (codeUpper === 'DUTY_OFF' || statusCategory === 'OFF') {
  const offName = formatDutyOffShortName(item.previousDutyCode, item.previousDutyName, item.dutyName || notes);
  dutyOffList.push({ airman, note: offName });
  } else if (['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA', 'AIRPORT', 'AIRFIELD', 'ATT', 'AIR_FD'].includes(codeUpper) || statusCategory === 'DUTY') {
@@ -1097,10 +1101,12 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  if (!isBaseSec && !isBtf && !isNtf && !isAirfield && !isHalishahar && !isBakeBite && !isTdy && !isLeave && !isIda && !isDutyOff && !isOnParadeFlag) {
  let customKey = codeUpper === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || item.dutyCode || 'OTHER DISPOSAL');
  if (notes) {
- if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+ if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT', 'CANTEEN'].includes(codeUpper)) {
  customKey = notes;
  }
  }
+ if (isPtDocument && codeUpper === 'CANTEEN') customKey = 'Reception Duty';
+ if (isPtDocument && customKey === 'K/O & Reception') customKey = 'Reception Duty';
  allCustomKeys.add(customKey);
  }
  });
@@ -1119,7 +1125,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  if (dutyName === 'Base Security Duty') return pList.some(s => s.dutyCode === 'GD' || s.notes?.toLowerCase().includes('base sec'));
  if (dutyName === 'Base Taskforce Duty') return pList.some(s => s.dutyCode === 'BTF');
  if (dutyName === 'Najirpara Taskforce Duty') return pList.some(s => s.dutyCode === 'NTF');
- if (dutyName === 'Airfield Duty') return pList.some(s => s.dutyCode === 'AIRPORT' || s.dutyCode === 'AIR_FD' || s.notes?.toLowerCase().includes('airfield') || s.notes?.toLowerCase().includes('air fd'));
+ if (dutyName === 'Airfield') return pList.some(s => s.dutyCode === 'AIRPORT' || s.dutyCode === 'AIR_FD' || s.notes?.toLowerCase().includes('airfield') || s.notes?.toLowerCase().includes('air fd'));
  if (dutyName === 'Tdy') return pList.some(s => ['TDY', 'ATT', 'DETT'].includes(s.dutyCode));
  if (dutyName === 'Leave') return pList.some(s => s.dutyCode === 'LEAVE');
  
@@ -1138,7 +1144,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  {hasData('Base Security Duty') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Base Security Duty</th>}
  {hasData('Base Taskforce Duty') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Base Taskforce Duty</th>}
  {hasData('Najirpara Taskforce Duty') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Najirpara Taskforce Duty</th>}
- {hasData('Airfield Duty') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>}
+ {hasData('Airfield') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Airfield Duty</th>}
  {hasData('Halishahar Duty') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Halishahar Duty</th>}
  {hasData('Bake & Bite') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Bake & Bite</th>}
  {hasData('Tdy') && <th className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle" rowSpan={2}>Tdy</th>}
@@ -1208,10 +1214,12 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  if (!isBaseSec && !isBtf && !isNtf && !isAirfield && !isHalishahar && !isBakeBite && !isTdy && !isLeave && !isIda && !isDutyOff && !isOnParadeFlag) {
  let customKey = codeUpper === 'OTHERS' ? (notes || 'OTHER DISPOSAL') : (item.dutyName || item.dutyCode || 'OTHER DISPOSAL');
  if (notes) {
- if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT'].includes(codeUpper)) {
+ if (!['LEAVE', 'ATT', 'TDY', 'DETT', 'BAKE_N_BITE', 'RECEPTION', 'ESSN', 'CMH', 'BNS', 'BSH', 'SICK_REPORT', 'ED', 'ADMIN_ORDER', 'CLASS_TRG', 'GAMES', 'ABSENT', 'CANTEEN'].includes(codeUpper)) {
  customKey = notes;
  }
  }
+ if (isPtDocument && codeUpper === 'CANTEEN') customKey = 'Reception Duty';
+ if (isPtDocument && customKey === 'K/O & Reception') customKey = 'Reception Duty';
  if (!dayCustomDisposals[customKey]) dayCustomDisposals[customKey] = [];
  dayCustomDisposals[customKey].push(item);
  }
@@ -1240,7 +1248,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  {hasData('Najirpara Taskforce Duty') && <td className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle">
  {renderAirmanColumnList(ntf)}
  </td>}
- {hasData('Airfield Duty') && <td className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle">
+ {hasData('Airfield') && <td className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle">
  {renderAirmanColumnList(airfield)}
  </td>}
  {hasData('Halishahar Duty') && <td className="border border-slate-800 dark:border-slate-700 p-1.5 text-center align-middle">
@@ -1370,14 +1378,12 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard Duty On/Off</div>
  </th>
- <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
- <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Canteen</div>
- </th>
+ {!isPtDocument && (<th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center"><div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Canteen</div></th>)}
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Bake & Bite</div>
  </th>
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
- <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">K/O & Reception</div>
+ <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">{isPtDocument ? "Reception Duty" : "K/O & Reception"}</div>
  </th>
  <th className="border border-slate-800 dark:border-slate-700 p-0.5 align-middle text-center">
  <div className="w-full h-28 flex items-center justify-center [writing-mode:vertical-lr] [transform:rotate(180deg)] text-[9px]">Guard of Honour</div>
@@ -1425,7 +1431,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.sickExCount > 0 ? stats.sickExCount : '-'}</td>
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.drillCatCCount > 0 ? stats.drillCatCCount : '-'}</td>
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.guardDutyCount > 0 ? stats.guardDutyCount : '-'}</td>
- <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : '-'}</td>
+ {!isPtDocument && (<td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.canteenCount > 0 ? stats.canteenCount : "-"}</td>)}
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.bakeBiteCount > 0 ? stats.bakeBiteCount : '-'}</td>
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.koReceptionCount > 0 ? stats.koReceptionCount : '-'}</td>
  <td className="border border-slate-800 dark:border-slate-700 p-1 text-center align-middle">{stats.gamesCount > 0 ? stats.gamesCount : '-'}</td>
@@ -1564,8 +1570,8 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  )}
  {receptionList.length > 0 && (
  <div>
- <h3 className="font-bold underline text-slate-900 dark:text-white mb-1 capitalize tracking-wide">K/O & Reception</h3>
- {renderDisposalAirmenList(receptionList, 'RECEPTION', 'K/O & Reception')}
+ <h3 className="font-bold underline text-slate-900 dark:text-white mb-1 capitalize tracking-wide">{isPtDocument ? "Reception Duty" : "K/O & Reception"}</h3>
+ {renderDisposalAirmenList(receptionList, 'RECEPTION', isPtDocument ? 'Reception Duty' : 'K/O & Reception')}
  </div>
  )}
  {gamesList.length > 0 && (
@@ -1905,7 +1911,7 @@ export const PrintableParadeStateModal: React.FC<PrintableParadeStateModalProps>
  return { isOnParade: false, label: 'Class / Trg', dutyCode: 'CLASS_TRG', notes, dutyName: 'Class / Trg' };
  }
  if (['AIRPORT', 'AIR_FD', 'AIRFIELD', 'ATT'].includes(codeUpper)) {
- return { isOnParade: false, label: 'Airfield Duty', dutyCode: 'ATT', notes, dutyName: 'Airfield Duty' };
+ return { isOnParade: false, label: 'Airfield', dutyCode: 'ATT', notes, dutyName: 'Airfield' };
  }
  if (['GAMES', 'GH', 'GAME_HONOR'].includes(codeUpper)) {
  return { isOnParade: false, label: 'G/H & Games', dutyCode: 'GAMES', notes, dutyName: 'G/H & Games' };

@@ -91,7 +91,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
       if (passcode === actualAdminPass) {
         setIsSuccess(true);
         setTimeout(() => {
-          const actualRole = isDefaultOwner ? 'SUPER_ADMIN' : (user?.role || assignedRole);
+          const actualRole = isDefaultOwner ? 'OWNER' : (user?.role || assignedRole);
           onSuccess(actualRole as UserRole);
         }, 800);
       } else {

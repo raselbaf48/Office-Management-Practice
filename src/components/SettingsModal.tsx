@@ -490,7 +490,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const sections = [
     { id: 'appearance', label: 'Theme & Appearance', icon: <Palette className="w-5 h-5" />, color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-400' },
     ...((role === 'SUPER_ADMIN' || role === 'OWNER' || role === 'ADMIN') ? [{ id: 'cloudsync', label: 'Database Cloud Sync', icon: <Cloud className="w-5 h-5" />, color: 'text-blue-500 bg-blue-100 dark:bg-blue-950 dark:text-blue-400' }] : []),
-    ...((role === 'SUPER_ADMIN' || role === 'OWNER') ? [
+    ...((role === 'SUPER_ADMIN' || role === 'OWNER' || role === 'ADMIN') ? [
       { id: 'appNotice', label: 'App Notice', icon: <Megaphone className="w-5 h-5" />, color: 'text-orange-500 bg-orange-100 dark:bg-orange-950 dark:text-orange-400' },
       { id: 'maintenanceMode', label: 'Maintenance Mode', icon: <Wrench className="w-5 h-5" />, color: 'text-red-500 bg-red-100 dark:bg-red-950 dark:text-red-400' }
     ] : []),
@@ -1105,7 +1105,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         activeUsers.map(u => (
                           <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                              {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'OWNER' ? 'Owner' : (u.role === 'SUPER_ADMIN' || u.role === 'OWNER') ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
+                              {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'OWNER' ? 'Owner' : u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
                             </span>
                           </div>
                         ))
@@ -1156,7 +1156,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                               {log.rank} {log.name}
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 font-bold uppercase tracking-wider">
-                                {log.role === 'OWNER' ? 'Owner' : (log.role === 'SUPER_ADMIN' || log.role === 'OWNER') ? 'Super Admin' : log.role === 'ADMIN' ? 'Admin' : 'User'}
+                                {log.role === 'OWNER' ? 'Owner' : log.role === 'SUPER_ADMIN' ? 'Super Admin' : log.role === 'ADMIN' ? 'Admin' : 'User'}
                               </span>
                             </div>
                             <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
