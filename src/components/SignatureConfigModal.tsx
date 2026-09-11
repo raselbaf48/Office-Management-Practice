@@ -378,7 +378,7 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {prepared.name || 'NAME'}
                 </div>
-                <div className="text-[11px] font-bold uppercase">{prepared.rank || 'RANK'}</div>
+                <div className="text-[11px] font-bold">{prepared.rank || 'RANK'}</div>
                 <div className="text-[10px] font-normal">{prepared.designation || 'Designation'}</div>
                 <div className="text-[9px] text-slate-500">{prepared.unit || '155 UASU BAF'}</div>
               </div>
@@ -402,7 +402,7 @@ export const SignatureConfigModal: React.FC<SignatureConfigModalProps> = ({
                 <div className="text-xs font-black uppercase text-slate-900 dark:text-white">
                   {authorized.name || 'NAME'}
                 </div>
-                <div className="text-[11px] font-bold uppercase">{authorized.rank || 'RANK'}</div>
+                <div className="text-[11px] font-bold">{authorized.rank || 'RANK'}</div>
                 <div className="text-[10px] font-normal">{authorized.designation || 'Designation'}</div>
                 <div className="text-[9px] text-slate-500">{authorized.unit || '155 UASU BAF'}</div>
               </div>

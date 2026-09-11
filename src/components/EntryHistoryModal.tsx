@@ -3,6 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { ActivityHistoryItem, Airman, DutyCategoryCode, IDAShift } from '../types';
 import { getCurrentUserSession } from '../utils/authSession';
 import { DUTY_TYPES } from '../data/dutyTypes';
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 import {
   History,
   X,
@@ -317,7 +321,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
                 >
                   {airmen.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.rank} {a.name} ({a.flightName} - {a.bdNo})
+                      {formatAirmanName(a.rank)} {a.name} ({a.flightName} - {a.bdNo})
                     </option>
                   ))}
                 </select>
@@ -425,7 +429,7 @@ export const EntryHistoryModal: React.FC<EntryHistoryModalProps> = ({
             filteredHistory.map((item, index) => {
               const dt = new Date(item.timestamp);
               const timeStr = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              const dateStr = dt.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: 'numeric' });
+              const dateStr = dt.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: '2-digit' }).replace(/Sept/gi, 'Sep');
 
               const air = airmen.find((a) => a.id === item.airmanId);
               const isLeave = item.dutyCode === 'LEAVE' || item.actionType === 'GRANT_LEAVE';

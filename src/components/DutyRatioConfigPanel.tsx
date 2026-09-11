@@ -30,6 +30,10 @@ const DEFAULT_MANPOWER = {
 import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
 
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 // Helper function to auto-distribute duty data based on manpower
 const autoDistributeTableData = (table: DutyRatioTable, currentManpower: any) => {
     const includesSgt = table.eligibleRanks ? table.eligibleRanks.includes('Sgt') : table.id !== 'security_duty';
@@ -710,7 +714,7 @@ export const DutyRatioConfigPanel: React.FC<DutyRatioConfigPanelProps> = ({ acti
                               }`}
                             >
                               <td className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">{idx + 1}</td>
-                              <td className="px-3 py-2 text-center font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.rank}</td>
+                              <td className="px-3 py-2 text-center font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{formatAirmanName(a.rank)}</td>
                               <td className="px-3 py-2 text-center text-slate-800 dark:text-slate-200 whitespace-nowrap">{a.name}</td>
                               <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.trade}</td>
                               <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">{a.flightName}</td>

@@ -235,21 +235,31 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
           {!isResetMode ? (
             <>
               <div className="mb-6">
-                <input
-                  type="password"
-                  value={passcode}
-                  readOnly
+                <div 
+                  className="flex justify-center space-x-3 sm:space-x-4 mb-4 cursor-pointer outline-none" 
+                  onClick={() => setIsPasswordFocused(true)}
+                  tabIndex={0}
                   onFocus={() => setIsPasswordFocused(true)}
-                  disabled={isSuccess || isVerifying || lockRemainingSec > 0}
-                  className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-2xl font-mono tracking-[0.5em] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition-all disabled:opacity-50 cursor-pointer"
-                  placeholder="••••"
-                  autoFocus
-                  maxLength={10}
-                />
+                >
+                  {[0, 1, 2, 3].map((index) => (
+                    <div
+                      key={index}
+                      className={`w-14 h-16 sm:w-16 sm:h-20 rounded-2xl flex items-center justify-center text-4xl font-black border-2 transition-all ${
+                        isPasswordFocused && passcode.length === index
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 ring-4 ring-emerald-500/20'
+                          : passcode.length > index
+                          ? 'border-slate-800 bg-slate-800 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50'
+                      }`}
+                    >
+                      {passcode.length > index ? '•' : ''}
+                    </div>
+                  ))}
+                </div>
                 
                 {isPasswordFocused && !isSuccess && !isVerifying && lockRemainingSec === 0 && (
                   <div className="pt-2 animate-fadeIn">
-                    <RandomizedKeypad value={passcode} onChange={setPasscode} onSubmit={handleVerify} maxLength={10} />
+                    <RandomizedKeypad value={passcode} onChange={setPasscode} onSubmit={handleVerify} maxLength={4} />
                   </div>
                 )}
                 
@@ -349,7 +359,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                     />
                     {isPasswordFocused && (
                       <div className="pt-2">
-                         <RandomizedKeypad value={newPass} onChange={setNewPass} onSubmit={() => setIsPasswordFocused(false)} maxLength={10} />
+                         <RandomizedKeypad value={newPass} onChange={setNewPass} onSubmit={() => setIsPasswordFocused(false)} maxLength={4} />
                       </div>
                     )}
                   </div>
@@ -365,7 +375,7 @@ export const AdminPasscodeModal: React.FC<AdminPasscodeModalProps> = ({
                     />
                     {isConfirmFocused && (
                       <div className="pt-2">
-                         <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} onSubmit={() => setIsConfirmFocused(false)} maxLength={10} />
+                         <RandomizedKeypad value={confirmPass} onChange={setConfirmPass} onSubmit={() => setIsConfirmFocused(false)} maxLength={4} />
                       </div>
                     )}
                   </div>

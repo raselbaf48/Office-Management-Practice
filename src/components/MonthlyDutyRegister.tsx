@@ -12,6 +12,10 @@ import { getIdacShiftsForDateAndFlight, getFlightDutyQuotaForDate } from '../dat
 import { FlightDutyRatioModal } from './FlightDutyRatioModal';
 import { EntryHistoryModal } from './EntryHistoryModal';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface RestoreItem {
   airmanId: string;
   date: string;
@@ -433,7 +437,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
       const data = await res.json();
       if (res.ok && data.success) {
         const selectedAirman = airmen.find((a) => a.id === bulkAirmanId);
-        const airmanLabel = selectedAirman ? `${selectedAirman.rank} ${selectedAirman.name}` : 'Airman';
+        const airmanLabel = selectedAirman ? `${formatAirmanName(selectedAirman.rank)} ${selectedAirman.name}` : 'Airman';
         const dutyLabel = DUTY_TYPE_MAP.get(bulkDutyCode)?.name || bulkDutyCode;
         setBulkSuccessMsg(`✓ Assigned ${dutyLabel} to ${airmanLabel} (${bulkFromDate} to ${bulkToDate}).`);
         setLastUndoAction({
@@ -456,7 +460,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   const handleBulkDeleteRange = async () => {
     if (!bulkAirmanId || !bulkFromDate || !bulkToDate) return;
     const selectedAirman = airmen.find((a) => a.id === bulkAirmanId);
-    const airmanLabel = selectedAirman ? `${selectedAirman.rank} ${selectedAirman.name}` : 'Airman';
+    const airmanLabel = selectedAirman ? `${formatAirmanName(selectedAirman.rank)} ${selectedAirman.name}` : 'Airman';
 
     if (!window.confirm(`Are you sure you want to delete/clear all duty entries for ${airmanLabel} between ${bulkFromDate} and ${bulkToDate}?`)) {
       return;
@@ -1216,7 +1220,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                               onViewProfile(a);
                                             }
                                           }}
-                                          title={`${a.rank} ${a.name} (${a.bdNo}) - ${fl} Flt. Click to edit/change.`}
+                                          title={`${formatAirmanName(a.rank)} ${a.name} (${a.bdNo}) - ${fl} Flt. Click to edit/change.`}
                                           className={`px-1.5 py-0.5 rounded font-mono font-black text-[10px] tracking-tight shadow-2xs border transition-transform hover:scale-110 active:scale-95 cursor-pointer ${cat.badgeBg}`}
                                         >
                                           {code}
@@ -1407,11 +1411,11 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                         {airman.serNo}
                       </td>
 
-                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center" style={{ minWidth: getOptimalMinColumnWidth(`${airman.rank} ${airman.name}`, 140, 7.5, 24) }}>
+                      <td className="py-2.5 px-3 sticky left-10 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 text-center" style={{ minWidth: getOptimalMinColumnWidth(`${formatAirmanName(airman.rank)} ${airman.name}`, 140, 7.5, 24) }}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1.5 truncate">
                             <span className="font-bold text-[10px] text-slate-600 dark:text-slate-300 shrink-0">
-                              {airman.rank}
+                              {formatAirmanName(airman.rank)}
                             </span>
                             <span
                               onClick={() => onViewProfile(airman)}
@@ -1426,7 +1430,7 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                                 e.stopPropagation();
                                 handleOpenBulkModal(airman.id);
                               }}
-                              title={`Assign Duty Date Range for ${airman.rank} ${airman.name}`}
+                              title={`Assign Duty Date Range for ${formatAirmanName(airman.rank)} ${airman.name}`}
                               className="ml-1 p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors"
                             >
                               <CalendarRange className="w-3.5 h-3.5" />
@@ -1774,8 +1778,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
 
                       const flightSuffix = bulkFlight === 'All' ? ` (${a.flightName})` : '';
                       const label = disposalText
-                        ? `${a.rank} ${a.name}${flightSuffix} - ${disposalText}`
-                        : `${a.rank} ${a.name}${flightSuffix}`;
+                        ? `${formatAirmanName(a.rank)} ${a.name}${flightSuffix} - ${disposalText}`
+                        : `${formatAirmanName(a.rank)} ${a.name}${flightSuffix}`;
 
                       return (
                         <option
@@ -2137,8 +2141,8 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
                       else if (hasOtherDuty) dutySuffix = res.dutyCode;
 
                       const label = dutySuffix
-                        ? `${a.rank} ${a.name} - ${dutySuffix}`
-                        : `${a.rank} ${a.name}`;
+                        ? `${formatAirmanName(a.rank)} ${a.name} - ${dutySuffix}`
+                        : `${formatAirmanName(a.rank)} ${a.name}`;
 
                       return (
                         <option key={a.id} value={a.id}>

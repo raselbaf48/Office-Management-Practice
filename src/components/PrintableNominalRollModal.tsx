@@ -5,6 +5,10 @@ import { Printer, X, Download } from 'lucide-react';
 import { exportHtmlToWord } from '../utils/htmlExport';
 import { getSavedPreparedBy, getSavedAuthorizedBy } from './SignatureConfigModal';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface PrintableNominalRollModalProps {
   airmen: Airman[];
   title?: string;
@@ -104,7 +108,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                         {airman.bdNo.replace(/^BD\//i, '')}
                       </td>
                       <td className="p-1.5 border border-black text-center">
-                        {airman.rank}
+                        {formatAirmanName(airman.rank)}
                       </td>
                       <td className="p-1.5 border border-black text-center">
                         {airman.name}

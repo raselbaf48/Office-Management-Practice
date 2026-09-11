@@ -5,6 +5,10 @@ import { X, Calendar, Clock, User, Check, RefreshCw, Sparkles, Shield } from 'lu
 import { sortAirmenBySeniority } from '../utils/seniority';
 import { getFlightDutyQuotaForDate, getIdacShiftsForDateAndFlight, getFlightsForIdacShift } from '../data/officialDutyRatioMatrix';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface IdacDutyAssignModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -306,7 +310,7 @@ export const IdacDutyAssignModal: React.FC<IdacDutyAssignModalProps> = ({
               >
                 {flightAirmen.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.rank} {a.name} ({a.trade})
+                    {formatAirmanName(a.rank)} {a.name} ({a.trade})
                   </option>
                 ))}
               </select>

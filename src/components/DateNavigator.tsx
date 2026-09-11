@@ -24,7 +24,7 @@ export function DateNavigator({ hideArrows, className, value, disabled, onChange
         const d = new Date(value);
         if(isNaN(d.getTime())) return '';
         const day = String(d.getDate()).padStart(2, '0');
-        const month = d.toLocaleString('en-US', { month: 'short' });
+        const month = d.toLocaleString('en-US', { month: 'short' }).replace(/Sept/gi, 'Sep');
         const year = String(d.getFullYear()).slice(-2);
         return `${day} ${month}`;
       })()

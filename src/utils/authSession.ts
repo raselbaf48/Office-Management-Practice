@@ -23,6 +23,7 @@ export interface UserSession {
   trade?: string;
   loginTimestamp: string;
   assignedRole?: string;
+  systemRole?: string;
   adminPass?: string;
   ownerPass?: string;
 }
@@ -487,6 +488,7 @@ export const setUserSession = (airman: Airman, assignedRole: UserLoginRole = 'US
     trade: airman.trade,
     loginTimestamp: new Date().toISOString(),
     assignedRole: assignedRole,
+    systemRole: detailedUser?.role || (cleanBd === '48456' ? 'OWNER' : 'USER'),
     adminPass: detailedUser?.adminPass || (cleanBd === '48456' ? '1124' : undefined),
     ownerPass: detailedUser?.ownerPass
   };

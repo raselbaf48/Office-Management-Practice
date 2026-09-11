@@ -27,6 +27,10 @@ import {
 import { Airman, FlightName, DutyCategoryCode, IDAShift, DocumentAnalysisResult } from '../types';
 import { DUTY_TYPES } from '../data/dutyTypes';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface UploadedFileItem {
   id: string;
   name: string;
@@ -1059,7 +1063,7 @@ Security GD: 509301 Cpl Rashed, 509999 LAC Jahid
                                       <option value="">-- Select Airman --</option>
                                       {airmen.map((a) => (
                                         <option key={a.id} value={a.id}>
-                                          {a.rank} {a.name} (BD/{a.bdNo}, {a.flightName} Flt)
+                                          {formatAirmanName(a.rank)} {a.name} (BD/{a.bdNo}, {a.flightName} Flt)
                                         </option>
                                       ))}
                                     </select>

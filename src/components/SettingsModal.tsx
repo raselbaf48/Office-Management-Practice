@@ -46,6 +46,10 @@ import {   localDb, getSyncLogs, SyncLog } from '../services/localDatabase';
 
 import { CustomDutiesTab } from './CustomDutiesTab';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -1105,7 +1109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         activeUsers.map(u => (
                           <div key={u.bdNo} className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                              {u.rank} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'OWNER' ? 'Owner' : u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
+                              {formatAirmanName(u.rank)} {u.name} - ({u.page || 'Dashboard'}) - {u.role === 'OWNER' ? 'Owner' : u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'ADMIN' ? 'Admin' : 'User'}
                             </span>
                           </div>
                         ))

@@ -93,6 +93,7 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
         }, 400);
       } else {
         setErrorMsg(validation.message || 'Invalid User ID or PIN.');
+        setPasswordInput('');
         setIsLoading(false);
       }
     }, 500);

@@ -19,6 +19,12 @@ import { saveAs } from 'file-saver';
 import { Airman, DutyAssignment, FlightName } from '../types';
 import { DutyRatioTable } from '../data/officialDutyRatioMatrix';
 
+
+const formatRunningLetter = (text: string) => {
+  if (!text) return '';
+  return text.toLowerCase().split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
+
 export interface RosterExportItem {
   serNo: string;
   bdNo: string;
@@ -149,8 +155,8 @@ export async function exportDutyRosterDocx(
         children: [
           createDataCell(item.serNo || displaySer, 800, AlignmentType.CENTER),
           createDataCell(item.bdNo, 1100, AlignmentType.CENTER),
-          createDataCell(item.rank, 900, AlignmentType.CENTER),
-          createDataCell(item.name, 1400, AlignmentType.LEFT),
+          createDataCell(formatRunningLetter(item.rank), 900, AlignmentType.CENTER),
+          createDataCell(formatRunningLetter(item.name), 1400, AlignmentType.LEFT),
           createDataCell(item.trade, 1300, AlignmentType.CENTER),
           createDataCell(item.block || 'L/O', 1100, AlignmentType.CENTER),
           createDataCell(item.mobileNo || '-', 1600, AlignmentType.CENTER),
@@ -355,8 +361,8 @@ export async function exportNominalRollDocx(
       children: [
         createArialDataCell(String(idx + 1), 700, AlignmentType.CENTER),
         createArialDataCell(a.bdNo.replace(/^BD\//i, ''), 1400, AlignmentType.CENTER),
-        createArialDataCell(a.rank, 1000, AlignmentType.LEFT),
-        createArialDataCell(a.name, 2200, AlignmentType.LEFT),
+        createArialDataCell(formatRunningLetter(a.rank), 1000, AlignmentType.LEFT),
+        createArialDataCell(formatRunningLetter(a.name), 2200, AlignmentType.LEFT),
         createArialDataCell(a.trade, 1400, AlignmentType.LEFT),
         createArialDataCell(a.flightName, 1300, AlignmentType.LEFT),
         createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.LEFT),
@@ -729,7 +735,7 @@ export async function exportParadeStateSingleDocx(
   };
 
   // Format airman names
-  const toDisplay = (airmenList: Airman[]) => airmenList.map((a) => ({ displayName: `${a.rank} ${a.name}` }));
+  const toDisplay = (airmenList: Airman[]) => airmenList.map((a) => ({ displayName: `${formatRunningLetter(a.rank)} ${formatRunningLetter(a.name)}` }));
 
   // Format Duty Off as: `${rank} ${name} - ${duty} Off`
   const dutyOffDisplay = dutyOff.map((item) => {
@@ -739,14 +745,14 @@ export async function exportParadeStateSingleDocx(
       dutyNote = `${dutyNote} Off`;
     }
     return {
-      displayName: `${item.airman.rank} ${item.airman.name} - ${dutyNote}`,
+      displayName: `${formatRunningLetter(item.airman.rank)} ${formatRunningLetter(item.airman.name)} - ${dutyNote}`,
     };
   });
 
   const dutyOnDisplay = dutyOn.map((item) => {
     const dutyNote = item.note && !item.note.toLowerCase().includes('imported') ? item.note : 'GD';
     return {
-      displayName: `${item.airman.rank} ${item.airman.name} - ${dutyNote}`,
+      displayName: `${formatRunningLetter(item.airman.rank)} ${formatRunningLetter(item.airman.name)} - ${dutyNote}`,
     };
   });
 
@@ -761,7 +767,7 @@ export async function exportParadeStateSingleDocx(
       spacing: { after: 40 },
       children: [
         new TextRun({
-          text: isPt ? 'ON PT' : 'ON PARADE',
+          text: isPt ? 'On PT' : 'On Parade',
           font: 'Arial',
           bold: true,
           size: 24,
@@ -784,7 +790,7 @@ export async function exportParadeStateSingleDocx(
           spacing: { after: 15, line: 240 },
           children: [
             new TextRun({
-              text: `${idx + 1}. ${a.rank} ${a.name}`,
+              text: `${idx + 1}. ${formatRunningLetter(a.rank)} ${formatRunningLetter(a.name)}`,
               font: 'Arial',
               size: 22,
             }),
@@ -800,9 +806,9 @@ export async function exportParadeStateSingleDocx(
       const col2Item = onParade16To30[i];
       const col3Item = onParade31Plus[i];
       
-      const col1Text = col1Item ? `${i + 1}. ${col1Item.rank} ${col1Item.name}` : '';
-      const col2Text = col2Item ? `${16 + i}. ${col2Item.rank} ${col2Item.name}` : '';
-      const col3Text = col3Item ? `${31 + i}. ${col3Item.rank} ${col3Item.name}` : '';
+      const col1Text = col1Item ? `${i + 1}. ${formatRunningLetter(col1Item.rank)} ${formatRunningLetter(col1Item.name)}` : '';
+      const col2Text = col2Item ? `${16 + i}. ${formatRunningLetter(col2Item.rank)} ${formatRunningLetter(col2Item.name)}` : '';
+      const col3Text = col3Item ? `${31 + i}. ${formatRunningLetter(col3Item.rank)} ${formatRunningLetter(col3Item.name)}` : '';
 
       innerRows.push(
         new TableRow({
@@ -863,21 +869,21 @@ export async function exportParadeStateSingleDocx(
 
   // Col 2 Disposals: LEAVE, BAKE & BITE, ESSN, CMH, SICK REPORT
   const col2Paragraphs: Paragraph[] = [];
-  const secCanteen = buildDisposalSection('CANTEEN', toDisplay(params.canteen || []), col2Paragraphs.length === 0);
+  const secCanteen = buildDisposalSection('Canteen', toDisplay(params.canteen || []), col2Paragraphs.length === 0);
   if (secCanteen.length > 0) col2Paragraphs.push(...secCanteen);
-  const secLeave = buildDisposalSection('LEAVE', toDisplay(leave), col2Paragraphs.length === 0);
+  const secLeave = buildDisposalSection('Leave', toDisplay(leave), col2Paragraphs.length === 0);
   if (secLeave.length > 0) col2Paragraphs.push(...secLeave);
 
-  const secBakeBite = buildDisposalSection('BAKE & BITE', toDisplay(bakeBite), col2Paragraphs.length === 0);
+  const secBakeBite = buildDisposalSection('Bake & Bite', toDisplay(bakeBite), col2Paragraphs.length === 0);
   if (secBakeBite.length > 0) col2Paragraphs.push(...secBakeBite);
 
-  const secEssn = buildDisposalSection('ESSN', toDisplay(essn), col2Paragraphs.length === 0);
+  const secEssn = buildDisposalSection('Essn', toDisplay(essn), col2Paragraphs.length === 0);
   if (secEssn.length > 0) col2Paragraphs.push(...secEssn);
 
-  const secCmh = buildDisposalSection('CMH', toDisplay(cmh), col2Paragraphs.length === 0);
+  const secCmh = buildDisposalSection('Cmh / Bns / Bsh', toDisplay(cmh), col2Paragraphs.length === 0);
   if (secCmh.length > 0) col2Paragraphs.push(...secCmh);
 
-  const secSick = buildDisposalSection('SICK REPORT', toDisplay(sickReport), col2Paragraphs.length === 0);
+  const secSick = buildDisposalSection('Sick Report', toDisplay(sickReport), col2Paragraphs.length === 0);
   if (secSick.length > 0) col2Paragraphs.push(...secSick);
 
   const col2 = new TableCell({
@@ -889,26 +895,26 @@ export async function exportParadeStateSingleDocx(
 
   // Col 3 Disposals: ATT/TDY/DETT, RECEPTION, AIR FD DUTY, ADMIN ORDER, CLASS/TRG, DRILL CAT-C, Other[0]
   const col3Paragraphs: Paragraph[] = [];
-  const secTdy = buildDisposalSection('ATT/TDY/DETT', toDisplay(tdy), col3Paragraphs.length === 0);
+  const secTdy = buildDisposalSection('Att/Tdy/Dett', toDisplay(tdy), col3Paragraphs.length === 0);
   if (secTdy.length > 0) col3Paragraphs.push(...secTdy);
 
-  const secReception = buildDisposalSection('RECEPTION', toDisplay(reception), col3Paragraphs.length === 0);
+  const secReception = buildDisposalSection('Reception / K/O', toDisplay(reception), col3Paragraphs.length === 0);
   if (secReception.length > 0) col3Paragraphs.push(...secReception);
 
-  const secAirFd = buildDisposalSection('AIR FD DUTY', toDisplay(airFdDuty), col3Paragraphs.length === 0);
+  const secAirFd = buildDisposalSection('Air Fd Duty', toDisplay(airFdDuty), col3Paragraphs.length === 0);
   if (secAirFd.length > 0) col3Paragraphs.push(...secAirFd);
 
-  const secAdmin = buildDisposalSection('ADMIN ORDER', toDisplay(adminOrder), col3Paragraphs.length === 0);
+  const secAdmin = buildDisposalSection('Admin Order', toDisplay(adminOrder), col3Paragraphs.length === 0);
   if (secAdmin.length > 0) col3Paragraphs.push(...secAdmin);
 
-  const secClass = buildDisposalSection('CLASS/TRG', toDisplay(classTrg), col3Paragraphs.length === 0);
+  const secClass = buildDisposalSection('Class / Trg', toDisplay(classTrg), col3Paragraphs.length === 0);
   if (secClass.length > 0) col3Paragraphs.push(...secClass);
 
-  const secDrill = buildDisposalSection('DRILL CAT-C', toDisplay(drillCatC), col3Paragraphs.length === 0);
+  const secDrill = buildDisposalSection('Drill Cat-C', toDisplay(drillCatC), col3Paragraphs.length === 0);
   if (secDrill.length > 0) col3Paragraphs.push(...secDrill);
 
   if (otherDisposals && otherDisposals.length > 0) {
-    const secOther0 = buildDisposalSection(otherDisposals[0].title.toUpperCase(), toDisplay(otherDisposals[0].airmen), col3Paragraphs.length === 0);
+    const secOther0 = buildDisposalSection(formatRunningLetter(otherDisposals[0].title), toDisplay(otherDisposals[0].airmen), col3Paragraphs.length === 0);
     if (secOther0.length > 0) col3Paragraphs.push(...secOther0);
   }
 
@@ -921,23 +927,23 @@ export async function exportParadeStateSingleDocx(
 
   // Col 4 Disposals: DUTY ON, DUTY OFF, GAMES, ABSENT, Remaining Other Disposals
   const col4Paragraphs: Paragraph[] = [];
-  const secDutyOn = buildDisposalSection('DUTY ON', dutyOnDisplay, col4Paragraphs.length === 0);
+  const secDutyOn = buildDisposalSection('Duty On', dutyOnDisplay, col4Paragraphs.length === 0);
   if (secDutyOn.length > 0) col4Paragraphs.push(...secDutyOn);
 
   if (!isPt) {
-    const secDutyOff = buildDisposalSection('DUTY OFF', dutyOffDisplay, col4Paragraphs.length === 0);
+    const secDutyOff = buildDisposalSection('Duty Off', dutyOffDisplay, col4Paragraphs.length === 0);
     if (secDutyOff.length > 0) col4Paragraphs.push(...secDutyOff);
   }
 
-  const secGames = buildDisposalSection('GAMES', toDisplay(games), col4Paragraphs.length === 0);
+  const secGames = buildDisposalSection('Games', toDisplay(games), col4Paragraphs.length === 0);
   if (secGames.length > 0) col4Paragraphs.push(...secGames);
 
-  const secAbsent = buildDisposalSection('ABSENT', toDisplay(absent), col4Paragraphs.length === 0);
+  const secAbsent = buildDisposalSection('Absent', toDisplay(absent), col4Paragraphs.length === 0);
   if (secAbsent.length > 0) col4Paragraphs.push(...secAbsent);
 
   if (otherDisposals && otherDisposals.length > 1) {
     for (let odIdx = 1; odIdx < otherDisposals.length; odIdx++) {
-      const secRem = buildDisposalSection(otherDisposals[odIdx].title.toUpperCase(), toDisplay(otherDisposals[odIdx].airmen), col4Paragraphs.length === 0);
+      const secRem = buildDisposalSection(formatRunningLetter(otherDisposals[odIdx].title), toDisplay(otherDisposals[odIdx].airmen), col4Paragraphs.length === 0);
       if (secRem.length > 0) col4Paragraphs.push(...secRem);
     }
   }
@@ -995,7 +1001,7 @@ export async function exportParadeStateSingleDocx(
             spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
-                text: leftSigRank.toUpperCase(),
+                text: leftSigRank,
                 font: 'Arial',
                 bold: true,
                 size: 24,
@@ -1057,7 +1063,7 @@ export async function exportParadeStateSingleDocx(
             spacing: { after: 15, line: 240 },
             children: [
               new TextRun({
-                text: rightSigRank.toUpperCase(),
+                text: rightSigRank,
                 font: 'Arial',
                 bold: true,
                 size: 24,
@@ -1305,7 +1311,7 @@ export async function exportParadeStateMultiDocx(
                 spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
-                    text: lSigRank.toUpperCase(),
+                    text: lSigRank,
                     font: 'Arial',
                     bold: true,
                     size: 24,
@@ -1356,7 +1362,7 @@ export async function exportParadeStateMultiDocx(
                 spacing: { after: 15, line: 240 },
                 children: [
                   new TextRun({
-                    text: rSigRank.toUpperCase(),
+                    text: rSigRank,
                     font: 'Arial',
                     bold: true,
                     size: 24,
@@ -1497,8 +1503,8 @@ export async function exportMonthlyDutyRegisterDocx(
       children: [
         createArialDataCell(String(idx + 1), 500, AlignmentType.CENTER),
         createArialDataCell(a.bdNo, 1100, AlignmentType.CENTER),
-        createArialDataCell(a.rank, 800, AlignmentType.CENTER),
-        createArialDataCell(a.name, 1800, AlignmentType.LEFT),
+        createArialDataCell(formatRunningLetter(a.rank), 800, AlignmentType.CENTER),
+        createArialDataCell(formatRunningLetter(a.name), 1800, AlignmentType.LEFT),
         createArialDataCell(a.flightName.slice(0, 3), 700, AlignmentType.CENTER),
         ...Array.from({ length: daysInMonth }, (_, i) => {
           const dStr = `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
@@ -1512,7 +1518,7 @@ export async function exportMonthlyDutyRegisterDocx(
             else if (ass.dutyCode === 'AIRPORT') codeDisplay = 'AIR';
             else if (ass.dutyCode === 'IDAC' || ass.dutyCode === 'IDA') {
               codeDisplay = ass.idaShift === 'Night' ? 'IDAn' : ass.idaShift === 'Afternoon' ? 'IDAa' : 'IDAm';
-            } else if (ass.dutyCode === 'LEAVE') codeDisplay = 'L';
+            } else if (ass.dutyCode === 'Leave') codeDisplay = 'L';
             else if (ass.dutyCode === 'TDY') codeDisplay = 'TDY';
             else if (ass.dutyCode === 'BAKE_N_BITE') codeDisplay = 'BB';
             else if (ass.dutyCode === 'DUTY_OFF') codeDisplay = 'OFF';

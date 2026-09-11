@@ -4,7 +4,7 @@ import { FlyingWingStateView } from './FlyingWingStateView';
 import { Printer, X } from 'lucide-react';
 
 export const PrintableFlyingWingModal = ({ date, uasuStats, onClose }: any) => {
-  const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: '2-digit'}).replace(/ /g, ' ');
+  const formatted = new Date(date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: '2-digit'}).replace(/Sept/gi, 'Sep').replace(/ /g, ' ');
  useEffect(() => {
  const originalTitle = document.title;
  // moved outside.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year: '2-digit'}).replace(/ /g, ' '); 
@@ -56,6 +56,7 @@ export const PrintableFlyingWingModal = ({ date, uasuStats, onClose }: any) => {
  />
  </div>
  </div>
- </div>
- );
+ </div>,
+    document.body
+  );
 };

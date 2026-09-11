@@ -14,6 +14,10 @@ import {
 import { Airman } from '../types';
 import { UserRole } from '../types';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface IdacSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -322,7 +326,7 @@ export const IdacSettingsModal: React.FC<IdacSettingsModalProps> = ({ isOpen, on
                                 )}
                                 <div>
                                   <div className={`font-bold ${isSelected ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-900 dark:text-slate-100'}`}>
-                                    {airman.rank} {airman.name}
+                                    {formatAirmanName(airman.rank)} {airman.name}
                                   </div>
                                   <div className="text-[10px] text-slate-500">BD/{airman.bdNo} • 📞 {airman.mobileNo || 'N/A'}</div>
                                 </div>

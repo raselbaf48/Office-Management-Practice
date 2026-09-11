@@ -4,6 +4,10 @@ import { Airman, DutyAssignment } from '../types';
 import { X, Shield, Phone, MapPin, Award, Calendar, FileText, User, Filter, Printer, Clock, Settings } from 'lucide-react';
 import { DUTY_TYPE_MAP } from '../data/dutyTypes';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface AirmanProfileModalProps {
   airman: Airman;
   onClose: () => void;
@@ -166,7 +170,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
         <div className="bg-slate-900 text-white p-5 flex items-start justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center space-x-3.5">
             <div className="w-12 h-12 rounded-2xl bg-emerald-600 border border-emerald-400/50 flex items-center justify-center text-white text-lg font-black shadow-md">
-              {airman.rank}
+              {formatAirmanName(airman.rank)}
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -442,7 +446,7 @@ export const AirmanProfileModal: React.FC<AirmanProfileModalProps> = ({ airman, 
                     Rank & Seniority
                   </span>
                   <span className="font-black text-sm text-slate-900 dark:text-slate-100">
-                    {airman.rank}
+                    {formatAirmanName(airman.rank)}
                   </span>
                 </div>
                 <div>

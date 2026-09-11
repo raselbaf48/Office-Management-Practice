@@ -1,4 +1,7 @@
 import { DateNavigator } from './DateNavigator';
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 import React, { useState, useEffect } from 'react';
 import { 
   Users, ShieldCheck, UserMinus, Plane, Calendar, Filter,
@@ -136,7 +139,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
   // Compute day of week
   const dateObj = new Date(selectedDate);
   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-  const dateDisplay = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  const dateDisplay = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(/Sept/gi, 'Sep');
 
   const flightsList: (FlightName | 'Overall')[] = [
     'Overall',
@@ -594,7 +597,7 @@ export const DashboardParadeState: React.FC<DashboardParadeStateProps> = ({
                               </td>
                             )}
                             <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">
-                              {item.airman.rank}
+                              {formatAirmanName(item.airman.rank)}
                             </td>
                             <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">
                               {item.airman.name}

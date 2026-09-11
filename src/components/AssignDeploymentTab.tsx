@@ -5,6 +5,10 @@ import { sortAirmenBySeniority } from '../utils/seniority';
 import { DateNavigator } from './DateNavigator';
 import { RefreshCw, Check } from 'lucide-react';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface AssignDeploymentTabProps {
   airmen: Airman[];
   onClose: () => void;
@@ -172,7 +176,7 @@ export const AssignDeploymentTab: React.FC<AssignDeploymentTabProps> = ({ airmen
             >
               <option value="" disabled>— Select an Airman —</option>
               {deploymentAirmenList.map((a) => (
-                <option key={a.id} value={a.id}>{a.rank} {a.name}</option>
+                <option key={a.id} value={a.id}>{formatAirmanName(a.rank)} {a.name}</option>
               ))}
             </select>
           </div>

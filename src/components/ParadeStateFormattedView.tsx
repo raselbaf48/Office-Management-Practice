@@ -213,23 +213,29 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  // Fetch personnel status for disposal fromDate
  useEffect(() => {
- if (!showAddDisposalModal || !disposalFromDate) return;
- fetch(`/api/parade-state?date=${disposalFromDate}&shift=Morning`)
- .then((r) => r.json())
- .then((data: ParadeStateResponse) => {
- const map: Record<string, { statusCategory: string; dutyCode: string; notes?: string; dutyName?: string }> = {};
- (data?.personnelStatusList || []).forEach((item) => {
- map[item.airman.id] = {
- statusCategory: item.statusCategory,
- dutyCode: item.dutyCode,
- notes: item.notes,
- dutyName: item.dutyName,
- };
- });
- setDisposalPersonnelStatusMap(map);
- })
- .catch((err) => console.error('Failed to fetch disposal personnel statuses:', err));
- }, [showAddDisposalModal, disposalFromDate]);
+    const fetchStatuses = () => {
+      if (!showAddDisposalModal || !disposalFromDate) return;
+      fetch(`/api/parade-state?date=${disposalFromDate}&shift=Morning`)
+        .then((r) => r.json())
+        .then((data) => {
+          const map = {};
+          (data?.personnelStatusList || []).forEach((item) => {
+            map[item.airman.id] = {
+              statusCategory: item.statusCategory,
+              dutyCode: item.dutyCode,
+              notes: item.notes,
+              dutyName: item.dutyName,
+            };
+          });
+          setDisposalPersonnelStatusMap(map);
+        })
+        .catch((err) => console.error('Failed to fetch disposal personnel statuses:', err));
+    };
+
+    fetchStatuses();
+    window.addEventListener('baf_state_updated', fetchStatuses);
+    return () => window.removeEventListener('baf_state_updated', fetchStatuses);
+  }, [showAddDisposalModal, disposalFromDate]);
 
  // Format Date: e.g. "14 Aug 26"
  const formatDateShort = (dStr: string) => {
@@ -568,18 +574,13 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  };
 
  // Save changes to edited disposal
- const handleSaveEditDisposal = async () => {
+ const handleSaveEditDisposal = async (overrideCat?: string) => {
+  const activeCategory = overrideCat || editDisposalCategory;
  if (!editDisposalModal || !editDisposalFromDate || !editDisposalToDate) return;
  setEditDisposalLoading(true);
  try {
- if (editDisposalCategory === 'ON_PARADE') {
- // If changed to On Parade, clear disposal
- await handleDeleteEditDisposal();
- return;
- }
-
- const isCustom = editDisposalCategory === 'OTHERS';
- const effectiveDutyCode = isCustom ? 'OTHERS' : editDisposalCategory;
+ const isCustom = activeCategory === 'OTHERS';
+ const effectiveDutyCode = isCustom ? 'OTHERS' : activeCategory;
  const effectiveNotes = isCustom ? (editDisposalCustomTitle.trim() || 'Custom Disposal') : undefined;
 
  const res = await fetch('/api/roster/assign-range', {
@@ -711,7 +712,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  const formatListStr = (items: typeof pList) =>
  items.length > 0
  ? items
- .map((it, idx) => `${idx + 1}. ${it.airman.rank} ${it.airman.name}`)
+ .map((it, idx) => `${idx + 1}. ${formatAirmanName(it.airman.rank)} ${formatAirmanName(it.airman.name)}`)
  .join('\n')
  : '-';
 
@@ -1034,7 +1035,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <ol className="space-y-0.5 text-[11px] leading-snug font-normal text-left">
  {list.map((item, idx) => (
  <li key={idx} className="whitespace-nowrap">
- {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+ {idx + 1}. {formatAirmanName(item.airman.rank)} {formatAirmanName(item.airman.name)}
  </li>
  ))}
  </ol>
@@ -1070,7 +1071,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  title={(role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'OWNER') ? 'Click to edit, change or remove disposal' : undefined}
  >
  <span className="truncate">
- {i + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+ {i + 1}. {formatAirmanName(item.airman.rank)} {formatAirmanName(item.airman.name)}
  {(isDutyOn || isDutyOff) && noteText ? (
  <span className="text-slate-800 dark:text-slate-200 font-medium"> - {noteText}</span>
  ) : noteText && noteText !== dutyName && noteText !== dutyCode ? (
@@ -1122,15 +1123,18 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  {/* Top Controls Banner (Hidden during print) */}
  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 dark:border-slate-700 rounded-2xl p-5 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 print:hidden">
- <div className="flex items-center space-x-3">
- <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg shrink-0">
- <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
- </div>
  <div>
- <h2 className="text-sm font-bold text-slate-900 dark:text-white ">State Controls</h2>
- <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Select date range and flight</p>
- </div>
- </div>
+          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-black uppercase tracking-wider">
+            <Shield className="w-4 h-4" />
+            <span>155 UASU BAF • Daily {isPtDocument ? 'PT' : 'Parade'} State</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white print:text-black mt-1">
+            {isPtDocument ? 'PT State Controls' : 'Parade State Controls'}
+          </h1>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">
+            Manage {isPtDocument ? 'PT' : 'parade'} date, flight and display settings
+          </p>
+        </div>
 
  <div className="flex flex-wrap items-center xl:justify-end gap-2.5">
  {isPtDocument ? null : (
@@ -1246,15 +1250,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <span>Signatures</span>
  </button>
  )}
- {/* Download Document Button */}
-          <button
-            onClick={handleDownloadDocx}
-            className="flex items-center space-x-1.5 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-900/20 transition-all cursor-pointer ml-4"
-            title="Download Document"
-          >
-            <Download className="w-5 h-5" />
-            <span>Download Document</span>
-          </button>
+ 
 
           
           {isMultiDay && (
@@ -1681,8 +1677,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {/* Left side: 1 to 15 */}
  <ol className="space-y-0.5 font-normal leading-tight">
  {onPtList.slice(0, 15).map((item, idx) => (
- <li key={item.airman.id} className="whitespace-nowrap">
- {idx + 1}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+ <li key={item.airman.id} className="whitespace-nowrap cursor-pointer hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 px-1 rounded transition-colors" onClick={() => openEditDisposal(item.airman, 'ON_PARADE', 'On Parade')} title="Click to edit, change or remove disposal">
+ {idx + 1}. {formatAirmanName(item.airman.rank)} {formatAirmanName(item.airman.name)}
  </li>
  ))}
  </ol>
@@ -1691,8 +1687,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {onPtList.length > 15 && (
  <ol className="space-y-0.5 font-normal leading-tight">
  {onPtList.slice(15, 30).map((item, idx) => (
- <li key={item.airman.id} className="whitespace-nowrap">
- {16 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+ <li key={item.airman.id} className="whitespace-nowrap cursor-pointer hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 px-1 rounded transition-colors" onClick={() => openEditDisposal(item.airman, 'ON_PARADE', 'On Parade')} title="Click to edit, change or remove disposal">
+ {16 + idx}. {formatAirmanName(item.airman.rank)} {formatAirmanName(item.airman.name)}
  </li>
  ))}
  </ol>
@@ -1702,8 +1698,8 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {onPtList.length > 30 && (
  <ol className="space-y-0.5 font-normal leading-tight">
  {onPtList.slice(30).map((item, idx) => (
- <li key={item.airman.id} className="whitespace-nowrap">
- {31 + idx}. {item.airman.rank} {formatAirmanName(item.airman.name)}
+ <li key={item.airman.id} className="whitespace-nowrap cursor-pointer hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 px-1 rounded transition-colors" onClick={() => openEditDisposal(item.airman, 'ON_PARADE', 'On Parade')} title="Click to edit, change or remove disposal">
+ {31 + idx}. {formatAirmanName(item.airman.rank)} {formatAirmanName(item.airman.name)}
  </li>
  ))}
  </ol>
@@ -1881,7 +1877,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  {/* Row Edit Popover */}
  {activeEditCell && (
  <DutyCellPopover
- airmanName={`${activeEditCell.airman.rank} ${activeEditCell.airman.name}`}
+ airmanName={`${formatAirmanName(activeEditCell.airman.rank)} ${activeEditCell.airman.name}`}
  airmanFlight={activeEditCell.airman.flightName}
  date={activeEditCell.date}
  currentCode={activeEditCell.dutyCode}
@@ -1957,7 +1953,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
  2. Select Disposal Category
  </label>
- {savedDisposals.length > 0 && sessionStorage.getItem('baf_user_role') === 'SUPER_ADMIN' && (
+ 
  <button
  type="button"
  onClick={() => setIsEditingDisposals(!isEditingDisposals)}
@@ -1966,7 +1962,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  >
  <Settings className="w-4 h-4" />
  </button>
- )}
+ 
  </div>
  <div className="flex flex-wrap gap-2">
  {savedDisposals.map((cat) => {
@@ -2212,7 +2208,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  if (isOnParade) {
  return (
- <label
+ <div onClick={() => { if (isChecked) { setSelectedDisposalAirmenIds((prev) => prev.filter((id) => id !== a.id)); } else { setSelectedDisposalAirmenIds((prev) => [...prev, a.id]); } }}
  key={a.id}
  className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none text-xs ${
  isChecked
@@ -2221,26 +2217,17 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  }`}
  >
  <div className="flex items-center space-x-2.5 min-w-0">
- <input
- type="checkbox"
- checked={isChecked}
- onChange={() => {
- if (isChecked) {
- setSelectedDisposalAirmenIds((prev) => prev.filter((id) => id !== a.id));
- } else {
- setSelectedDisposalAirmenIds((prev) => [...prev, a.id]);
- }
- }}
- className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer border-slate-300 dark:border-slate-600 dark:bg-slate-800"
- />
+ <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 border'}`}>
+                            {isChecked && <Check className="w-3 h-3" strokeWidth={3} />}
+                          </div>
  <span className="truncate">
- <span className="font-bold text-slate-900 dark:text-white print:text-black ">{a.rank}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
+ <span className="font-bold text-slate-900 dark:text-white print:text-black ">{formatAirmanName(a.rank)}</span> {a.name} <span className="text-[11px] text-slate-400">({a.trade})</span>
  </span>
  </div>
  <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
  On Parade
  </span>
- </label>
+                      </div>
  );
  }
 
@@ -2252,7 +2239,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  >
  <div className="flex items-center space-x-2.5 min-w-0">
  <span className="truncate text-slate-700 dark:text-slate-300">
- <span className="font-bold">{a.rank}</span> {a.name} ({a.trade})
+ <span className="font-bold">{formatAirmanName(a.rank)}</span> {a.name} ({a.trade})
  </span>
  </div>
  <div className="flex items-center space-x-1.5 shrink-0 ml-2">
@@ -2325,7 +2312,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  <span>✏️ Edit / Change Disposal</span>
  </h3>
  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
- {editDisposalModal.airman.rank} {editDisposalModal.airman.name} • BD/{editDisposalModal.airman.bdNo} • {editDisposalModal.airman.trade} ({editDisposalModal.airman.flightName} Flt)
+ {formatAirmanName(editDisposalModal.airman.rank)} {editDisposalModal.airman.name} • BD/{editDisposalModal.airman.bdNo} • {editDisposalModal.airman.trade} ({editDisposalModal.airman.flightName} Flt)
  </p>
  </div>
  <button
@@ -2348,7 +2335,7 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  </div>
  <button
  type="button"
- onClick={handleDeleteEditDisposal}
+ onClick={() => handleSaveEditDisposal('ON_PARADE')}
  disabled={editDisposalLoading}
  className="px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 dark:hover:bg-rose-900 rounded-lg border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
  >
@@ -2384,56 +2371,106 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  </div>
 
  {/* Change Category Selection */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
- Change Disposal Category To:
- </label>
- <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
- {[
- { code: 'ON_PARADE', label: '✅ On Parade (Clear)' },
- { code: 'ESSN', label: 'ESSN (Essential)' },
- { code: 'SICK_REPORT', label: 'Sick Report' },
- { code: 'ADMIN_ORDER', label: "Admin Order" },
- { code: 'OTHERS', label: '✨ Other Custom' },
- ].map((cat) => {
- const isSelected = editDisposalCategory === cat.code;
- return (
- <button
- key={cat.code}
- type="button"
- onClick={() => setEditDisposalCategory(cat.code)}
- className={`p-2 rounded-xl text-xs font-bold text-left border transition-all truncate cursor-pointer ${
- isSelected
- ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-100 shadow-xs'
- : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:border-slate-700'
- }`}
- >
- {cat.label}
- </button>
- );
- })}
- </div>
+              <div className="space-y-2 relative">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Change Disposal Category To:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDisposals(!isEditingDisposals)}
+                    className={`p-1 rounded-md transition-colors cursor-pointer ${isEditingDisposals ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    title="Manage Saved Categories"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {savedDisposals.map((cat) => {
+                    const isSelected = !isEditingDisposals && editDisposalCategory === cat.code && (cat.code !== 'OTHERS' || editDisposalCustomTitle === cat.customTitle);
+                    return (
+                      <div key={cat.label} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isEditingDisposals) return;
+                            setEditDisposalCategory(cat.code);
+                            if (cat.customTitle) setEditDisposalCustomTitle(cat.customTitle);
+                            else if (cat.code === 'OTHERS') setEditDisposalCustomTitle('');
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all truncate ${isEditingDisposals ? 'pr-6 opacity-80 cursor-default bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'cursor-pointer'} ${
+                            isSelected
+                              ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 shadow-xs'
+                              : (!isEditingDisposals ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600' : '')
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                        {isEditingDisposals && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDisposalOption(cat.label)}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:hover:bg-red-900 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {!isEditingDisposals && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowDisposalDropdown(!showDisposalDropdown)}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-400 bg-slate-50 dark:bg-slate-900 transition-all cursor-pointer flex items-center space-x-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        {savedDisposals.length === 0 && <span>Add Category</span>}
+                      </button>
+                      {showDisposalDropdown && (
+                        <div className="absolute bottom-full mb-1 left-0 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
+                          {[...ALL_DISPOSAL_OPTIONS, ...historicalCustomCats].filter(opt => opt.code === 'OTHERS' || (!savedDisposals.some(d => d.code === opt.code && (d.code !== 'OTHERS' || d.customTitle === opt.customTitle)))).filter((opt, index, self) => index === self.findIndex((t) => t.code === opt.code && t.customTitle === opt.customTitle)).map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => {
+                                handleAddDisposalOption(opt);
+                                setEditDisposalCategory(opt.code);
+                                if (opt.customTitle) setEditDisposalCustomTitle(opt.customTitle);
+                                else if (opt.code === 'OTHERS') setEditDisposalCustomTitle('');
+                                setShowDisposalDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors"
+                            >
+                              {opt.code === 'OTHERS' && opt.customTitle ? opt.customTitle : opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
- {/* Custom Title Input if OTHERS */}
- {editDisposalCategory === 'OTHERS' && (
- <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn">
- <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
- Specify Custom Disposal Name
- </label>
- <input
- type="text"
- placeholder="e.g. Special Escort, VVIP Detail, Flood Cell..."
- value={editDisposalCustomTitle}
- onChange={(e) => setEditDisposalCustomTitle(e.target.value)}
- className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white print:text-black outline-none focus:border-amber-500 shadow-xs"
- required
- />
- </div>
- )}
- </div>
- </div>
-
- {/* Modal Action Buttons */}
+                {/* Custom Title Input if OTHERS selected */}
+                {editDisposalCategory === 'OTHERS' && (!ALL_DISPOSAL_OPTIONS.find(o => o.label === editDisposalCustomTitle) || editDisposalCustomTitle === '') && !isEditingDisposals && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl space-y-1 animate-fadeIn mt-2">
+                    <label className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      Specify Custom Disposal Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Special Escort, VVIP Detail..."
+                      value={editDisposalCustomTitle}
+                      onChange={(e) => setEditDisposalCustomTitle(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white print:text-black outline-none focus:border-amber-500 shadow-xs"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Modal Action Buttons */}
  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800 dark:border-white print:border-black">
  <button
  type="button"
@@ -2442,6 +2479,14 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
  >
  Cancel
  </button>
+              <button
+                type="button"
+                onClick={() => handleSaveEditDisposal()}
+                disabled={editDisposalLoading || !editDisposalCategory || (editDisposalCategory === 'OTHERS' && !editDisposalCustomTitle.trim())}
+                className="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl disabled:opacity-50 transition-all shadow-md shadow-emerald-900/20 cursor-pointer"
+              >
+                {editDisposalLoading ? 'Applying...' : 'Apply Changes'}
+              </button>
  
  </div>
  </div>
@@ -2460,7 +2505,9 @@ export const ParadeStateFormattedView: React.FC<ParadeStateFormattedViewProps> =
 
  {/* Internal Printable Parade State Modal (Fallback) */}
  {isInternalPrintOpen && (
-<PrintableParadeStateModal userFlight={userFlight} initialHideEmptyColumns={hideEmptyColumns}
+<PrintableParadeStateModal
+              onDownloadDocx={handleDownloadDocx}
+              userFlight={userFlight} initialHideEmptyColumns={hideEmptyColumns}
  initialFromDate={fromDate} initialToDate={toDate}
  shift="Morning"
  flight={selectedFlight}

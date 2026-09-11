@@ -10,6 +10,11 @@ import { EntryHistoryModal } from './EntryHistoryModal';
 import { History } from 'lucide-react';
 import { localDb } from '../services/localDatabase';
 
+
+const formatAirmanName = (name: string) => {
+  if (!name) return '';
+  return name.toLowerCase().split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
 interface NominalRollProps {
   airmen: Airman[];
   role: UserRole;
@@ -270,7 +275,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                   </td>
                   <td className="py-3 px-4">
                     <span className="font-black px-2 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono border border-slate-300 dark:border-slate-700">
-                      {airman.rank}
+                      {formatAirmanName(airman.rank)}
                     </span>
                   </td>
                   <td className="py-3 px-4">

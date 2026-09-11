@@ -114,7 +114,7 @@ export async function getDbFromFirebase() {
        disableNetwork(db).catch(console.error);
        console.warn('Firebase quota exceeded during read. Cloud sync disabled.');
     } else {
-       console.error('Error loading from Firebase:', error);
+       if (error?.message?.includes('offline')) { console.warn('Firebase is offline. Using local data.'); } else { console.error('Error loading from Firebase:', error); }
     }
     return null;
   }
@@ -123,7 +123,7 @@ export async function getDbFromFirebase() {
 if (typeof window !== "undefined") {
   const originalError = console.error;
   console.error = (...args) => {
-    if (args.some(arg => typeof arg === 'string' && (arg.includes('resource-exhausted') || arg.includes('maximum backoff delay')))) return;
+    if (args.some(arg => typeof arg === 'string' && (arg.includes('resource-exhausted') || arg.includes('maximum backoff delay') || arg.includes('Could not reach Cloud Firestore backend') || arg.includes('offline mode')))) return;
     if (args.some(arg => arg?.code === 'resource-exhausted')) return;
     originalError(...args);
   };

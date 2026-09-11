@@ -8,6 +8,10 @@ import { exportTableToCSV } from '../utils/csvExport';
 import { getOptimalMinColumnWidth } from '../utils/tableUtils';
 import { EntryHistoryModal } from './EntryHistoryModal';
 
+
+const formatAirmanName = (name: string) => {
+  return name || '';
+};
 interface DeploymentRegisterViewProps {
   role?: UserRole;
   airmen: Airman[];
@@ -469,7 +473,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">
                         <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-black text-[11px]">
-                          {airman.rank}
+                          {formatAirmanName(airman.rank)}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-black text-slate-900 dark:text-white" style={{ minWidth: getOptimalMinColumnWidth(airman.name, 120, 7.5, 32) }}>
@@ -609,7 +613,7 @@ export const DeploymentRegisterView: React.FC<DeploymentRegisterViewProps> = ({
                   </option>
                   {grantAirmenList.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.rank} {a.name}
+                      {formatAirmanName(a.rank)} {a.name}
                     </option>
                   ))}
                 </select>

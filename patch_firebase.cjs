@@ -1,14 +1,9 @@
 const fs = require('fs');
-
-let content = fs.readFileSync('src/firebase.ts', 'utf8');
-
-// Replace export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-// with initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
-// But wait, the signature for initializeFirestore is initializeFirestore(app, settings, databaseId)
-
+const file = 'src/firebase.ts';
+let content = fs.readFileSync(file, 'utf8');
 content = content.replace(
-  'export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);',
-  'export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);'
+  "export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }, firebaseConfig.firestoreDatabaseId);",
+  "export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);"
 );
-
-fs.writeFileSync('src/firebase.ts', content, 'utf8');
+fs.writeFileSync(file, content);
+console.log("Patched firebase.ts to use force long polling");
