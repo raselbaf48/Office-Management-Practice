@@ -548,7 +548,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
           // Auto-advance logic
           if (selectionMode === 'FlightFirst' && activeFlight !== 'All' && activeDutyCode) {
-            const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
+            const _storedMatrix = getStoredDutyMatrix(); const allDuties = DUTY_TYPES.filter((dt) => { if (!dt.isCountedAsDuty) return false; const mEntries = _storedMatrix.filter(t => t.dutyCode === dt.code); if (mEntries.length > 0 && mEntries.every(t => t.isDisabled)) return false; return true; });
             const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code, undefined, activeFlight) > 0);
             if (ratioFiltered.length > 1) {
               const currentIndex = ratioFiltered.findIndex((d) => d.code === activeDutyCode);
@@ -1007,7 +1007,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               {/* Duty Category Cards with Detailed Airmen List */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                 {(() => {
-                  const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
+                  const _storedMatrix = getStoredDutyMatrix(); const allDuties = DUTY_TYPES.filter((dt) => { if (!dt.isCountedAsDuty) return false; const mEntries = _storedMatrix.filter(t => t.dutyCode === dt.code); if (mEntries.length > 0 && mEntries.every(t => t.isDisabled)) return false; return true; });
                   const ratioFiltered = allDuties.filter((dt) => {
     const req = getRequiredCountForDuty(dt.code);
     const assignedCount = assignmentsList.filter(a => {
@@ -1025,12 +1025,20 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
     }).length;
     return req > 0 || assignedCount > 0;
 });
-                  const dutiesToRender = filterByRatio && ratioFiltered.length > 0 ? ratioFiltered : allDuties;
+                  const dutiesToRender = filterByRatio ? ratioFiltered : allDuties; if(dutiesToRender.length === 0) return <div className="col-span-full py-6 text-center text-sm font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">No active duties scheduled in the Ratio Matrix for this date.</div>;
 
                   return dutiesToRender.map((dt) => {
                     const isSelected = activeDutyCode === dt.code;
                     const reqQuota = getRequiredCountForDuty(dt.code);
                     const assignedList = getAssignedAirmenForDuty(dt.code);
+                    
+                    let displayName = dt.name;
+                    if (dt.code !== 'IDAC' && dt.code !== 'IDA') {
+                      const mEntries = _storedMatrix.filter(t => t.dutyCode === dt.code);
+                      if (mEntries.length > 0 && mEntries[0].title) {
+                        displayName = mEntries[0].title;
+                      }
+                    }
 
                     return (
                       <div
@@ -1050,8 +1058,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                       >
                         {/* Header: Duty Name & Ratio Badge (e.g. 3/3) */}
                         <div className="flex items-center justify-between gap-1 border-b border-slate-100 dark:border-slate-700/60 pb-1.5 mb-1.5">
-                          <span className={`text-[11px] font-black truncate leading-tight ${isSelected ? 'text-emerald-950 dark:text-emerald-100' : 'text-slate-900 dark:text-slate-100'}`}>
-                            {dt.name}
+                          <span className={`text-[11px] font-black truncate leading-tight ${isSelected ? 'text-emerald-950 dark:text-emerald-100' : 'text-slate-900 dark:text-slate-100'}`} title={displayName}>
+                            {displayName}
                           </span>
                           <div className="shrink-0">
                             {reqQuota > 0 ? (
@@ -1273,7 +1281,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                         if (selectionMode === 'None' || !activeDutyCode) {
                           setSelectionMode('FlightFirst');
                         }
-                        const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
+                        const _storedMatrix = getStoredDutyMatrix(); const allDuties = DUTY_TYPES.filter((dt) => { if (!dt.isCountedAsDuty) return false; const mEntries = _storedMatrix.filter(t => t.dutyCode === dt.code); if (mEntries.length > 0 && mEntries.every(t => t.isDisabled)) return false; return true; });
                         const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code, undefined, newFlt as FlightName) > 0);
                         if (ratioFiltered.length > 0) {
                           if (!activeDutyCode || !ratioFiltered.some(d => d.code === activeDutyCode)) {
@@ -1461,7 +1469,11 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                 })
               )}
             </div>
+
           </div>
+
+
+        </div>
         </div>
 
         {/* Modal Footer */}
@@ -1498,7 +1510,6 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           }}
         />
       )}
-      </div>
     </div>
   );
 };

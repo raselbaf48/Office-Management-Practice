@@ -307,39 +307,41 @@ export const DutyRatioMatrixView: React.FC<DutyRatioMatrixViewProps> = ({
 
         {/* Auto-saved instantly, button removed as requested */}
     </div>
+    </div> {/* CLOSE Top Banner & Header */}
 
-    {/* LAST UPDATING DATE */}
-    <div className="flex flex-col items-center justify-center mt-6 w-full max-w-3xl mx-auto">
-      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Last Updating Date</div>
-      <input 
-        type="date"
-        value={targetDate}
-        onChange={(e) => setTargetDate(e.target.value)}
-        className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-indigo-700 dark:text-indigo-400 focus:outline-none focus:border-indigo-500 shadow-sm"
-      />
-    </div>
-
-    {/* TAB NAVIGATION */}
-    <div className="flex flex-wrap space-x-1 sm:space-x-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-full max-w-3xl mt-4 mx-auto justify-center">
-      <button 
-        onClick={() => setViewMode('DUTY_LIST')}
-        className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_LIST' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
-      >Duty List</button>
-      <button 
-        onClick={() => setViewMode('MANPOWER')}
-        className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'MANPOWER' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
-      >Manpower</button>
-      <button 
-        onClick={() => setViewMode('DUTY_DISTRIBUTION')}
-        className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_DISTRIBUTION' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
-      >Distribution</button>
-      <button 
-        onClick={() => setViewMode('DUTY_RATIO')}
-        className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_RATIO' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
-      >Duty Ratio</button>
-    </div>
-
+    {/* CONTROLS SECTION */}
+    <div className="flex flex-col items-center justify-center space-y-4">
+      {/* LAST UPDATING DATE */}
+      <div className="flex flex-col items-center justify-center w-48 mx-auto">
+        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Last Updating Date</div>
+        <input 
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-indigo-700 dark:text-indigo-400 focus:outline-none focus:border-indigo-500 shadow-sm w-full text-center"
+        />
       </div>
+
+      {/* TAB NAVIGATION */}
+      <div className="flex flex-wrap space-x-1 sm:space-x-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-full max-w-3xl mx-auto justify-center">
+        <button 
+          onClick={() => setViewMode('DUTY_LIST')}
+          className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_LIST' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
+        >Duty List</button>
+        <button 
+          onClick={() => setViewMode('MANPOWER')}
+          className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'MANPOWER' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
+        >Manpower</button>
+        <button 
+          onClick={() => setViewMode('DUTY_DISTRIBUTION')}
+          className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_DISTRIBUTION' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
+        >Distribution</button>
+        <button 
+          onClick={() => setViewMode('DUTY_RATIO')}
+          className={`flex-1 py-2 px-2 sm:px-4 text-xs sm:text-sm font-bold rounded-lg transition-colors ${viewMode === 'DUTY_RATIO' ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
+        >Duty Ratio</button>
+      </div>
+    </div>
     <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth print:hidden">
       <div className="max-w-7xl mx-auto space-y-8">
         

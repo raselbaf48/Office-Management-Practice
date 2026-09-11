@@ -1,8 +1,63 @@
-import React from 'react';
-import { Menu, KeyRound, ShieldCheck, LogOut, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, KeyRound, ShieldCheck, LogOut, User, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { SidebarTab } from './Sidebar';
 import { UserRole } from '../types';
 import { UserSession } from '../utils/authSession';
+import { getFirebaseSyncState, FirebaseSyncStatusState, getSyncLogs } from '../services/localDatabase';
+
+const CloudSyncIndicator = () => {
+  const [syncState, setSyncState] = useState<FirebaseSyncStatusState>(getFirebaseSyncState());
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const handleSyncUpdate = (e: any) => {
+      setSyncState(e.detail);
+    };
+    
+    const handleLogsUpdate = (e: any) => {
+      const logs = e.detail;
+      if (logs && logs.length > 0) {
+        setHasError(logs[0].status === 'ERROR');
+      }
+    };
+
+    window.addEventListener('d1_sync_update', handleSyncUpdate);
+    window.addEventListener('baf_sync_logs_updated', handleLogsUpdate);
+    
+    // Initial error check
+    const logs = getSyncLogs();
+    if (logs && logs.length > 0) {
+       setHasError(logs[0].status === 'ERROR');
+    }
+
+    return () => {
+      window.removeEventListener('d1_sync_update', handleSyncUpdate);
+      window.removeEventListener('baf_sync_logs_updated', handleLogsUpdate);
+    };
+  }, []);
+
+  return (
+    <div className="hidden sm:flex items-center justify-center p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm relative group cursor-pointer">
+      {syncState.status === 'syncing' ? (
+        <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+      ) : hasError ? (
+        <CloudOff className="w-4 h-4 text-red-500" />
+      ) : syncState.isConfigured ? (
+        <Cloud className="w-4 h-4 text-emerald-500" />
+      ) : (
+        <CloudOff className="w-4 h-4 text-slate-400" />
+      )}
+      
+      {/* Tooltip */}
+      <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-slate-900 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+        <p className="font-bold mb-1">Cloud Sync Status</p>
+        <p className="text-slate-300">
+          {syncState.status === 'syncing' ? 'Syncing with cloud...' : hasError ? 'Error in last sync. Check settings.' : syncState.isConfigured ? 'Connected & up to date.' : 'Cloud sync not configured.'}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 interface TopHeaderProps {
   activeTab: SidebarTab;
@@ -90,6 +145,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Upper Right: User Profile & Admin Option */}
         <div className="flex items-center space-x-2.5">
+          <CloudSyncIndicator />
           {/* User Session Info Badge */}
           {userSession && (
             <div className="hidden sm:flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 px-2.5 py-1.5 rounded-xl">

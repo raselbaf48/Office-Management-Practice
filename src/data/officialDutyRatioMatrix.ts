@@ -426,7 +426,7 @@ export function getFlightDutyQuotaForDate(
     table = matrix.find((t) => t.dutyCode === dutyCode);
   }
 
-  if (!table) return 0;
+  if (!table || table.isDisabled) return 0;
   
   // If the user explicitly set a target of 0 for this flight for the whole month, return 0 for all days.
   // This handles cases where they use LRM but haven't updated the daily arrays in the calendar.
@@ -452,7 +452,7 @@ export function getFlightsForIdacShift(dateStr: string, shift: string): import('
     table = matrix.find((t) => t.id === 'idac_nt' || (t.dutyCode === 'IDAC' && t.shiftLabel === 'Night'));
   }
   
-  if (!table) return [];
+  if (!table || table.isDisabled) return [];
   
   const validFlights: import('../types').FlightName[] = [];
   const flights: import('../types').FlightName[] = ['Avionics', 'Mechanics', 'GCS', 'Admin'];

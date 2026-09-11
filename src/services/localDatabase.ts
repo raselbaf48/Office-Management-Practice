@@ -118,6 +118,10 @@ export class LocalDatabaseEngine {
   private isFirebaseSyncing: boolean = false;
   private saveTimeout: any = null;
 
+  public getDb(): LocalStorageDB {
+    return this.db;
+  }
+
   constructor() {
     this.db = this.loadInitialLocalState();
     if (typeof window !== 'undefined') {
@@ -215,7 +219,7 @@ export class LocalDatabaseEngine {
   /**
    * Push changes to Firebase Firestore
    */
-  private async saveToFirebase(dbToSave: LocalStorageDB, immediate = false): Promise<void> {
+  public async saveToFirebase(dbToSave: LocalStorageDB, immediate = false): Promise<void> {
     if (typeof window === 'undefined') return;
     
     // Prevent accidental pushes if we haven't finished our initial sync pull yet
