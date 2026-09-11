@@ -158,16 +158,7 @@ export class LocalDatabaseEngine {
         const localTime = new Date(this.db.lastUpdated || 0).getTime();
         const fbTime = new Date(data.lastUpdated || 0).getTime();
 
-        // If local is newer, push to Firebase instead of pulling
-        // FIX: NEVER push from a completely fresh/empty local state to overwrite cloud data.
-        // We determine if local is "fresh" by checking if activityHistory is completely empty, 
-        // OR if airmen length is exactly the initial count but assignments are empty.
-        const isLocalBasicallyEmpty = !this.db.activityHistory || this.db.activityHistory.length === 0;
 
-        if (localTime > fbTime && !isLocalBasicallyEmpty) {
-           this.saveToFirebase(this.db);
-           return true;
-        }
         
         // If local is basically empty, ALWAYS prefer cloud data even if local timestamp is technically "newer"
         // (which happens on first load on a new device)
@@ -208,6 +199,7 @@ export class LocalDatabaseEngine {
         return true;
       } else {
         // Initial seed Firebase with initial airmen and assignments
+        this.isFirebaseSyncing = false; // Allow the seed to push
         this.saveToFirebase(this.db);
         return true;
       }

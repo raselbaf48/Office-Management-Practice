@@ -262,6 +262,22 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         }
       }
         
+      // If all quotas are fulfilled, fallback to the first flight that has a quota
+      if (targetFlight === "All") {
+        for (const flt of orderedFlights) {
+          const required = getFlightDutyQuotaForDate(
+            fromDate, 
+            flt, 
+            activeDutyCode,
+            (activeDutyCode === "IDAC" || activeDutyCode === "IDA") ? activeIdaShift : undefined
+          );
+          if (required > 0) {
+            targetFlight = flt;
+            break;
+          }
+        }
+      }
+      
       setActiveFlight(targetFlight);
     }
   }, [activeDutyCode, fromDate, activeIdaShift, assignmentsList, airmanMap]);
@@ -1035,6 +1051,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                         key={dt.code}
                         onClick={() => {
                           setActiveDutyCode(dt.code);
+                          userManuallySelectedFlightRef.current = false;
                           if (activeFlight === 'All') {
                             setSelectionMode('DutyFirst');
                           }
@@ -1225,7 +1242,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">
                 2. Flight:
               </span>
-              {(['Avionics', 'Mechanics', 'GCS', 'Admin'] as FlightName[]).filter(flt => {
+              {(['All', 'Avionics', 'Mechanics', 'GCS', 'Admin'] as Array<FlightName | 'All'>).filter(flt => {
+                if (flt === 'All') return true;
                 const matrixConfig = getStoredDutyMatrix().find(t => t.dutyCode === activeDutyCode);
                 
                 if (matrixConfig) {
@@ -1252,14 +1270,16 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
                 return true;
               }).map((flt) => {
-                const isDisabledFlt = (isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin);
+                const isDisabledFlt = flt !== 'All' && ((isAdmin && adminFlight && flt !== adminFlight) || (isPastDate && !isSuperAdmin));
                 return (
                 <button
                   key={flt}
                   type="button"
                   onClick={() => {
                     if (!isDisabledFlt) {
-                      const newFlt = activeFlight === flt ? 'All' : flt;
+                      if (activeFlight === flt) return; // Do not deselect on click
+                      
+                      const newFlt = flt;
                       setActiveFlight(newFlt);
                       
                       if (newFlt !== 'All') {
@@ -1268,16 +1288,13 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                           setSelectionMode('FlightFirst');
                         }
                         const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
-                        const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code, undefined, newFlt) > 0);
+                        const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code, undefined, newFlt as FlightName) > 0);
                         if (ratioFiltered.length > 0) {
                           if (!activeDutyCode || !ratioFiltered.some(d => d.code === activeDutyCode)) {
                             setActiveDutyCode(ratioFiltered[0].code);
                           }
                         }
                       } else {
-                        // User explicitly clicked the active flight to deselect it.
-                        // We lock the auto-selector so it doesn't force a flight based on the duty,
-                        // and we keep the current duty selected.
                         userManuallySelectedFlightRef.current = true;
                         if (!activeDutyCode) {
                           setSelectionMode('None');
