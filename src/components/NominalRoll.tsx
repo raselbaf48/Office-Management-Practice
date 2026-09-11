@@ -105,6 +105,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
     const matchesRank = rankFilter === '' ? true : (rankFilter === 'All' || airman.rank === rankFilter);
     const q = search.toLowerCase();
     const matchesSearch =
+      (airman.fullName || '').toLowerCase().includes(q) ||
       airman.name.toLowerCase().includes(q) ||
       airman.bdNo.toLowerCase().includes(q) ||
       airman.code.toLowerCase().includes(q) ||
@@ -252,7 +253,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                 <th className="py-3 px-4 w-12 text-center">Ser</th>
                 <th className="py-3 px-4">BD No</th>
                 <th className="py-3 px-4">Rank</th>
-                <th className="py-3 px-4">Name</th>
+                <th className="py-3 px-4">Full Name</th>
                 <th className="py-3 px-4">Trade</th>
                 <th className="py-3 px-4">Flight</th>
                 <th className="py-3 px-4">Address</th>
@@ -281,7 +282,7 @@ export const NominalRoll: React.FC<NominalRollProps> = ({
                   <td className="py-3 px-4">
                     <div className="flex items-center space-x-2">
                       <span className="font-black text-slate-900 dark:text-slate-100 text-left">
-                        {airman.name}
+                        {airman.fullName || airman.name}
                       </span>
                       {(!airman.bdNo?.trim() || !airman.rank?.trim() || !airman.name?.trim() || !airman.trade?.trim() || ['General Tech', '-', 'N/A'].includes(airman.trade) || !airman.addressBlock?.trim() || ['-', 'N/A', 'L/O', 'L/I', "Sgt's Mess", "Airmen's Mess", "Live Out", "Live In"].includes(airman.addressBlock) || !airman.mobileNo?.trim() || ['01', '01700000000', '-'].includes(airman.mobileNo) || !airman.flightName?.trim()) && (
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Missing or incomplete information (Trade, Address, or Mobile). Click to update." />

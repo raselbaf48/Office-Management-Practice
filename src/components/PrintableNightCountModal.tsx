@@ -81,6 +81,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
  onViewAirmanProfile,
   initialFromDate,
   initialToDate,
+  onDownloadDocx,
 }) => {
  const isPtDocument = false;
  const [fromDate, setFromDate] = useState<string>(initialFromDate || selectedDate);
@@ -2189,7 +2190,7 @@ export const PrintableNightCountModal: React.FC<NightCountStateViewProps & { onC
                       </button>
                       {showDisposalDropdown && (
                         <div className="absolute bottom-full mb-1 left-0 w-56 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1">
-                          {[...ALL_DISPOSAL_OPTIONS, ...historicalCustomCats].filter(opt => opt.code === 'OTHERS' || (!savedDisposals.some(d => d.code === opt.code && (d.code !== 'OTHERS' || d.customTitle === opt.customTitle)))).filter((opt, index, self) => index === self.findIndex((t) => t.code === opt.code && t.customTitle === opt.customTitle)).map((opt) => (
+                          {ALL_DISPOSAL_OPTIONS.filter(opt => opt.code === 'OTHERS' || (!savedDisposals.some(d => d.code === opt.code && (d.code !== 'OTHERS' || d.customTitle === opt.customTitle)))).filter((opt, index, self) => index === self.findIndex((t) => t.code === opt.code && t.customTitle === opt.customTitle)).map((opt) => (
                             <button
                               key={opt.label}
                               type="button"

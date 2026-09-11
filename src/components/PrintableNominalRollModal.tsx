@@ -55,7 +55,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
 
         <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
           <button
-            onClick={() => exportHtmlToWord('print-nominal-roll-content', 'Nominal_Roll_155_UASU_BAF.doc')}
+            onClick={() => exportHtmlToWord('print-nominal-roll-content', 'Nominal_Roll_155_UASU_BAF.doc', 'portrait')}
             className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
@@ -73,7 +73,14 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
 
       {/* Printable Content Area */}
       <div className="flex-1 overflow-auto print:overflow-visible bg-slate-200/50 print:bg-white p-4 sm:py-8 print:p-0 flex justify-start sm:justify-center print:block">
-        <div id="print-nominal-roll-content" className="w-max sm:w-[210mm] min-w-[min(100vw-32px,210mm)] h-fit min-h-[297mm] print:w-full print:min-h-0 print:h-auto shrink-0 bg-white text-black print:shadow-none print:border-none border border-slate-300 shadow-2xl p-4 sm:p-12 print:p-0 print:m-0">
+        <style type="text/css">
+          {`
+            @media print {
+              @page { size: portrait; margin: 8mm; }
+            }
+          `}
+        </style>
+        <div id="print-nominal-roll-content" className="w-max sm:w-[210mm] min-w-[min(100vw-32px,210mm)] mx-auto h-fit min-h-[297mm] print:w-full print:min-h-0 print:h-auto shrink-0 bg-white text-black print:shadow-none print:border-none border border-slate-300 shadow-2xl p-4 sm:p-12 print:p-0 print:m-0">
           <div className="w-full">
             {/* Document Header */}
             <div className="text-center mb-6">
@@ -91,7 +98,7 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                     <th className="p-1.5 border border-black font-bold text-center w-8">Ser</th>
                     <th className="p-1.5 border border-black font-bold text-center">BD No</th>
                     <th className="p-1.5 border border-black font-bold text-center">Rank</th>
-                    <th className="p-1.5 border border-black font-bold text-center w-48">Name</th>
+                    <th className="p-1.5 border border-black font-bold text-center">Full Name</th>
                     <th className="p-1.5 border border-black font-bold text-center">Trade</th>
                     <th className="p-1.5 border border-black font-bold text-center">Flight</th>
                     <th className="p-1.5 border border-black font-bold text-center">Address</th>
@@ -110,16 +117,16 @@ export const PrintableNominalRollModal: React.FC<PrintableNominalRollModalProps>
                       <td className="p-1.5 border border-black text-center">
                         {formatAirmanName(airman.rank)}
                       </td>
-                      <td className="p-1.5 border border-black text-center">
-                        {airman.name}
+                      <td className="p-1.5 border border-black text-left">
+                        {airman.fullName || airman.name}
                       </td>
-                      <td className="p-1.5 border border-black text-center">
+                      <td className="p-1.5 border border-black text-left">
                         {airman.trade}
                       </td>
-                      <td className="p-1.5 border border-black text-center">
+                      <td className="p-1.5 border border-black text-left">
                         {airman.flightName}
                       </td>
-                      <td className="p-1.5 border border-black text-center">
+                      <td className="p-1.5 border border-black text-left">
                         {airman.addressBlock || '-'}
                       </td>
                       <td className="p-1.5 border border-black text-center">

@@ -349,7 +349,7 @@ export async function exportNominalRollDocx(
       createArialHeaderCell('Ser', 700),
       createArialHeaderCell('BD No', 1400),
       createArialHeaderCell('Rank', 1000),
-      createArialHeaderCell('Name', 2200),
+      createArialHeaderCell('Full Name', 2200),
       createArialHeaderCell('Trade', 1400),
       createArialHeaderCell('Flight', 1300),
       
@@ -362,7 +362,7 @@ export async function exportNominalRollDocx(
         createArialDataCell(String(idx + 1), 700, AlignmentType.CENTER),
         createArialDataCell(a.bdNo.replace(/^BD\//i, ''), 1400, AlignmentType.CENTER),
         createArialDataCell(formatRunningLetter(a.rank), 1000, AlignmentType.LEFT),
-        createArialDataCell(formatRunningLetter(a.name), 2200, AlignmentType.LEFT),
+        createArialDataCell(formatRunningLetter(a.fullName || a.name), 2200, AlignmentType.LEFT),
         createArialDataCell(a.trade, 1400, AlignmentType.LEFT),
         createArialDataCell(a.flightName, 1300, AlignmentType.LEFT),
         createArialDataCell(a.addressBlock || '-', 1600, AlignmentType.LEFT),
@@ -386,6 +386,7 @@ export async function exportNominalRollDocx(
         properties: {
           page: {
             margin: { top: 720, right: 720, bottom: 720, left: 720 },
+            size: { orientation: PageOrientation.PORTRAIT },
           },
         },
         children: docChildren,
@@ -1518,7 +1519,7 @@ export async function exportMonthlyDutyRegisterDocx(
             else if (ass.dutyCode === 'AIRPORT') codeDisplay = 'AIR';
             else if (ass.dutyCode === 'IDAC' || ass.dutyCode === 'IDA') {
               codeDisplay = ass.idaShift === 'Night' ? 'IDAn' : ass.idaShift === 'Afternoon' ? 'IDAa' : 'IDAm';
-            } else if (ass.dutyCode === 'Leave') codeDisplay = 'L';
+            } else if (ass.dutyCode === 'LEAVE') codeDisplay = 'L';
             else if (ass.dutyCode === 'TDY') codeDisplay = 'TDY';
             else if (ass.dutyCode === 'BAKE_N_BITE') codeDisplay = 'BB';
             else if (ass.dutyCode === 'DUTY_OFF') codeDisplay = 'OFF';

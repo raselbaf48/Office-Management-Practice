@@ -1,4 +1,4 @@
-export function exportHtmlToWord(elementId: string, filename: string) {
+export function exportHtmlToWord(elementId: string, filename: string, orientation: 'landscape' | 'portrait' = 'landscape') {
   const el = document.getElementById(elementId);
   if (!el) {
     console.error(`Element with id ${elementId} not found`);
@@ -127,8 +127,8 @@ export function exportHtmlToWord(elementId: string, filename: string) {
       <title>Export Document</title>
       <style>
         @page WordSection1 {
-          size: 841.9pt 595.3pt; /* A4 landscape dimensions */
-          mso-page-orientation: landscape;
+          size: ${orientation === 'landscape' ? '841.9pt 595.3pt' : '595.3pt 841.9pt'}; /* A4 dimensions */
+          ${orientation === 'landscape' ? 'mso-page-orientation: landscape;' : ''}
           margin: 36.0pt 36.0pt 36.0pt 36.0pt;
         }
         div.WordSection1 {

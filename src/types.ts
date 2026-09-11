@@ -37,7 +37,8 @@ export interface Airman {
   code: string;        // e.g., MSR, RSL, OMR, etc.
   bdNo: string;        // e.g. BD/102341
   rank: Rank;
-  name: string;
+  fullName?: string;   // Full Name
+  name: string;        // Surname / Short name
   trade: string;       // e.g. Avionic, Aero Mech, Armt Mech, GCO, Admin
   addressBlock: string;// e.g. Block-B, Qtr 104 / Barrack-3
   mobileNo: string;
