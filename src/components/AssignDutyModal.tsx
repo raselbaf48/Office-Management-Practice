@@ -262,21 +262,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         }
       }
         
-      // If all quotas are fulfilled, fallback to the first flight that has a quota
-      if (targetFlight === "All") {
-        for (const flt of orderedFlights) {
-          const required = getFlightDutyQuotaForDate(
-            fromDate, 
-            flt, 
-            activeDutyCode,
-            (activeDutyCode === "IDAC" || activeDutyCode === "IDA") ? activeIdaShift : undefined
-          );
-          if (required > 0) {
-            targetFlight = flt;
-            break;
-          }
-        }
-      }
+      // If all quotas are fulfilled, targetFlight remains "All" 
       
       setActiveFlight(targetFlight);
     }
