@@ -4,6 +4,12 @@ import { getFirestore, initializeFirestore, doc, setDoc, getDoc, disableNetwork,
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
+export const isTestingEnvironment = () => {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  return h.includes('ais-dev') || h.includes('ais-pre') || h.includes('localhost');
+};
+
 export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 
@@ -30,6 +36,12 @@ if (typeof window !== "undefined") {
 
 export async function saveDbToFirebase(dbData: any) {
   if (quotaExceeded) return false;
+  
+  // Check if we are in a testing environment (AI Studio)
+  if (typeof window !== 'undefined' && (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('ais-pre') || window.location.hostname.includes('localhost'))) {
+    console.log("Testing environment detected: Write blocked.");
+    return 'SIMULATED';
+  }
   
   // Cloud writing is enabled
   

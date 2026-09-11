@@ -1,11 +1,11 @@
-import { db } from '../firebase';
+import { db, isTestingEnvironment } from '../firebase';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection, query, orderBy, limit, addDoc, disableNetwork } from 'firebase/firestore';
 
 // Call this when user logs in
 const isQuotaExceeded = () => typeof window !== 'undefined' && window.localStorage.getItem('firebase_quota_exceeded') === new Date().toDateString();
 
 export const logUserLogin = async (user: any) => {
-  if (isQuotaExceeded()) return;
+  if (isQuotaExceeded() || isTestingEnvironment()) return;
   try {
     const timestamp = new Date().toISOString();
     // 1. Add to active users
@@ -45,7 +45,7 @@ export const logUserLogin = async (user: any) => {
 
 // Call this periodically to update last active OR on logout
 export const updatePresence = async (bdNo: string, isLoggingOut = false, page = 'Dashboard') => {
-  if (isQuotaExceeded()) return;
+  if (isQuotaExceeded() || isTestingEnvironment()) return;
   if (!bdNo) return;
   try {
     if (isLoggingOut) {
