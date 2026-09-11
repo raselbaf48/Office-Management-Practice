@@ -217,10 +217,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
             const targetShift = shifts.find(s => getFlightDutyQuotaForDate(fromDate, activeFlight, activeDutyCode, s) > 0);
             if (targetShift) {
                 setActiveIdaShift(targetShift);
-                return;
+            } else {
+                setActiveIdaShift(undefined);
             }
         }
-        setActiveIdaShift(undefined);
     }
   }, [activeDutyCode, fromDate, activeFlight]);
 
@@ -408,6 +408,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
 
   // Direct Click Assignment Action (No Draft System)
   const handleToggleAssignAirman = async (airman: Airman) => {
+    if (!activeDutyCode) {
+      alert("Please select a duty first.");
+      return;
+    }
     if ((activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') && !activeIdaShift) {
       alert("Please select a shift first.");
       return;
@@ -635,17 +639,18 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
       if (firstDuty.dutyCode === 'DUTY_OFF') {
         if (prevAssignments.length > 0) {
           const yestAss = prevAssignments[0];
-          let offShort = 'Duty Off';
+          let offShort = 'GD Off';
           if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
           else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
           else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
           else if (yestAss.dutyCode === 'AIRPORT') offShort = 'Airport Off';
           else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
           else if (yestAss.notes?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
+          else offShort = 'GD Off';
           
           name = offShort;
         } else {
-          name = firstDuty.previousDutyName || firstDuty.notes || 'Duty Off';
+          name = firstDuty.previousDutyName || firstDuty.notes || 'GD Off';
         }
       }
 
@@ -661,7 +666,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         (yestAss.notes || '').toLowerCase().includes('idac');
         
       if (isHeavy) {
-        let offShort = 'Duty Off';
+        let offShort = 'GD Off';
         if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
         else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
         else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
@@ -774,8 +779,8 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         const infoB = getDutyStatusInfo(b.id);
 
         // Put On Parade and Night-Off first when unassigned
-        const isAAvailable = infoA.type === 'ON_PARADE' || infoA.type === 'NIGHT_OFF';
-        const isBAvailable = infoB.type === 'ON_PARADE' || infoB.type === 'NIGHT_OFF';
+        const isAAvailable = infoA.type === 'ON_PARADE' || infoA.type === 'NIGHT_OFF' || infoA.type === 'DUTY_OFF';
+        const isBAvailable = infoB.type === 'ON_PARADE' || infoB.type === 'NIGHT_OFF' || infoB.type === 'DUTY_OFF';
         if (isAAvailable && !isBAvailable) return -1;
         if (!isAAvailable && isBAvailable) return 1;
 
@@ -1001,7 +1006,23 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                 {(() => {
                   const allDuties = DUTY_TYPES.filter((dt) => dt.code !== 'ON_PARADE');
-                  const ratioFiltered = allDuties.filter((dt) => getRequiredCountForDuty(dt.code) > 0);
+                  const ratioFiltered = allDuties.filter((dt) => {
+    const req = getRequiredCountForDuty(dt.code);
+    const assignedCount = assignmentsList.filter(a => {
+      if (activeFlight !== 'All') {
+        const airman = airmanMap.get(a.airmanId);
+        if (airman && airman.flightName !== activeFlight) return false;
+      }
+      if (dt.code === 'ATT' || dt.code === 'AIRPORT') {
+        return a.dutyCode === 'ATT' || a.dutyCode === 'AIRPORT';
+      }
+      if (dt.code === 'IDAC' || dt.code === 'IDA') {
+        return a.dutyCode === 'IDAC' || a.dutyCode === 'IDA';
+      }
+      return a.dutyCode === dt.code;
+    }).length;
+    return req > 0 || assignedCount > 0;
+});
                   const dutiesToRender = filterByRatio && ratioFiltered.length > 0 ? ratioFiltered : allDuties;
 
                   return dutiesToRender.map((dt) => {
@@ -1254,10 +1275,13 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                           }
                         }
                       } else {
-                        userManuallySelectedFlightRef.current = false;
-                        setActiveDutyCode('');
-                        setSelectionMode('None');
-                        setActiveIdaShift(undefined);
+                        // User explicitly clicked the active flight to deselect it.
+                        // We lock the auto-selector so it doesn't force a flight based on the duty,
+                        // and we keep the current duty selected.
+                        userManuallySelectedFlightRef.current = true;
+                        if (!activeDutyCode) {
+                          setSelectionMode('None');
+                        }
                       }
                     }
                   }}
@@ -1287,7 +1311,6 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
           </div>
 
           {/* 4. Personnel Candidate List */}
-          {(activeFlight !== 'All' || activeDutyCode !== '') && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -1342,7 +1365,7 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                   } else if (activeDutyCode === 'IDAC' || activeDutyCode === 'IDA') {
                     // User requirement: For IDAC Duty, all personnel in the flight are visible and eligible, even if on other disposal
                     isEligible = true;
-                  } else if (statusInfo.type === 'ON_PARADE' || statusInfo.type === 'NIGHT_OFF' || statusInfo.type === 'CANTEEN' || (statusInfo.label || '').toLowerCase().includes('canteen') || (statusInfo.type === 'DEPLOYMENT' && (statusInfo.label || '').toLowerCase().includes('canteen'))) {
+                  } else if (statusInfo.type === 'ON_PARADE' || statusInfo.type === 'NIGHT_OFF' || statusInfo.type === 'DUTY_OFF' || statusInfo.type === 'GD Off' || statusInfo.type === 'CANTEEN' || (statusInfo.label || '').toLowerCase().includes('canteen') || (statusInfo.type === 'DEPLOYMENT' && (statusInfo.label || '').toLowerCase().includes('canteen'))) {
                     // On Parade, Duty Off, or Canteen are always eligible
                     isEligible = true;
                   }
@@ -1436,7 +1459,6 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
               )}
             </div>
           </div>
-          )}
         </div>
 
         {/* Modal Footer */}

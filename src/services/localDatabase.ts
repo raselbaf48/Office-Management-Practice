@@ -1011,6 +1011,7 @@ export class LocalDatabaseEngine {
             else if ((yestCodeStr === 'IDAC' || yestCodeStr === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
             else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
             else if (yestCodeStr === 'DUTY_OFF') offShort = yestAss.previousDutyName || 'GD Off';
+            else if (yestCodeStr === 'ON_PARADE') offShort = 'GD Off';
             else offShort = `${yestAss.dutyCode} Off`;
           } else if (ass.notes && !ass.notes.toLowerCase().includes('imported')) {
             if (ass.notes.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
@@ -1137,7 +1138,7 @@ export class LocalDatabaseEngine {
       if (!isPT) {
         const yestAss = yestMap.get(airmanId);
         if (yestAss) {
-          let offShort = 'Duty Off';
+          let offShort = 'GD Off';
           if (yestAss.dutyCode === 'GD') offShort = 'GD Off';
           else if (yestAss.dutyCode === 'BTF') offShort = 'BTF Off';
           else if (yestAss.dutyCode === 'NTF') offShort = 'NTF Off';
@@ -1145,7 +1146,8 @@ export class LocalDatabaseEngine {
           else if (yestAss.dutyCode === 'HALISHAHAR') offShort = 'Halishahar Off';
           else if ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') offShort = 'IDAC Nt Off';
           else if (yestAss.notes?.toLowerCase().includes('idac') || yestAss.previousDutyName?.toLowerCase().includes('idac')) offShort = 'IDAC Nt Off';
-          else if (yestAss.dutyCode === 'DUTY_OFF') offShort = yestAss.previousDutyName || yestAss.notes || 'Duty Off';
+          else if (yestAss.dutyCode === 'DUTY_OFF') offShort = yestAss.previousDutyName || yestAss.notes || 'GD Off';
+          else if (yestAss.dutyCode === 'ON_PARADE') offShort = 'GD Off';
           else offShort = `${yestAss.dutyCode} Off`;
 
           offShort = offShort
@@ -1154,7 +1156,7 @@ export class LocalDatabaseEngine {
             .replace(/Duty Off Off/g, 'Duty Off');
 
           const isHeavy =
-            ['GD', 'BTF', 'NTF', 'AIRPORT', 'ATT', 'HALISHAHAR', 'DUTY_OFF'].includes(yestAss.dutyCode) ||
+            ['GD', 'BTF', 'NTF', 'AIRPORT', 'ATT', 'HALISHAHAR'].includes(yestAss.dutyCode) ||
             ((yestAss.dutyCode === 'IDAC' || yestAss.dutyCode === 'IDA') && yestAss.idaShift === 'Night') ||
             yestAss.notes?.toLowerCase().includes('idac');
 

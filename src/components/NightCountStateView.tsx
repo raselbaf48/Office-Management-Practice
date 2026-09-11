@@ -2006,7 +2006,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
                       return { isOnParade: false, label: 'Absent', dutyCode: 'ABSENT', notes, dutyName: 'Absent' };
                     }
                     if (statusCategory === 'OFF' || codeUpper === 'DUTY_OFF') {
-                      return { isOnParade: false, label: dutyName || notes || 'Duty Off', dutyCode: 'DUTY_OFF', notes, dutyName: dutyName || 'Duty Off' };
+                      return { isOnParade: false, label: dutyName || notes || 'GD Off', dutyCode: 'DUTY_OFF', notes, dutyName: dutyName || 'GD Off' };
                     }
                     if (statusCategory === 'DUTY' || ['GD', 'BTF', 'NTF', 'HALISHAHAR', 'IDAC', 'IDA'].includes(codeUpper)) {
                       return { isOnParade: false, label: notes || dutyCode || 'On Duty', dutyCode: dutyCode || 'DUTY_ON', notes, dutyName: dutyName || 'On Duty' };
