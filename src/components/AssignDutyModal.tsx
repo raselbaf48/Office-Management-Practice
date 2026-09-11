@@ -201,21 +201,28 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
         const eligibleFlights = matrixConfig?.eligibleFlights || dutyConfig.eligibleFlights;
         if (eligibleFlights && eligibleFlights.length > 0 && !eligibleFlights.includes(activeFlight)) {
            setActiveFlight('All');
+           userManuallySelectedFlightRef.current = false;
         }
       }
     }
   }, [activeDutyCode, activeFlight]);
 
-  // Reset manual flight selection tracking when duty config changes
+  // Reset or auto-select shift when duty config changes
   useEffect(() => {
-    userManuallySelectedFlightRef.current = false;
     if (activeDutyCode !== 'IDAC' && activeDutyCode !== 'IDA') {
         setActiveIdaShift(undefined);
     } else {
-        // When switching to IDAC, also reset shift to ensure no shift/flight is selected initially
+        if (activeFlight !== 'All') {
+            const shifts: IDAShift[] = ['Morning', 'Afternoon', 'Night'];
+            const targetShift = shifts.find(s => getFlightDutyQuotaForDate(fromDate, activeFlight, activeDutyCode, s) > 0);
+            if (targetShift) {
+                setActiveIdaShift(targetShift);
+                return;
+            }
+        }
         setActiveIdaShift(undefined);
     }
-  }, [activeDutyCode, fromDate]);
+  }, [activeDutyCode, fromDate, activeFlight]);
 
   // Auto-select flight for matrix-tracked duties based on quota and unfulfilled assignments
   useEffect(() => {
@@ -1120,7 +1127,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                     return (
                       <div
                         key={s}
-                        onClick={() => setActiveIdaShift(s)}
+                        onClick={() => {
+                          setActiveIdaShift(s);
+                          userManuallySelectedFlightRef.current = false;
+                        }}
                         className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-start ${
                           isShiftSelected
                             ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/40'
@@ -1230,9 +1240,9 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                     if (!isDisabledFlt) {
                       const newFlt = activeFlight === flt ? 'All' : flt;
                       setActiveFlight(newFlt);
-                      userManuallySelectedFlightRef.current = true;
                       
                       if (newFlt !== 'All') {
+                        userManuallySelectedFlightRef.current = true;
                         if (selectionMode === 'None' || !activeDutyCode) {
                           setSelectionMode('FlightFirst');
                         }
@@ -1244,9 +1254,10 @@ export const AssignDutyModal: React.FC<AssignDutyModalProps> = ({
                           }
                         }
                       } else {
-                        if (!activeDutyCode) {
-                          setSelectionMode('None');
-                        }
+                        userManuallySelectedFlightRef.current = false;
+                        setActiveDutyCode('');
+                        setSelectionMode('None');
+                        setActiveIdaShift(undefined);
                       }
                     }
                   }}
