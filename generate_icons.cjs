@@ -39,8 +39,7 @@ async function generateIcon(size, filename, scale) {
 }
 
 async function run() {
-    // 0.94 scale means 94% of the canvas height. Let's adjust this to exactly match user needs.
-    const scale = 0.93; 
+    const scale = 0.99; 
     await generateIcon(192, 'pwa-192x192.png', scale);
     await generateIcon(192, 'pwa-192x192-full.png', scale);
     await generateIcon(192, 'pwa-192x192-trans.png', scale);
