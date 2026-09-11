@@ -39,7 +39,7 @@ async function generateIcon(size, filename, scale) {
 }
 
 async function run() {
-    const scale = 0.99; 
+    const scale = 0.9999; 
     await generateIcon(192, 'pwa-192x192.png', scale);
     await generateIcon(192, 'pwa-192x192-full.png', scale);
     await generateIcon(192, 'pwa-192x192-trans.png', scale);
