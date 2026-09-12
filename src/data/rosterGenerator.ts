@@ -94,7 +94,11 @@ export function calculateDutyStats(
 
   const assignmentMap = new Map<string, DutyAssignment>();
   assignments.forEach((ass) => {
-    assignmentMap.set(`${ass.airmanId}_${ass.date}`, ass);
+    const key = `${ass.airmanId}_${ass.date}`;
+    const existing = assignmentMap.get(key);
+    if (!existing || (existing.disposalScope || 'ALL') !== 'ALL') {
+      assignmentMap.set(key, ass);
+    }
   });
 
   if (year && month) {
@@ -224,9 +228,12 @@ export function detectConflicts(airmen: Airman[], assignments: DutyAssignment[])
   const alerts: ConflictAlert[] = [];
   const airmanMap = new Map(airmen.map((a) => [a.id, a]));
 
+  // Only consider main roster (ALL) scope for conflicts
+  const mainAssignments = assignments.filter((a) => (a.disposalScope || 'ALL') === 'ALL');
+
   // Group assignments by airman
   const byAirman = new Map<string, DutyAssignment[]>();
-  assignments.forEach((ass) => {
+  mainAssignments.forEach((ass) => {
     const list = byAirman.get(ass.airmanId) || [];
     list.push(ass);
     byAirman.set(ass.airmanId, list);

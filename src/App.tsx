@@ -34,6 +34,7 @@ import { INITIAL_AIRMEN } from './data/initialAirmen';
 import { Logo155UASU } from './components/Logo155UASU';
 import { Shield, AlertCircle, X } from 'lucide-react';
 import { getCurrentUserSession, clearUserSession, UserSession } from './utils/authSession';
+import { localDb } from './services/localDatabase';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
@@ -451,6 +452,9 @@ return () => mediaQuery.removeEventListener('change', listener);
             } else {
               handleRoleChange('USER');
             }
+            
+            // Trigger instant data download from cloud after login
+            localDb.syncFromFirebase();
           }}
         />
       </div>

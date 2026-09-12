@@ -72,7 +72,7 @@ export interface DutyAssignment {
   dutyCode: DutyCategoryCode;
   idaShift?: IDAShift;
   proxyForFlight?: FlightName;
-  disposalScope?: 'ALL' | 'PARADE' | 'PT';
+  disposalScope?: 'ALL' | 'PARADE' | 'PT' | 'NIGHT_COUNT';
   notes?: string;
   previousDutyName?: string;
   assignedBy?: string;
@@ -137,7 +137,7 @@ export interface PersonnelStatusItem {
   airman: Airman;
   dutyCode: DutyCategoryCode;
   idaShift?: IDAShift;
-  disposalScope?: 'ALL' | 'PARADE' | 'PT';
+  disposalScope?: 'ALL' | 'PARADE' | 'PT' | 'NIGHT_COUNT';
   notes?: string;
   dutyName?: string;
   previousDutyName?: string;

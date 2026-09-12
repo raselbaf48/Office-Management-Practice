@@ -67,36 +67,33 @@ export const UserLoginGate: React.FC<UserLoginGateProps> = ({
       return;
     }
 
-    setTimeout(() => {
-      const validation = validateUserLogin(cleanInput, passwordInput, airmen);
+    const validation = validateUserLogin(cleanInput, passwordInput, airmen);
 
-      if (validation.success && validation.airman) {
-        const config = getAppConfig();
-        const role = validation.detailedUser?.role || 'USER';
-        
-        if (isFeatureActive(config.maintenance) && role !== 'SUPER_ADMIN' && role !== 'OWNER') {
-          setErrorMsg(config.maintenance.message || 'App is currently undergoing maintenance. Please try again later.');
-          setIsLoading(false);
-          return;
-        }
-        const airman = validation.airman;
-        setSuccessAirman(airman);
-        const assignedLoginRole = cleanInput === '48456' ? 'OWNER' : 'USER';
-        setUserSession(airman, assignedLoginRole, validation.detailedUser);
-        const updatedRecents = [cleanInput, ...recentLogins.filter(x => x !== cleanInput)].slice(0, 4);
-        setRecentLogins(updatedRecents);
-        localStorage.setItem('baf_recent_logins', JSON.stringify(updatedRecents));
-        localStorage.setItem('baf_last_used_id', cleanInput);
-        setTimeout(() => {
-          setIsLoading(false);
-          onAuthenticated();
-        }, 400);
-      } else {
-        setErrorMsg(validation.message || 'Invalid User ID or PIN.');
-        setPasswordInput('');
+    if (validation.success && validation.airman) {
+      const config = getAppConfig();
+      const role = validation.detailedUser?.role || 'USER';
+      
+      if (isFeatureActive(config.maintenance) && role !== 'SUPER_ADMIN' && role !== 'OWNER') {
+        setErrorMsg(config.maintenance.message || 'App is currently undergoing maintenance. Please try again later.');
         setIsLoading(false);
+        return;
       }
-    }, 500);
+      const airman = validation.airman;
+      setSuccessAirman(airman);
+      const assignedLoginRole = cleanInput === '48456' ? 'OWNER' : 'USER';
+      setUserSession(airman, assignedLoginRole, validation.detailedUser);
+      const updatedRecents = [cleanInput, ...recentLogins.filter(x => x !== cleanInput)].slice(0, 4);
+      setRecentLogins(updatedRecents);
+      localStorage.setItem('baf_recent_logins', JSON.stringify(updatedRecents));
+      localStorage.setItem('baf_last_used_id', cleanInput);
+      
+      setIsLoading(false);
+      onAuthenticated();
+    } else {
+      setErrorMsg(validation.message || 'Invalid User ID or PIN.');
+      setPasswordInput('');
+      setIsLoading(false);
+    }
   };
 
   const handleNextStep = (e: React.FormEvent) => {

@@ -126,7 +126,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const [disposalPersonnelStatusMap, setDisposalPersonnelStatusMap] = useState<Record<string, { statusCategory: string; dutyCode: string; notes?: string; dutyName?: string }>>({});
   const [disposalFromDate, setDisposalFromDate] = useState<string>(selectedDate);
   const [disposalToDate, setDisposalToDate] = useState<string>(selectedDate);
-  const [disposalScope, setDisposalScope] = useState<'ALL' | 'PARADE' | 'PT'>('ALL');
+  const [disposalScope, setDisposalScope] = useState<'ALL' | 'PARADE' | 'PT' | 'NIGHT_COUNT'>('ALL');
   const [disposalNotes, setDisposalNotes] = useState<string>('');
   const [disposalLoading, setDisposalLoading] = useState<boolean>(false);
   const [disposalSuccessMsg, setDisposalSuccessMsg] = useState<string>('');
@@ -333,7 +333,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const fetchSingle = async () => {
     setLoading(true);
     try {
-      const stateType = isPtDocument ? 'PT' : 'PARADE';
+      const stateType = 'NIGHT_COUNT';
       const res = await fetch(`/api/parade-state?date=${fromDate}&shift=Morning&flight=Overall&stateType=${stateType}`);
       if (res.ok) {
         const d = await res.json();
@@ -350,7 +350,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
   const fetchMulti = async () => {
     setLoading(true);
     try {
-      const stateType = isPtDocument ? 'PT' : 'PARADE';
+      const stateType = 'NIGHT_COUNT';
       const results = await Promise.all(
         datesInRange.map((dStr) =>
           fetch(`/api/parade-state?date=${dStr}&shift=Morning&flight=Overall&stateType=${stateType}`)
@@ -445,7 +445,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
             dutyCode: code,
             idaShift,
             proxyForFlight,
-            disposalScope: isPtDocument ? 'PT' : 'PARADE',
+            disposalScope: 'NIGHT_COUNT',
             notes,
           },
         }),
@@ -610,7 +610,7 @@ export const NightCountStateView: React.FC<NightCountStateViewProps> = ({
           dutyCode: effectiveDutyCode,
           fromDate: editDisposalFromDate,
           toDate: editDisposalToDate,
-          disposalScope: isPtDocument ? 'PT' : 'PARADE',
+          disposalScope: 'NIGHT_COUNT',
           notes: effectiveNotes,
         }),
       });

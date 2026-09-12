@@ -1454,7 +1454,11 @@ export async function exportMonthlyDutyRegisterDocx(
 
   const assignmentMap = new Map<string, DutyAssignment>();
   assignments.forEach((ass) => {
-    assignmentMap.set(`${ass.airmanId}_${ass.date}`, ass);
+    const key = `${ass.airmanId}_${ass.date}`;
+    const existing = assignmentMap.get(key);
+    if (!existing || (existing.disposalScope || 'ALL') !== 'ALL') {
+      assignmentMap.set(key, ass);
+    }
   });
 
   const docChildren: any[] = [

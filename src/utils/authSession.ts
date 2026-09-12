@@ -77,7 +77,6 @@ export const getCurrentUserSession = (): UserSession | null => {
 /**
  * Get all detailed/authorized login users
  */
-
 const SYSTEM_OWNER: DetailedUserLogin = {
   id: 'user-login-deleted_admin',
   airmanId: 'system-owner',
@@ -97,25 +96,6 @@ const SYSTEM_OWNER: DetailedUserLogin = {
   remarks: 'Mobile No: 01760369685',
 };
 
-const SYSTEM_OWNER_NEW: DetailedUserLogin = {
-  id: 'user-login-48456',
-  airmanId: 'system-owner-2',
-  bdNo: '48456',
-  rank: 'Civil',
-  name: 'System Owner',
-  flightName: 'Admin',
-  trade: 'System Admin',
-  role: 'OWNER',
-  password: '48456',
-  adminPass: '51519919',
-  ownerPass: '51519919',
-  status: 'ACTIVE',
-  detailOrder: 'SYSTEM_OWNER_02',
-  detailedAt: new Date().toISOString(),
-  detailedBy: 'System',
-  remarks: 'System Owner Super Admin',
-};
-
 export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogin[] => {
   let parsed: DetailedUserLogin[] = [];
   try {
@@ -133,9 +113,13 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
   
   let modified = false;
 
-  // Force remove specific user 53539919
+  // Force remove specific user 53539919 and old System Owner
   const beforeCount = parsed.length;
-  parsed = parsed.filter(u => u.bdNo !== '53539919' && u.bdNo !== 'deleted_admin');
+  parsed = parsed.filter(u => 
+    u.bdNo !== '53539919' && 
+    u.bdNo !== 'deleted_admin' &&
+    !(u.bdNo === '48456' && u.name === 'System Owner' && u.rank === 'Civil')
+  );
   if (parsed.length !== beforeCount) {
     modified = true;
   }
@@ -169,9 +153,6 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
     }
   };
 
-  
-  enforceOwner(SYSTEM_OWNER_NEW, '48456', '48456', '51519919');
-
   // Auto-sync Nominal Roll users into User Management
   if (nominalAirmen && nominalAirmen.length > 0) {
     nominalAirmen.forEach((a) => {
@@ -201,14 +182,18 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
         });
         modified = true;
       } else {
+        let detailModified = false;
+        
         // Sync status based on nominal roll activity
         if (!a.active && parsed[idx].status === 'ACTIVE') {
           parsed[idx].status = 'SUSPENDED';
-          modified = true;
+          detailModified = true;
         } else if (a.active && parsed[idx].status === 'SUSPENDED') {
           parsed[idx].status = 'ACTIVE';
-          modified = true;
+          detailModified = true;
         }
+        
+        if (detailModified) modified = true;
       }
     });
   }
@@ -238,7 +223,7 @@ export const getDetailedUsers = (nominalAirmen: Airman[] = []): DetailedUserLogi
       detailedBy: '155 UASU Unit HQ',
       remarks: 'Primary Admin User ID (LAC Rasel)',
     },
-   SYSTEM_OWNER, SYSTEM_OWNER_NEW];
+   SYSTEM_OWNER];
   return primaryFallback;
 };
 

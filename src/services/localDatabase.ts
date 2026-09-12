@@ -148,6 +148,19 @@ export class LocalDatabaseEngine {
           this.saveToFirebase(this.db, true);
         }
       });
+      
+      // Auto Sync Timer (Every 10 seconds)
+      setInterval(() => {
+        if (!this.isFirebaseSyncing) {
+          if (this.saveTimeout) {
+            // Push changes if there are pending updates
+            this.saveToFirebase(this.db, true).then(() => this.syncFromFirebase());
+          } else {
+            // Pull changes otherwise
+            this.syncFromFirebase();
+          }
+        }
+      }, 10000);
     }
   }
 
@@ -584,10 +597,8 @@ export class LocalDatabaseEngine {
         );
       }
     } else {
-      index = list.findIndex((a) => a.airmanId === assignment.airmanId && a.date === assignment.date && a.dutyCode === assignment.dutyCode);
-      if (index < 0) {
-        index = list.findIndex((a) => a.airmanId === assignment.airmanId && a.date === assignment.date);
-      }
+      const scope = assignment.disposalScope || 'ALL';
+      index = list.findIndex((a) => a.airmanId === assignment.airmanId && a.date === assignment.date && (a.disposalScope || 'ALL') === scope);
     }
 
     const prevAssignment = index >= 0 ? { ...list[index] } : null;
@@ -672,15 +683,11 @@ export class LocalDatabaseEngine {
           index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
         }
       } else if (dutyCode === 'AIRPORT' || dutyCode === 'ATT' || dutyCode === 'DETT') {
-        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT'));
-        if (index < 0) {
-          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
-        }
+        const scope = disposalScope || 'ALL';
+        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT') && (a.disposalScope || 'ALL') === scope);
       } else {
-        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && a.dutyCode === dutyCode);
-        if (index < 0) {
-          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
-        }
+        const scope = disposalScope || 'ALL';
+        index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.disposalScope || 'ALL') === scope);
       }
 
       if (index >= 0) {
@@ -779,15 +786,11 @@ export class LocalDatabaseEngine {
             index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'IDAC' || a.dutyCode === 'IDA') && a.idaShift !== 'Night');
           }
         } else if (dutyCode === 'AIRPORT' || dutyCode === 'ATT' || dutyCode === 'DETT') {
-          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT'));
-          if (index < 0) {
-            index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
-          }
+          const scope = disposalScope || 'ALL';
+          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.dutyCode === 'AIRPORT' || a.dutyCode === 'ATT' || a.dutyCode === 'DETT') && (a.disposalScope || 'ALL') === scope);
         } else {
-          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && a.dutyCode === dutyCode);
-          if (index < 0) {
-            index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr);
-          }
+          const scope = disposalScope || 'ALL';
+          index = list.findIndex((a) => a.airmanId === airmanId && a.date === dateStr && (a.disposalScope || 'ALL') === scope);
         }
 
         const assignment: DutyAssignment = {
@@ -900,13 +903,23 @@ export class LocalDatabaseEngine {
     const selectedFlight = params?.flight || 'Overall';
     const stateType = (params?.stateType || 'PARADE').toUpperCase();
     const isPT = stateType === 'PT';
+    const isNightCount = stateType === 'NIGHT_COUNT';
 
     const monthKey = date.slice(0, 7);
     const monthAssignments = this.db.assignments[monthKey] || [];
     const dateAssignments = monthAssignments.filter((a) => a.date === date);
 
     const assignmentMap = new Map<string, DutyAssignment>();
-    dateAssignments.forEach((a) => assignmentMap.set(a.airmanId, a));
+    dateAssignments.forEach((a) => {
+      const scope = a.disposalScope || 'ALL';
+      const isApplicable = scope === 'ALL' || (isPT && scope === 'PT') || (isNightCount && scope === 'NIGHT_COUNT') || (!isPT && !isNightCount && scope === 'PARADE');
+      if (isApplicable) {
+        const existing = assignmentMap.get(a.airmanId);
+        if (!existing || (existing.disposalScope || 'ALL') === 'ALL') {
+          assignmentMap.set(a.airmanId, a);
+        }
+      }
+    });
 
     // Calculate yesterday's assignments for auto duty off calculation safely via UTC
     const getYesterdayDateStr = (dateStr: string): string => {
@@ -924,7 +937,16 @@ export class LocalDatabaseEngine {
     const yestMonthKey = yestStr.slice(0, 7);
     const yestAssignments = (this.db.assignments[yestMonthKey] || []).filter((a) => a.date === yestStr);
     const yestMap = new Map<string, DutyAssignment>();
-    yestAssignments.forEach((a) => yestMap.set(a.airmanId, a));
+    yestAssignments.forEach((a) => {
+      const scope = a.disposalScope || 'ALL';
+      const isApplicable = scope === 'ALL' || (isPT && scope === 'PT') || (isNightCount && scope === 'NIGHT_COUNT') || (!isPT && !isNightCount && scope === 'PARADE');
+      if (isApplicable) {
+        const existing = yestMap.get(a.airmanId);
+        if (!existing || (existing.disposalScope || 'ALL') === 'ALL') {
+          yestMap.set(a.airmanId, a);
+        }
+      }
+    });
 
     // Target airmen filter
     const allAirmen = this.db.airmen || [];
@@ -951,7 +973,7 @@ export class LocalDatabaseEngine {
       dutyCode: string; 
       idaShift?: string; 
       proxyForFlight?: string;
-      disposalScope?: 'ALL' | 'PARADE' | 'PT';
+      disposalScope?: 'ALL' | 'PARADE' | 'PT' | 'NIGHT_COUNT';
       notes: string; 
       dutyName: string;
       previousDutyName?: string;
@@ -960,7 +982,7 @@ export class LocalDatabaseEngine {
       const ass = assignmentMap.get(airmanId);
       
       const scope = ass?.disposalScope || 'ALL';
-      const isApplicable = scope === 'ALL' || (isPT && scope === 'PT') || (!isPT && scope === 'PARADE');
+      const isApplicable = scope === 'ALL' || (isPT && scope === 'PT') || (isNightCount && scope === 'NIGHT_COUNT') || (!isPT && !isNightCount && scope === 'PARADE');
 
       if (ass && isApplicable) {
         let dutyName: string = String(ass.dutyCode);

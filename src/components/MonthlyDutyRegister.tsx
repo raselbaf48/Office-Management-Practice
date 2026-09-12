@@ -578,7 +578,11 @@ export const MonthlyDutyRegister: React.FC<MonthlyDutyRegisterProps> = ({
   // Map assignments by key "airmanId_YYYY-MM-DD"
   const assignmentMap = new Map<string, DutyAssignment>();
   assignments.forEach((ass) => {
-    assignmentMap.set(`${ass.airmanId}_${ass.date}`, ass);
+    const key = `${ass.airmanId}_${ass.date}`;
+    const existing = assignmentMap.get(key);
+    if (!existing || (existing.disposalScope || 'ALL') !== 'ALL') {
+      assignmentMap.set(key, ass);
+    }
   });
 
   // Calculate duty stats & conflicts
