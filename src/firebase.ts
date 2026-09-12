@@ -7,7 +7,7 @@ const app = initializeApp(firebaseConfig);
 export const isTestingEnvironment = () => {
   if (typeof window === 'undefined') return false;
   const h = window.location.hostname;
-  return h.includes('ais-dev') || h.includes('ais-pre') || h.includes('localhost');
+  return h.includes('localhost');
 };
 
 export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
@@ -35,16 +35,9 @@ if (typeof window !== "undefined") {
 }
 
 export async function saveDbToFirebase(dbData: any) {
-  if (quotaExceeded) return false;
+  if (quotaExceeded) return 'QUOTA_EXCEEDED';
   
-  // Check if we are in a testing environment (AI Studio)
-  if (typeof window !== 'undefined' && (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('ais-pre') || window.location.hostname.includes('localhost'))) {
-    console.log("Testing environment detected: Write blocked.");
-    return 'SIMULATED';
-  }
-  
-  // Cloud writing is enabled
-  
+  // Cloud writing is enabled for all environments
   try {
     const extraSettings: Record<string, string> = {};
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -75,10 +68,11 @@ export async function saveDbToFirebase(dbData: any) {
        }
        disableNetwork(db).catch(console.error);
        console.warn('Firebase quota exceeded. Cloud sync is disabled for this session.');
+       return 'QUOTA_EXCEEDED';
     } else {
        console.error('Error saving to Firebase:', error);
+       return error?.message || 'Unknown Firebase Error';
     }
-    return false;
   }
 }
 

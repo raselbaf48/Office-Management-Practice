@@ -625,7 +625,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
                           Manually push your local changes or pull updates from the central Firebase database.
                         </p>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <button 
                             onClick={async () => {
                               setRestoreStatus('Downloading...');
@@ -634,28 +634,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               setRestoreStatus('');
                               if (onRosterUpdated) onRosterUpdated();
                             }} 
-                            disabled={restoreStatus === 'Downloading...' || restoreStatus === 'Uploading...'}
-                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex flex-col items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+                            disabled={restoreStatus === 'Downloading...'}
+                            className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 text-white rounded-full font-bold flex flex-row items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 transform hover:-translate-y-0.5"
                           >
-                            <Download className={`w-5 h-5 ${restoreStatus === 'Downloading...' ? 'animate-bounce' : ''}`} />
-                            <span className="text-sm">Download</span>
-                          </button>
-                          
-                          <button 
-                            onClick={async () => {
-                              if(window.confirm('Are you sure you want to OVERWRITE the cloud database with your local data? This cannot be undone.')) {
-                                setRestoreStatus('Uploading...');
-                                await localDb.saveToFirebase(localDb.getDb(), true);
-                                setSyncLogsState(getSyncLogs());
-                                setRestoreStatus('');
-                                alert('Data uploaded to cloud successfully!');
-                              }
-                            }} 
-                            disabled={restoreStatus === 'Downloading...' || restoreStatus === 'Uploading...'}
-                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex flex-col items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-                          >
-                            <Upload className={`w-5 h-5 ${restoreStatus === 'Uploading...' ? 'animate-bounce' : ''}`} />
-                            <span className="text-sm">Upload</span>
+                            <Cloud className={`w-6 h-6 ${restoreStatus === 'Downloading...' ? 'animate-bounce' : ''}`} />
+                            <span className="text-base tracking-wide">{restoreStatus === 'Downloading...' ? 'Syncing...' : 'Sync Now'}</span>
                           </button>
                         </div>
                       </div>

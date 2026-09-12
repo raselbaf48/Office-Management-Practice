@@ -125,8 +125,11 @@ export class LocalDatabaseEngine {
   constructor() {
     this.db = this.loadInitialLocalState();
     if (typeof window !== 'undefined') {
-      // Async sync from Cloudflare D1
-      this.syncFromFirebase();
+      if (window.localStorage.getItem('baf_pending_sync') === 'true') {
+        this.saveToFirebase(this.db, true).then(() => this.syncFromFirebase());
+      } else {
+        this.syncFromFirebase();
+      }
       window.addEventListener("baf_idac_settings_updated", () => this.saveToFirebase(this.db));
       window.addEventListener("baf_duty_ratio_updated", () => this.saveToFirebase(this.db));
       window.addEventListener("baf_signatures_updated", () => this.saveToFirebase(this.db));
@@ -153,7 +156,21 @@ export class LocalDatabaseEngine {
    */
   public async syncFromFirebase(): Promise<boolean> {
     if (typeof window === 'undefined' || this.isFirebaseSyncing) return false;
+    
+    // If there is a pending local save, push it first before pulling to prevent data loss
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+      await this.saveToFirebase(this.db, true);
+    }
+    
     this.isFirebaseSyncing = true;
+    
+    // Failsafe: Reset syncing flag after 10 seconds just in case it gets stuck
+    setTimeout(() => {
+      this.isFirebaseSyncing = false;
+    }, 10000);
+
     try {
       const data = await getDbFromFirebase();
       if (data) {
@@ -225,6 +242,8 @@ export class LocalDatabaseEngine {
     // Prevent accidental pushes if we haven't finished our initial sync pull yet
     if (this.isFirebaseSyncing) {
        console.warn('Prevented saveToFirebase because a pull sync is currently in progress.');
+       addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "ERROR", message: "Push blocked: Sync in progress" });
+       broadcastSyncState();
        return;
     }
     
@@ -238,14 +257,20 @@ export class LocalDatabaseEngine {
           lastUpdated: dbToSave.lastUpdated,
         });
         if (success as unknown as string === 'SIMULATED') {
+          if (typeof window !== 'undefined') window.localStorage.removeItem('baf_pending_sync');
           firebaseConnected = true;
           firebaseLastSyncTime = new Date().toLocaleTimeString();
           addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Dev Mode: Simulated save (Live DB is Protected)" });
           broadcastSyncState();
-        } else if (success) {
+        } else if (success === true) {
+          if (typeof window !== 'undefined') window.localStorage.removeItem('baf_pending_sync');
           firebaseConnected = true;
           firebaseLastSyncTime = new Date().toLocaleTimeString();
           addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "SUCCESS", message: "Successfully saved local data to cloud" });
+          broadcastSyncState();
+        } else {
+          const errorMsg = typeof success === 'string' ? success : "Failed to push to cloud (Returned false)";
+          addSyncLog({ timestamp: new Date().toISOString(), type: "PUSH", status: "ERROR", message: errorMsg });
           broadcastSyncState();
         }
       } catch (e) {
@@ -265,11 +290,11 @@ export class LocalDatabaseEngine {
       clearTimeout(this.saveTimeout);
     }
     
-    // Auto-sync after 10 seconds (10000 ms) to prevent data loss on sudden closes
+    // Auto-sync after 3 seconds (3000 ms) to prevent data loss on sudden closes
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
       doSave();
-    }, 10000);
+    }, 3000);
   }
 
   private loadInitialLocalState(): LocalStorageDB {
@@ -336,6 +361,9 @@ export class LocalDatabaseEngine {
     }
 
     if (pushToFirebase) {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('baf_pending_sync', 'true');
+      }
       this.saveToFirebase(dbToSave);
     }
 
